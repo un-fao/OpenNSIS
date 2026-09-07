@@ -233,6 +233,58 @@ upgrades of the data
 containers (Postgres / pyCSW / MapServer) are a deliberate manual step and are
 out of `update.sh`'s scope.
 
+### Backup, and migrating to a new server
+
+A complete instance is four things — everything else is rebuilt from source:
+
+| What | Where | Contains |
+|---|---|---|
+| Database dump | `docker exec sis-database pg_dump -U sis -d sis` | users, settings, projects, mapsets, profiles, metadata records |
+| Raster/map volume | `sis-web-services/volume/` | uploaded rasters (COGs), generated mapfiles |
+| Catalogue volume | `sis-metadata/volume/` | pyCSW XML records |
+| Configuration | `.env` | all secrets, incl. the API key the web bundle is built with |
+
+**Routine backup** (run from the install dir; keep the output somewhere off-server):
+
+```bash
+docker exec sis-database pg_dump -U sis -d sis | gzip > sis-db-$(date +%F).sql.gz
+tar czf sis-volumes-$(date +%F).tgz sis-web-services/volume sis-metadata/volume .env
+```
+
+**Migrating to a new server:**
+
+1. On the **new** server, run the standard one-command install
+   (`ops/single/host-install.sh`, same country code). This puts the right
+   engine versions in place; its fresh database and secrets are about to be
+   replaced.
+2. Copy the backup files across, then from the install dir on the new server:
+
+```bash
+docker compose stop sis-api sis-api-glosis sis-web-mapping sis-metadata sis-web-services
+# database: drop the fresh one, restore yours
+docker exec -i sis-database psql -U sis -d postgres -v ON_ERROR_STOP=1 \
+  -c "DROP DATABASE sis WITH (FORCE);" -c "CREATE DATABASE sis OWNER sis;"
+gunzip -c sis-db-<date>.sql.gz | docker exec -i sis-database psql -U sis -d sis -q
+# volumes + configuration
+tar xzf sis-volumes-<date>.tgz
+chown -R 1000:1000 sis-web-services/volume sis-metadata/volume
+# rebuild so the web bundle is baked with the restored .env's API key,
+# then start everything
+docker compose up -d --build
+```
+
+3. If the backup came from an older version of the software, finish with
+   `./update.sh -y` — the restored database carries its own migration ledger,
+   so exactly the pending migrations are applied.
+4. Point the DNS record (or users) at the new server and verify: the map loads
+   with your layers, admin login works with your old password.
+
+The `.env` restore is not optional: the frontend's API key is **baked into the
+web bundle at build time** and must match the `api.api_client` row inside the
+restored database — restoring the database but keeping the new server's `.env`
+leaves the map unable to load layers. The `--build` in the final step is what
+re-bakes the bundle from the restored key.
+
 ### Per-country settings
 
 `deploy.sh` reads its configuration from the environment:
