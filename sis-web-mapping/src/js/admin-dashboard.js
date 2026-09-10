@@ -5125,7 +5125,10 @@ class AdminDashboard {
             .map(([v, l]) => `<option value="${v}"${(d.stroke_type || 'solid') === v ? ' selected' : ''}>${l}</option>`).join('')}
         </select></td>
         <td><input type="color" class="admdiv-fill" data-id="${id}" value="${this.escapeHtml(d.fill_color || '#cccccc')}"></td>
-        <td><input type="number" class="admdiv-opacity" data-id="${id}" value="${d.fill_opacity ?? 0}" min="0" max="1" step="0.05" style="width:64px;"></td>
+        <td style="white-space:nowrap;">
+          <input type="range" class="admdiv-opacity" data-id="${id}" value="${d.fill_opacity ?? 0}" min="0" max="1" step="0.05" style="width:70px;" title="${t('a.fillOpacityTip')}">
+          <span class="admdiv-opacity-val" style="font-size:var(--fs-xs);color:#555;min-width:26px;">${d.fill_opacity ?? 0}</span>
+        </td>
         <td>${pub}</td>
         <td>${activeBadge}</td>
         <td><button class="btn btn-sm admdiv-del" data-id="${id}" data-name="${this.escapeHtml(d.name)}" style="background:#dc3545;color:#fff;">${t('a.delete')}</button></td>
@@ -5151,8 +5154,12 @@ class AdminDashboard {
       patch(e.target.dataset.id, { stroke_type: e.target.value })));
     tbody.querySelectorAll('.admdiv-fill').forEach(el => el.addEventListener('change', e =>
       patch(e.target.dataset.id, { fill_color: e.target.value })));
-    tbody.querySelectorAll('.admdiv-opacity').forEach(el => el.addEventListener('change', e =>
-      patch(e.target.dataset.id, { fill_opacity: parseFloat(e.target.value || '0') })));
+    tbody.querySelectorAll('.admdiv-opacity').forEach(el => {
+      const label = el.parentElement.querySelector('.admdiv-opacity-val');
+      el.addEventListener('input', e => { if (label) label.textContent = e.target.value; });
+      el.addEventListener('change', e =>
+        patch(e.target.dataset.id, { fill_opacity: parseFloat(e.target.value || '0') }));
+    });
     tbody.querySelectorAll('.admdiv-pub').forEach(el => el.addEventListener('click', async (e) => {
       await patch(e.currentTarget.dataset.id, { is_published: e.currentTarget.dataset.value === '1' });
       await this.loadAdminDivisions();
