@@ -1547,9 +1547,16 @@ function setupPopup() {
         toggleProfileSelection(code, { scrollIntoView: true });
         return; // Stop here, don't check raster
       } else if (clusterFeatures && clusterFeatures.length > 1) {
-        // Cluster - zoom in
+        // Cluster: zoom in and open the attribute table alongside, so the
+        // profiles coming into view are immediately browsable.
         const extent = clusterFeatures[0].getGeometry().getExtent();
         map.getView().fit(extent, { duration: 500, maxZoom: map.getView().getZoom() + 2 });
+        const panel = document.getElementById('profiles-data-modal');
+        if (!panel || panel.style.display === 'none') {
+          await showVisibleProfilesData();
+          const btn = document.getElementById('profiles-data-btn');
+          if (btn) btn.textContent = t('profiles.hide');
+        }
         return; // Stop here
       }
     }
