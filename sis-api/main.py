@@ -4464,7 +4464,7 @@ async def list_admin_divisions(api_client: dict = Depends(verify_api_key)):
             cur.execute("""
                 SELECT division_id, name, display_order, stroke_color,
                        stroke_width, stroke_type, fill_color, fill_opacity,
-                       feature_count, active_default
+                       feature_count, active_default, min_zoom
                 FROM api.admin_division
                 WHERE is_published
                 ORDER BY display_order, division_id
@@ -4481,7 +4481,7 @@ async def list_admin_divisions_manage(current_user: dict = Depends(get_current_a
                 SELECT division_id, name, display_order, stroke_color,
                        stroke_width, stroke_type, fill_color, fill_opacity,
                        is_published, feature_count, file_name, uploaded_by,
-                       uploaded_at, active_default
+                       uploaded_at, active_default, min_zoom
                 FROM api.admin_division
                 ORDER BY display_order, division_id
             """)
@@ -4596,6 +4596,7 @@ class AdminDivisionUpdate(BaseModel):
     fill_opacity: Optional[float] = None
     is_published: Optional[bool] = None
     active_default: Optional[bool] = None
+    min_zoom: Optional[float] = None
 
 
 @app.patch("/api/admin-divisions/{division_id}")
@@ -4632,6 +4633,12 @@ async def update_admin_division(
         if not (0 <= body.fill_opacity <= 1):
             raise HTTPException(status_code=400, detail="fill_opacity must be 0–1")
         sets.append("fill_opacity = %s"); params.append(body.fill_opacity)
+    if body.min_zoom is not None:
+        if not (0 <= body.min_zoom <= 22):
+            raise HTTPException(status_code=400, detail="min_zoom must be 0-22")
+        # 0 means "always visible" — stored as NULL
+        sets.append("min_zoom = %s")
+        params.append(float(body.min_zoom) if body.min_zoom > 0 else None)
     if body.active_default is not None:
         sets.append("active_default = %s"); params.append(bool(body.active_default))
     if body.is_published is not None:

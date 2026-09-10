@@ -104,6 +104,8 @@
   "a.loadingSettings": "正在加载设置...",
   "a.admdiv.title": "行政区划",
   "a.admdiv.intro": "上传多边形边界图层——每个行政层级一个（例如国家、省、市；层级和名称因国家而异）。接受的格式：GeoJSON（.geojson/.json）、压缩的 Shapefile（.zip）、GeoPackage（.gpkg）或 KML（.kml/.kmz）。使用其他坐标系的文件在声明了 EPSG 代码时会自动重投影为 WGS 84。图层会出现在地图图层列表的“底图图层”下。",
+  "a.admdiv.minZoom": "缩放可见性",
+  "a.admdiv.minZoomTip": "仅当地图缩放级别大于该值时可见（0 = 始终可见）。",
   "a.admdiv.namePh": "图层名称（例如：省）",
   "a.admdiv.upload": "上传图层",
   "a.order": "顺序",

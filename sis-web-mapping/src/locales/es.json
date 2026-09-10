@@ -104,6 +104,8 @@
   "a.loadingSettings": "Cargando configuración...",
   "a.admdiv.title": "Divisiones administrativas",
   "a.admdiv.intro": "Suba capas de límites poligonales, una por nivel administrativo (p. ej. país, provincias, municipios; los niveles y sus nombres varían según el país). Formatos aceptados: GeoJSON (.geojson/.json), Shapefile comprimido (.zip), GeoPackage (.gpkg) o KML (.kml/.kmz). Los archivos en otro sistema de coordenadas se reproyectan automáticamente a WGS 84 cuando declaran su código EPSG. Las capas aparecen en la lista de capas del mapa bajo «Capas base».",
+  "a.admdiv.minZoom": "Visibilidad por zoom",
+  "a.admdiv.minZoomTip": "Visible solo cuando el mapa está más acercado que este nivel (0 = siempre visible).",
   "a.admdiv.namePh": "Nombre de la capa (p. ej. Provincias)",
   "a.admdiv.upload": "Subir capa",
   "a.order": "Orden",

@@ -281,13 +281,14 @@ class AdminDashboard {
                         <th>${t('a.strokeType')}</th>
                         <th>${t('a.fillColour')}</th>
                         <th title="${t('a.fillOpacityTip')}">${t('a.fillOpacity')}</th>
+                        <th title="${t('a.admdiv.minZoomTip')}">${t('a.admdiv.minZoom')}</th>
                         <th title="${t('a.publishedTip')}">${t('a.published')}</th>
                         <th title="${t('a.sp.activeTip')}">${t('a.active')}</th>
                         <th>${t('a.delete')}</th>
                       </tr>
                     </thead>
                     <tbody id="admdiv-tbody">
-                      <tr><td colspan="11" class="loading">${t('a.loadingLayers')}</td></tr>
+                      <tr><td colspan="12" class="loading">${t('a.loadingLayers')}</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -5103,7 +5104,7 @@ class AdminDashboard {
     if (!tbody) return;
     const rows = this.adminDivisions || [];
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="11" class="empty-state">${t('a.admdiv.none')}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="12" class="empty-state">${t('a.admdiv.none')}</td></tr>`;
       return;
     }
     tbody.innerHTML = rows.map(d => {
@@ -5128,6 +5129,10 @@ class AdminDashboard {
         <td style="white-space:nowrap;">
           <input type="range" class="admdiv-opacity" data-id="${id}" value="${d.fill_opacity ?? 0}" min="0" max="1" step="0.05" style="width:70px;" title="${t('a.fillOpacityTip')}">
           <span class="admdiv-opacity-val" style="font-size:var(--fs-xs);color:#555;min-width:26px;">${d.fill_opacity ?? 0}</span>
+        </td>
+        <td style="white-space:nowrap;">
+          <input type="range" class="admdiv-minzoom" data-id="${id}" value="${d.min_zoom ?? 0}" min="0" max="18" step="1" style="width:70px;" title="${t('a.admdiv.minZoomTip')}">
+          <span class="admdiv-minzoom-val" style="font-size:var(--fs-xs);color:#555;min-width:18px;">${d.min_zoom ?? 0}</span>
         </td>
         <td>${pub}</td>
         <td>${activeBadge}</td>
@@ -5154,6 +5159,12 @@ class AdminDashboard {
       patch(e.target.dataset.id, { stroke_type: e.target.value })));
     tbody.querySelectorAll('.admdiv-fill').forEach(el => el.addEventListener('change', e =>
       patch(e.target.dataset.id, { fill_color: e.target.value })));
+    tbody.querySelectorAll('.admdiv-minzoom').forEach(el => {
+      const label = el.parentElement.querySelector('.admdiv-minzoom-val');
+      el.addEventListener('input', e => { if (label) label.textContent = e.target.value; });
+      el.addEventListener('change', e =>
+        patch(e.target.dataset.id, { min_zoom: parseFloat(e.target.value || '0') }));
+    });
     tbody.querySelectorAll('.admdiv-opacity').forEach(el => {
       const label = el.parentElement.querySelector('.admdiv-opacity-val');
       el.addEventListener('input', e => { if (label) label.textContent = e.target.value; });

@@ -295,7 +295,10 @@ async function loadAdminDivisions() {
       source: new VectorSource(),
       style: adminDivisionStyle(d),
       zIndex: 900,
-      visible: false
+      visible: false,
+      // Zoom visibility: render only when zoomed in beyond this level
+      // (NULL/0 = always). The checkbox still controls overall visibility.
+      minZoom: (d.min_zoom != null && d.min_zoom > 0) ? d.min_zoom : -Infinity
     });
     map.addLayer(layer);
     adminDivisionLayers[d.division_id] = { layer, loaded: false };
