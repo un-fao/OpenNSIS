@@ -3545,6 +3545,25 @@ class AdminDashboard {
     }
   }
 
+  async moveAdminDivision(divisionId, dir) {
+    const arr = (this.adminDivisions || []).slice();
+    const i = arr.findIndex(d => d.division_id === divisionId);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= arr.length) return;
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+    try {
+      for (let k = 0; k < arr.length; k++) {
+        if (arr[k].display_order !== k) {
+          await api.updateAdminDivision(arr[k].division_id, { display_order: k });
+        }
+      }
+      await this.loadAdminDivisions();
+      this.renderAdminDivisions();
+    } catch (e) {
+      alert(t('a.err.updateFailed') + e.message);
+    }
+  }
+
   async moveSoilProfileLayer(projectId, dir) {
     const arr = (this.soilProfileLayers || []).slice();
     const i = arr.findIndex(r => r.project_id === projectId);
@@ -5107,7 +5126,7 @@ class AdminDashboard {
       tbody.innerHTML = `<tr><td colspan="12" class="empty-state">${t('a.admdiv.none')}</td></tr>`;
       return;
     }
-    tbody.innerHTML = rows.map(d => {
+    tbody.innerHTML = rows.map((d, rowIdx) => {
       const id = d.division_id;
       const pub = d.is_published
         ? `<span class="badge badge-success admdiv-pub" data-id="${id}" data-value="0" style="cursor:pointer;" title="${t('a.admdiv.pubTip')}">${t('a.yes')}</span>`
@@ -5116,7 +5135,12 @@ class AdminDashboard {
         ? `<span class="badge badge-danger admdiv-active" data-id="${id}" data-value="1" style="cursor:pointer;" title="${t('a.sp.activeOffTip')}">${t('a.no')}</span>`
         : `<span class="badge badge-success admdiv-active" data-id="${id}" data-value="0" style="cursor:pointer;" title="${t('a.sp.activeOnTip')}">${t('a.yes')}</span>`;
       return `<tr data-id="${id}">
-        <td><input type="number" class="admdiv-order" data-id="${id}" value="${d.display_order ?? 0}" min="0" max="999" style="width:64px;"></td>
+        <td style="white-space:nowrap;">
+          <button type="button" class="ord-btn admdiv-move" data-id="${id}" data-dir="-1"
+                  title="${t('a.moveUp')}" ${rowIdx === 0 ? 'disabled' : ''}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 14l6-6 6 6"/></svg></button>
+          <button type="button" class="ord-btn admdiv-move" data-id="${id}" data-dir="1"
+                  title="${t('a.moveDown')}" ${rowIdx === rows.length - 1 ? 'disabled' : ''}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 10l6 6 6-6"/></svg></button>
+        </td>
         <td><input type="text" class="admdiv-name" data-id="${id}" value="${this.escapeHtml(d.name)}" style="min-width:160px;"></td>
         <td>${d.feature_count ?? '-'}</td>
         <td><input type="color" class="admdiv-stroke" data-id="${id}" value="${this.escapeHtml(d.stroke_color || '#444444')}"></td>
@@ -5144,8 +5168,9 @@ class AdminDashboard {
       try { await api.updateAdminDivision(id, payload); }
       catch (e) { alert(t('a.err.updateFailed') + e.message); }
     };
-    tbody.querySelectorAll('.admdiv-order').forEach(el => el.addEventListener('change', e =>
-      patch(e.target.dataset.id, { display_order: parseInt(e.target.value || '0', 10) })));
+    tbody.querySelectorAll('.admdiv-move').forEach(btn => {
+      btn.addEventListener('click', () => this.moveAdminDivision(Number(btn.dataset.id), Number(btn.dataset.dir)));
+    });
     tbody.querySelectorAll('.admdiv-name').forEach(el => el.addEventListener('change', e => {
       const v = e.target.value.trim();
       if (!v) { alert(t('a.nameEmpty')); return; }
