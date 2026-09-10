@@ -5142,7 +5142,7 @@ class AdminDashboard {
           <button type="button" class="ord-btn admdiv-move" data-id="${id}" data-dir="1"
                   title="${t('a.moveDown')}" ${rowIdx === rows.length - 1 ? 'disabled' : ''}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 10l6 6 6-6"/></svg></button>
         </td>
-        <td><input type="text" class="admdiv-name" data-id="${id}" value="${this.escapeHtml(d.name)}" style="min-width:160px;"></td>
+        <td><input type="text" class="admdiv-name" data-id="${id}" value="${this.escapeHtml(d.name)}" size="${Math.min(Math.max((d.name || '').length + 2, 8), 30)}"></td>
         <td>${d.feature_count ?? '-'}</td>
         <td><input type="color" class="admdiv-stroke" data-id="${id}" value="${this.escapeHtml(d.stroke_color || '#444444')}"></td>
         <td><input type="number" class="admdiv-width" data-id="${id}" value="${d.stroke_width ?? 1.5}" min="0" max="20" step="0.5" style="width:64px;"></td>
@@ -5176,6 +5176,9 @@ class AdminDashboard {
     tbody.querySelectorAll('.admdiv-move').forEach(btn => {
       btn.addEventListener('click', () => this.moveAdminDivision(Number(btn.dataset.id), Number(btn.dataset.dir)));
     });
+    tbody.querySelectorAll('.admdiv-name').forEach(el => el.addEventListener('input', e => {
+      e.target.size = Math.min(Math.max(e.target.value.length + 2, 8), 30);
+    }));
     tbody.querySelectorAll('.admdiv-name').forEach(el => el.addEventListener('change', e => {
       const v = e.target.value.trim();
       if (!v) { alert(t('a.nameEmpty')); return; }
