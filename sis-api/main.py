@@ -4464,7 +4464,7 @@ async def list_admin_divisions(api_client: dict = Depends(verify_api_key)):
             cur.execute("""
                 SELECT division_id, name, display_order, stroke_color,
                        stroke_width, stroke_type, fill_color, fill_opacity,
-                       feature_count
+                       feature_count, active_default
                 FROM api.admin_division
                 WHERE is_published
                 ORDER BY display_order, division_id
@@ -4481,7 +4481,7 @@ async def list_admin_divisions_manage(current_user: dict = Depends(get_current_a
                 SELECT division_id, name, display_order, stroke_color,
                        stroke_width, stroke_type, fill_color, fill_opacity,
                        is_published, feature_count, file_name, uploaded_by,
-                       uploaded_at
+                       uploaded_at, active_default
                 FROM api.admin_division
                 ORDER BY display_order, division_id
             """)
@@ -4595,6 +4595,7 @@ class AdminDivisionUpdate(BaseModel):
     fill_color: Optional[str] = None
     fill_opacity: Optional[float] = None
     is_published: Optional[bool] = None
+    active_default: Optional[bool] = None
 
 
 @app.patch("/api/admin-divisions/{division_id}")
@@ -4631,6 +4632,8 @@ async def update_admin_division(
         if not (0 <= body.fill_opacity <= 1):
             raise HTTPException(status_code=400, detail="fill_opacity must be 0–1")
         sets.append("fill_opacity = %s"); params.append(body.fill_opacity)
+    if body.active_default is not None:
+        sets.append("active_default = %s"); params.append(bool(body.active_default))
     if body.is_published is not None:
         sets.append("is_published = %s"); params.append(bool(body.is_published))
     if not sets:

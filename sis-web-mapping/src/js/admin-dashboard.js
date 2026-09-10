@@ -282,11 +282,12 @@ class AdminDashboard {
                         <th>${t('a.fillColour')}</th>
                         <th title="${t('a.fillOpacityTip')}">${t('a.fillOpacity')}</th>
                         <th title="${t('a.publishedTip')}">${t('a.published')}</th>
+                        <th title="${t('a.sp.activeTip')}">${t('a.active')}</th>
                         <th>${t('a.delete')}</th>
                       </tr>
                     </thead>
                     <tbody id="admdiv-tbody">
-                      <tr><td colspan="10" class="loading">${t('a.loadingLayers')}</td></tr>
+                      <tr><td colspan="11" class="loading">${t('a.loadingLayers')}</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -5102,7 +5103,7 @@ class AdminDashboard {
     if (!tbody) return;
     const rows = this.adminDivisions || [];
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="10" class="empty-state">${t('a.admdiv.none')}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="11" class="empty-state">${t('a.admdiv.none')}</td></tr>`;
       return;
     }
     tbody.innerHTML = rows.map(d => {
@@ -5110,6 +5111,9 @@ class AdminDashboard {
       const pub = d.is_published
         ? `<span class="badge badge-success admdiv-pub" data-id="${id}" data-value="0" style="cursor:pointer;" title="${t('a.admdiv.pubTip')}">${t('a.yes')}</span>`
         : `<span class="badge badge-danger admdiv-pub" data-id="${id}" data-value="1" style="cursor:pointer;" title="${t('a.admdiv.unpubTip')}">${t('a.no')}</span>`;
+      const activeBadge = (d.active_default === false)
+        ? `<span class="badge badge-danger admdiv-active" data-id="${id}" data-value="1" style="cursor:pointer;" title="${t('a.sp.activeOffTip')}">${t('a.no')}</span>`
+        : `<span class="badge badge-success admdiv-active" data-id="${id}" data-value="0" style="cursor:pointer;" title="${t('a.sp.activeOnTip')}">${t('a.yes')}</span>`;
       return `<tr data-id="${id}">
         <td><input type="number" class="admdiv-order" data-id="${id}" value="${d.display_order ?? 0}" min="0" max="999" style="width:64px;"></td>
         <td><input type="text" class="admdiv-name" data-id="${id}" value="${this.escapeHtml(d.name)}" style="min-width:160px;"></td>
@@ -5123,6 +5127,7 @@ class AdminDashboard {
         <td><input type="color" class="admdiv-fill" data-id="${id}" value="${this.escapeHtml(d.fill_color || '#cccccc')}"></td>
         <td><input type="number" class="admdiv-opacity" data-id="${id}" value="${d.fill_opacity ?? 0}" min="0" max="1" step="0.05" style="width:64px;"></td>
         <td>${pub}</td>
+        <td>${activeBadge}</td>
         <td><button class="btn btn-sm admdiv-del" data-id="${id}" data-name="${this.escapeHtml(d.name)}" style="background:#dc3545;color:#fff;">${t('a.delete')}</button></td>
       </tr>`;
     }).join('');
@@ -5150,6 +5155,11 @@ class AdminDashboard {
       patch(e.target.dataset.id, { fill_opacity: parseFloat(e.target.value || '0') })));
     tbody.querySelectorAll('.admdiv-pub').forEach(el => el.addEventListener('click', async (e) => {
       await patch(e.currentTarget.dataset.id, { is_published: e.currentTarget.dataset.value === '1' });
+      await this.loadAdminDivisions();
+      this.renderAdminDivisions();
+    }));
+    tbody.querySelectorAll('.admdiv-active').forEach(el => el.addEventListener('click', async (e) => {
+      await patch(e.currentTarget.dataset.id, { active_default: e.currentTarget.dataset.value === '1' });
       await this.loadAdminDivisions();
       this.renderAdminDivisions();
     }));

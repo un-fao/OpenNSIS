@@ -318,10 +318,11 @@ async function loadAdminDivisions() {
     };
     cb.addEventListener('change', (e) => applyVisibility(e.target.checked));
 
-    // Published layers start active on the map. Deliberately not awaited —
-    // the geometry downloads must not delay app start-up.
-    cb.checked = true;
-    applyVisibility(true);
+    // Published layers start ticked unless the admin set Active = No.
+    // Deliberately not awaited — geometry downloads must not delay start-up.
+    const startActive = d.active_default !== false;
+    cb.checked = startActive;
+    if (startActive) applyVisibility(true);
   });
 
   contentDiv.insertBefore(frag, contentDiv.firstChild);
