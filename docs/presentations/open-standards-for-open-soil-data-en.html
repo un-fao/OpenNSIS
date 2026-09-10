@@ -610,6 +610,13 @@ curl -fsSL https://raw.githubusercontent.com/un-fao/<br>OpenNSIS/main/ops/single
     else if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();show(cur-1);}
     else if(e.key==='Home'){show(0);} else if(e.key==='End'){show(slides.length-1);}
   });
+  let wheelLock=0;
+  addEventListener('wheel',e=>{
+    const now=Date.now();
+    if(now-wheelLock<400||Math.abs(e.deltaY)<10)return;
+    wheelLock=now;
+    show(cur+(e.deltaY>0?1:-1));
+  },{passive:true});
   rail.forEach((b)=>b.addEventListener('click',()=>show(+b.dataset.go)));
   let x0=null;
   addEventListener('touchstart',e=>{x0=e.touches[0].clientX},{passive:true});
