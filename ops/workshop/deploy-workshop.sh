@@ -135,15 +135,6 @@ for f in "$PROJECT_DIR"/sis-database/migrations/*.sql; do
 done
 shopt -u nullglob
 
-# Colour-ramp fix for soil_data.class()/map(): correct the mapped_property
-# JOIN (was a predicate-less cross join → wrong colours) and interpolate the
-# ramp through HSV so green→red renders via yellow, not brown. Applied here
-# until it is regenerated into the dump itself.
-if [[ -f "$PROJECT_DIR/sis-database/fix_class_hsv_ramp.sql" ]]; then
-  dc cp "$PROJECT_DIR/sis-database/fix_class_hsv_ramp.sql" sis-database:/tmp/fix_ramp.sql
-  dx sis-database psql -d sis -U sis -f /tmp/fix_ramp.sql
-fi
-
 # Rotate the read-only federation role's password to the .env value.
 dx sis-database psql -d sis -U sis -v glosis_pw="$POSTGRES_GLOSIS_PASSWORD" \
   <<< "ALTER ROLE sis_glosis WITH PASSWORD :'glosis_pw';"
@@ -160,11 +151,18 @@ COUNTRY_LAT=$(echo "$COUNTRY_CENTROID" | cut -d'|' -f2)
 [ -z "$COUNTRY_LAT" ] && COUNTRY_LAT="0"
 [ -z "$COUNTRY_LON" ] && COUNTRY_LON="0"
 
+# Public WMS base URL advertised in mapfile capabilities (migration 019) —
+# external WMS clients (QGIS) follow it, so it must carry this instance's
+# public IP and port. Best-effort IP detection; fix in Settings if wrong.
+PUB_IP=$(curl -fs -4 --max-time 5 https://api.ipify.org 2>/dev/null || hostname -I | awk '{print $1}')
+WMS_PUBLIC_URL="http://${PUB_IP}:${HOST_PORT}/mapserver"
+
 # App settings. DOWNLOAD_BASE_URL stays relative (/downloads/) → resolves
 # against this country's own origin:port.
 dx sis-database psql -d sis -U sis -v ON_ERROR_STOP=1 \
   -v title="Soil Information System of $COUNTRY_NAME" \
-  -v lat="$COUNTRY_LAT" -v lon="$COUNTRY_LON" <<EOF
+  -v lat="$COUNTRY_LAT" -v lon="$COUNTRY_LON" \
+  -v wmsurl="$WMS_PUBLIC_URL" <<EOF
 INSERT INTO api.setting(key, value) VALUES
  ('COUNTRY_CODE', '$COUNTRY'),
  ('ORG_LOGO_URL','$ORG_LOGO_URL'),
@@ -175,7 +173,8 @@ INSERT INTO api.setting(key, value) VALUES
  ('LONGITUDE', :'lon'),
  ('ZOOM','9'),
  ('BASE_MAP_DEFAULT','esri-imagery'),
- ('DOWNLOAD_BASE_URL','/downloads/')
+ ('DOWNLOAD_BASE_URL','/downloads/'),
+ ('WMS_PUBLIC_URL', :'wmsurl')
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 EOF
 

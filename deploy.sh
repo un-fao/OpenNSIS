@@ -178,6 +178,17 @@ COUNTRY_LAT=$(echo "$COUNTRY_CENTROID" | cut -d'|' -f2)
 [ -z "$COUNTRY_LAT" ] && COUNTRY_LAT="0"
 [ -z "$COUNTRY_LON" ] && COUNTRY_LON="0"
 
+# Public WMS base URL advertised in mapfile capabilities (migration 019) so
+# external WMS clients (QGIS) reach the right address through the proxy.
+# With a domain -> https://<domain>/mapserver; otherwise best-effort public IP
+# (correct it later under Administration -> Settings if the guess is wrong).
+if [[ -n "${DOMAIN:-}" ]]; then
+  WMS_PUBLIC_URL="https://${DOMAIN}/mapserver"
+else
+  PUB_IP=$(curl -fs -4 --max-time 5 https://api.ipify.org 2>/dev/null || hostname -I | awk '{print $1}')
+  WMS_PUBLIC_URL="http://${PUB_IP}/mapserver"
+fi
+
 # Add sis-Web-mapping applications settings.
 # COUNTRY_CODE is the ISO 3166-1 alpha-2 code (BT, PH, VN, …) taken from the
 # COUNTRY var at the top of this script.
@@ -186,6 +197,7 @@ docker exec -i sis-database psql -d sis -U sis \
   -v title="Soil Information System of $COUNTRY_NAME" \
   -v lat="$COUNTRY_LAT" \
   -v lon="$COUNTRY_LON" \
+  -v wmsurl="$WMS_PUBLIC_URL" \
   <<EOF
 INSERT INTO api.setting(key, value) VALUES
  ('COUNTRY_CODE', '$COUNTRY'),
@@ -197,7 +209,8 @@ INSERT INTO api.setting(key, value) VALUES
  ('LONGITUDE', :'lon'),
  ('ZOOM','9'),
  ('BASE_MAP_DEFAULT','esri-imagery'),
- ('DOWNLOAD_BASE_URL','/downloads/')
+ ('DOWNLOAD_BASE_URL','/downloads/'),
+ ('WMS_PUBLIC_URL', :'wmsurl')
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 EOF
 
