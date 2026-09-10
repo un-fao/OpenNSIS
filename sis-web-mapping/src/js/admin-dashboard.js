@@ -281,6 +281,7 @@ class AdminDashboard {
                         <th>${t('a.strokeType')}</th>
                         <th>${t('a.fillColour')}</th>
                         <th title="${t('a.fillOpacityTip')}">${t('a.fillOpacity')}</th>
+                        <th title="${t('a.admdiv.labelTip')}">${t('a.admdiv.label')}</th>
                         <th title="${t('a.admdiv.minZoomTip')}">${t('a.admdiv.minZoom')}</th>
                         <th title="${t('a.publishedTip')}">${t('a.published')}</th>
                         <th title="${t('a.sp.activeTip')}">${t('a.active')}</th>
@@ -288,7 +289,7 @@ class AdminDashboard {
                       </tr>
                     </thead>
                     <tbody id="admdiv-tbody">
-                      <tr><td colspan="12" class="loading">${t('a.loadingLayers')}</td></tr>
+                      <tr><td colspan="13" class="loading">${t('a.loadingLayers')}</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -5123,7 +5124,7 @@ class AdminDashboard {
     if (!tbody) return;
     const rows = this.adminDivisions || [];
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="12" class="empty-state">${t('a.admdiv.none')}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="13" class="empty-state">${t('a.admdiv.none')}</td></tr>`;
       return;
     }
     tbody.innerHTML = rows.map((d, rowIdx) => {
@@ -5154,6 +5155,10 @@ class AdminDashboard {
           <input type="range" class="admdiv-opacity" data-id="${id}" value="${d.fill_opacity ?? 0}" min="0" max="1" step="0.05" style="width:70px;" title="${t('a.fillOpacityTip')}">
           <span class="admdiv-opacity-val" style="font-size:var(--fs-xs);color:#555;min-width:26px;">${d.fill_opacity ?? 0}</span>
         </td>
+        <td><select class="admdiv-label" data-id="${id}" title="${t('a.admdiv.labelTip')}" style="max-width:120px;">
+          <option value="">${t('a.admdiv.labelNone')}</option>
+          ${(d.attribute_keys || []).map(k => `<option value="${this.escapeHtml(k)}"${d.label_attribute === k ? ' selected' : ''}>${this.escapeHtml(k)}</option>`).join('')}
+        </select></td>
         <td style="white-space:nowrap;">
           <input type="range" class="admdiv-minzoom" data-id="${id}" value="${d.min_zoom ?? 0}" min="0" max="18" step="1" style="width:70px;" title="${t('a.admdiv.minZoomTip')}">
           <span class="admdiv-minzoom-val" style="font-size:var(--fs-xs);color:#555;min-width:18px;">${d.min_zoom ?? 0}</span>
@@ -5184,6 +5189,8 @@ class AdminDashboard {
       patch(e.target.dataset.id, { stroke_type: e.target.value })));
     tbody.querySelectorAll('.admdiv-fill').forEach(el => el.addEventListener('change', e =>
       patch(e.target.dataset.id, { fill_color: e.target.value })));
+    tbody.querySelectorAll('.admdiv-label').forEach(el => el.addEventListener('change', e =>
+      patch(e.target.dataset.id, { label_attribute: e.target.value })));
     tbody.querySelectorAll('.admdiv-minzoom').forEach(el => {
       const label = el.parentElement.querySelector('.admdiv-minzoom-val');
       el.addEventListener('input', e => { if (label) label.textContent = e.target.value; });

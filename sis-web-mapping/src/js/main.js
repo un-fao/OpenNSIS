@@ -242,7 +242,7 @@ function adminDivisionLineDash(strokeType, width) {
 }
 
 function adminDivisionStyle(d) {
-  return new Style({
+  const base = new Style({
     stroke: new Stroke({
       color: d.stroke_color || '#444444',
       width: Number(d.stroke_width) || 1.5,
@@ -254,6 +254,27 @@ function adminDivisionStyle(d) {
                        d.fill_opacity == null ? 0 : Number(d.fill_opacity))
     })
   });
+  if (!d.label_attribute) return base;
+  // Text label per feature from the admin-chosen attribute; dark text with a
+  // light halo stays readable over any basemap. Cached per value.
+  const cache = {};
+  return (feature) => {
+    const v = feature.get(d.label_attribute);
+    if (v == null || v === '') return base;
+    const key = String(v);
+    if (!cache[key]) {
+      cache[key] = [base, new Style({
+        text: new Text({
+          text: key,
+          font: '12px system-ui, sans-serif',
+          fill: new Fill({ color: '#2b2b2b' }),
+          stroke: new Stroke({ color: 'rgba(255,255,255,0.85)', width: 3 }),
+          overflow: false
+        })
+      })];
+    }
+    return cache[key];
+  };
 }
 
 async function loadAdminDivisions() {
