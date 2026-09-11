@@ -148,7 +148,7 @@
     <button class="hz c" data-go="12">C<small>GloSIS</small></button>
     <button class="hz r" data-go="14">R<small>OpenNSIS</small></button>
   </nav>
-  <div id="counter">1 / 21</div>
+  <div id="counter">1 / 22</div>
 
   <!-- 1 · TITLE -->
   <section class="slide">
@@ -505,6 +505,43 @@ curl -fsSL https://raw.githubusercontent.com/un-fao/<br>OpenNSIS/main/ops/single
     <div class="cap"><b>El visor de mapas, como lo ve un visitante</b> — rásteres publicados con leyendas en vivo, puntos de perfiles de suelo, y cada capa es a la vez un servicio WMS.</div>
   </section>
 
+  <!-- 16c · FEATURES -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-r)"></span>R · OpenNSIS</p>
+    <h2>Qué obtienes</h2>
+    <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-content:center;">
+      <div style="background:#FFFDF9;border:1px solid var(--line);border-radius:8px;padding:12px 16px;">
+          <h3 style="font-size:17px;margin:0 0 4px;color:var(--hz-a);">Cartografía web</h3>
+          <p style="font-size:14px;line-height:1.35;">Visor público de rásteres de suelo, perfiles con observaciones y capas de límites.</p>
+        </div><div style="background:#FFFDF9;border:1px solid var(--line);border-radius:8px;padding:12px 16px;">
+          <h3 style="font-size:17px;margin:0 0 4px;color:var(--hz-a);">ETL de perfiles</h3>
+          <p style="font-size:14px;line-height:1.35;">Carga de CSV, mapeo de columnas, validación por reglas, ingestión en un clic.</p>
+        </div><div style="background:#FFFDF9;border:1px solid var(--line);border-radius:8px;padding:12px 16px;">
+          <h3 style="font-size:17px;margin:0 0 4px;color:var(--hz-a);">Calculadora ráster</h3>
+          <p style="font-size:14px;line-height:1.35;">Mapas de aptitud con recetas de umbrales sobre rásteres publicados.</p>
+        </div><div style="background:#FFFDF9;border:1px solid var(--line);border-radius:8px;padding:12px 16px;">
+          <h3 style="font-size:17px;margin:0 0 4px;color:var(--hz-a);">Catálogo de metadatos</h3>
+          <p style="font-size:14px;line-height:1.35;">Registros ISO 19115/19139 automáticos, servidos por pyCSW.</p>
+        </div><div style="background:#FFFDF9;border:1px solid var(--line);border-radius:8px;padding:12px 16px;">
+          <h3 style="font-size:17px;margin:0 0 4px;color:var(--hz-a);">Federación GloSIS</h3>
+          <p style="font-size:14px;line-height:1.35;">Puntos de acceso dedicados — compartir en los términos del propio país.</p>
+        </div><div style="background:#FFFDF9;border:1px solid var(--line);border-radius:8px;padding:12px 16px;">
+          <h3 style="font-size:17px;margin:0 0 4px;color:var(--hz-a);">Control de intercambio</h3>
+          <p style="font-size:14px;line-height:1.35;">Interruptores por proyecto, difuminado espacial, límites públicos.</p>
+        </div><div style="background:#FFFDF9;border:1px solid var(--line);border-radius:8px;padding:12px 16px;">
+          <h3 style="font-size:17px;margin:0 0 4px;color:var(--hz-a);">Divisiones administrativas</h3>
+          <p style="font-size:14px;line-height:1.35;">Capas de límites con estilo desde GeoJSON, Shapefile, GeoPackage o KML.</p>
+        </div><div style="background:#FFFDF9;border:1px solid var(--line);border-radius:8px;padding:12px 16px;">
+          <h3 style="font-size:17px;margin:0 0 4px;color:var(--hz-a);">Seis idiomas</h3>
+          <p style="font-size:14px;line-height:1.35;">English · Español · Français · Português · Русский · 中文</p>
+        </div><div style="background:#FFFDF9;border:1px solid var(--line);border-radius:8px;padding:12px 16px;">
+          <h3 style="font-size:17px;margin:0 0 4px;color:var(--hz-a);">Actualización autoservicio</h3>
+          <p style="font-size:14px;line-height:1.35;">Un comando en el servidor — los datos siempre se conservan.</p>
+        </div>
+    </div>
+    <footer class="src">El recorrido completo: <a href="https://un-fao.github.io/OpenNSIS/#features" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">un-fao.github.io/OpenNSIS/#features</a></footer>
+  </section>
+
   <!-- 14 · OPENNSIS: ARCHITECTURE -->
   <section class="slide">
     <p class="eyebrow"><span class="hzchip" style="background:var(--hz-r)"></span>R · OpenNSIS</p>
@@ -591,7 +628,7 @@ curl -fsSL https://raw.githubusercontent.com/un-fao/<br>OpenNSIS/main/ops/single
   const slides=[...document.querySelectorAll('.slide')];
   const counter=document.getElementById('counter');
   const rail=[...document.querySelectorAll('#rail .hz')];
-  const sect=[[0,2],[3,3],[4,6],[7,11],[12,13],[14,20]]; // rail button -> slide range
+  const sect=[[0,2],[3,3],[4,6],[7,11],[12,13],[14,21]]; // rail button -> slide range
   let cur=0;
   function show(i){
     cur=Math.max(0,Math.min(slides.length-1,i));
