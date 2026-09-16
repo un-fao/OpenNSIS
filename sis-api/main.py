@@ -4210,6 +4210,33 @@ def _geojson_epsg(data) -> int:
         f"('{name}'). Reproject the file to EPSG:4326 and re-upload."))
 
 
+def _crs_from_wkt(wkt: str):
+    """rasterio/PROJ CRS parsed from WKT, or None. PROJ's alias tables also
+    identify ESRI-flavoured WKT — the kind ArcGIS (and QGIS's "ESRI WKT"
+    export) writes into .prj files, which carries no AUTHORITY node."""
+    if not (wkt or "").strip():
+        return None
+    try:
+        from rasterio.crs import CRS as _CRS
+        try:
+            return _CRS.from_wkt(wkt, morph_from_esri_dialect=True)
+        except TypeError:              # rasterio build without the keyword
+            return _CRS.from_wkt(wkt)
+    except Exception:
+        return None
+
+
+def _epsg_of_crs(crs):
+    """EPSG code of a rasterio CRS, or None when PROJ cannot match one."""
+    if crs is None:
+        return None
+    try:
+        code = crs.to_epsg()
+        return int(code) if code else None
+    except Exception:
+        return None
+
+
 def _admin_div_features_from_geojson(data) -> list:
     """[(properties_json, geometry_json), …] from a GeoJSON FeatureCollection,
     bare Feature or bare geometry. Non-polygon features are skipped."""
@@ -4319,8 +4346,11 @@ def _admin_div_kml_from_kmz(contents: bytes) -> bytes:
 def _admin_div_features_from_zip(contents: bytes) -> tuple:
     """(features, epsg) from a zipped ESRI Shapefile, read with pyshp (pure
     Python — no GDAL vector stack in the image). The EPSG code comes from the
-    .prj's AUTHORITY clause; a .prj that declares neither an EPSG code nor
-    plain WGS 84 is refused, since the CRS cannot be identified."""
+    .prj's AUTHORITY clause; failing that, PROJ (via rasterio) identifies the
+    WKT — covering ESRI-flavoured .prj files, which never carry AUTHORITY
+    nodes. A CRS that PROJ can parse but not match to an EPSG code is
+    reprojected here, feature by feature; only a .prj that cannot be
+    identified at all is refused."""
     import shapefile as _shp   # pyshp
     try:
         zf = zipfile.ZipFile(io.BytesIO(contents))
@@ -4332,6 +4362,7 @@ def _admin_div_features_from_zip(contents: bytes) -> tuple:
         raise HTTPException(status_code=400,
                             detail="The zip must contain .shp and .dbf files")
     epsg = 4326   # no .prj → assume WGS 84; the extent check is the backstop
+    src_crs = None   # set when the CRS is reprojectable but has no EPSG code
     if "prj" in names:
         prj = zf.read(names["prj"]).decode("utf-8", "ignore")
         # The whole-CRS authority is the last AUTHORITY entry in the WKT
@@ -4339,19 +4370,29 @@ def _admin_div_features_from_zip(contents: bytes) -> tuple:
         codes = re.findall(r'AUTHORITY\[\s*"EPSG"\s*,\s*"?(\d+)"?\s*\]', prj, re.IGNORECASE)
         if codes:
             epsg = int(codes[-1])
-        elif "PROJCS" in prj or not any(m in prj for m in ("WGS_1984", "WGS 84", "WGS84", "4326")):
-            raise HTTPException(status_code=400, detail=(
-                "Could not determine the shapefile's EPSG code — its .prj "
-                "declares no EPSG authority. Reproject the file to EPSG:4326 "
-                "and re-upload."))
+        else:
+            crs = _crs_from_wkt(prj)
+            code = _epsg_of_crs(crs)
+            if code:
+                epsg = code
+            elif crs is not None:
+                src_crs = crs
+            elif "PROJCS" in prj or not any(m in prj for m in ("WGS_1984", "WGS 84", "WGS84", "4326")):
+                raise HTTPException(status_code=400, detail=(
+                    "Could not identify the shapefile's coordinate system from "
+                    "its .prj. Reproject the file to EPSG:4326 and re-upload."))
     try:
         rdr = _shp.Reader(shp=io.BytesIO(zf.read(names["shp"])),
                           dbf=io.BytesIO(zf.read(names["dbf"])),
                           shx=io.BytesIO(zf.read(names["shx"])) if "shx" in names else None)
+        if src_crs is not None:
+            from rasterio.warp import transform_geom as _transform_geom
         out = []
         for sr in rdr.iterShapeRecords():
             gi = sr.shape.__geo_interface__
             if gi.get("type") in ADMIN_DIV_GEOM_TYPES:
+                if src_crs is not None:
+                    gi = _transform_geom(src_crs, "EPSG:4326", gi)
                 out.append((json.dumps(sr.record.as_dict(), default=str),
                             json.dumps(gi)))
         return out, epsg
@@ -4363,8 +4404,9 @@ def _admin_div_features_from_gpkg(contents: bytes) -> tuple:
     """(features, epsg) from a GeoPackage. A GeoPackage is SQLite, which the
     stdlib reads — no GDAL needed; PostGIS parses the WKB after the GeoPackage
     binary header is stripped. Exactly one polygon layer is expected; a
-    non-4326 EPSG is returned for the caller to reproject, an undefined or
-    non-EPSG CRS is refused."""
+    non-4326 EPSG is returned for the caller to reproject. A non-EPSG srs
+    entry is identified by PROJ from its WKT definition; only an undefined
+    or unidentifiable CRS is refused."""
     import sqlite3
     import struct
     import tempfile
@@ -4425,17 +4467,23 @@ def _admin_div_features_from_gpkg(contents: bytes) -> tuple:
                         f"Reproject the file to EPSG:4326 and re-upload."))
                 try:
                     srs = con.execute(
-                        "SELECT organization, organization_coordsys_id "
+                        "SELECT organization, organization_coordsys_id, definition "
                         "FROM gpkg_spatial_ref_sys WHERE srs_id = ?", (srs_id,)).fetchone()
                 except sqlite3.Error:
                     srs = None
                 if srs is not None and str(srs["organization"] or "").upper() != "EPSG":
-                    raise HTTPException(status_code=400, detail=(
-                        f"Layer '{layer['table_name']}' uses a non-EPSG CRS "
-                        f"('{srs['organization']}:{srs['organization_coordsys_id']}') — "
-                        f"the EPSG code is unknown. Reproject the file to "
-                        f"EPSG:4326 and re-upload."))
-                epsg = int(srs["organization_coordsys_id"]) if srs is not None else srs_id
+                    # Non-EPSG registration (e.g. ESRI:102100): let PROJ
+                    # identify the stored WKT definition instead.
+                    code = _epsg_of_crs(_crs_from_wkt(srs["definition"] or ""))
+                    if not code:
+                        raise HTTPException(status_code=400, detail=(
+                            f"Layer '{layer['table_name']}' uses a CRS this system "
+                            f"cannot identify "
+                            f"('{srs['organization']}:{srs['organization_coordsys_id']}') — "
+                            f"reproject the file to EPSG:4326 and re-upload."))
+                    epsg = code
+                else:
+                    epsg = int(srs["organization_coordsys_id"]) if srs is not None else srs_id
             tbl = layer["table_name"].replace('"', '""')
             geom_col = layer["column_name"]
             out = []
