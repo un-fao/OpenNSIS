@@ -592,7 +592,6 @@ function switchLayer(layerConfig) {
   const opacitySlider = document.getElementById('opacity');
   if (opacitySlider) {
     opacitySlider.value = layerConfig.default_opacity == null ? 1 : Number(layerConfig.default_opacity);
-    updateOpacityLabel();
   }
 
   // Show legend (dynamic when the layer ships legend classes).
@@ -1751,8 +1750,11 @@ function setupControls() {
     if (activeLayer) {
       activeLayer.setOpacity(parseFloat(e.target.value));
     }
-    updateOpacityLabel();
+    showOpacityTip();
   });
+  opacitySlider.addEventListener('change', hideOpacityTip);
+  opacitySlider.addEventListener('pointerup', hideOpacityTip);
+  opacitySlider.addEventListener('blur', hideOpacityTip);
 
   // Zoom controls
   document.getElementById('zoom-in').addEventListener('click', () => {
@@ -1953,10 +1955,33 @@ function showLoading(show) {
 }
 
 function updateOpacityLabel() {
-  const slider = document.getElementById('opacity');
   const label = document.querySelector('label[for="opacity"]');
-  if (!slider || !label) return;
-  label.textContent = t('layers.opacity') + ' \u00b7 ' + Math.round(parseFloat(slider.value) * 100) + '%';
+  if (label) label.textContent = t('layers.opacity');
+}
+
+/* Show the percentage as a bubble over the slider thumb while dragging. */
+let opacityTipTimer = null;
+function showOpacityTip() {
+  const slider = document.getElementById('opacity');
+  const tip = document.getElementById('opacity-tip');
+  if (!slider || !tip) return;
+  const val = parseFloat(slider.value);
+  tip.textContent = Math.round(val * 100) + '%';
+  const ctrl = slider.closest('.opacity-control');
+  const sRect = slider.getBoundingClientRect();
+  const cRect = ctrl.getBoundingClientRect();
+  const thumb = 14; // native range thumb is ~14px in the major engines
+  const x = (sRect.left - cRect.left) + thumb / 2 + val * (sRect.width - thumb);
+  tip.style.left = x + 'px';
+  tip.style.top = (sRect.top - cRect.top - 22) + 'px';
+  tip.style.display = 'block';
+  clearTimeout(opacityTipTimer);
+  opacityTipTimer = setTimeout(hideOpacityTip, 900);
+}
+function hideOpacityTip() {
+  clearTimeout(opacityTipTimer);
+  const tip = document.getElementById('opacity-tip');
+  if (tip) tip.style.display = 'none';
 }
 
 function applyStaticTranslations() {
