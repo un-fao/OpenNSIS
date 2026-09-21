@@ -429,8 +429,6 @@ body.light-basemap .header {
     font-size: var(--fs-xs) !important;
     color: var(--color-text-muted);
     margin-bottom: var(--sp-2) !important;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
 }
 
 .opacity-control input {

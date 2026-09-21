@@ -592,6 +592,7 @@ function switchLayer(layerConfig) {
   const opacitySlider = document.getElementById('opacity');
   if (opacitySlider) {
     opacitySlider.value = layerConfig.default_opacity == null ? 1 : Number(layerConfig.default_opacity);
+    updateOpacityLabel();
   }
 
   // Show legend (dynamic when the layer ships legend classes).
@@ -1750,6 +1751,7 @@ function setupControls() {
     if (activeLayer) {
       activeLayer.setOpacity(parseFloat(e.target.value));
     }
+    updateOpacityLabel();
   });
 
   // Zoom controls
@@ -1950,12 +1952,18 @@ function showLoading(show) {
   }
 }
 
+function updateOpacityLabel() {
+  const slider = document.getElementById('opacity');
+  const label = document.querySelector('label[for="opacity"]');
+  if (!slider || !label) return;
+  label.textContent = t('layers.opacity') + ' \u00b7 ' + Math.round(parseFloat(slider.value) * 100) + '%';
+}
+
 function applyStaticTranslations() {
   // The few strings that live in index.html rather than JS templates.
   const loading = document.querySelector('#loading-overlay div');
   if (loading) loading.textContent = t('app.loading');
-  const opacity = document.querySelector('label[for="opacity"]');
-  if (opacity) opacity.textContent = t('layers.opacity');
+  updateOpacityLabel();
 }
 
 function showError(message) {
