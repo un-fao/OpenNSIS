@@ -510,5 +510,6 @@
   "a.moveUp": "Subir",
   "a.moveDown": "Descer",
   "theme.dark": "Modo escuro",
-  "theme.light": "Modo claro"
+  "theme.light": "Modo claro",
+  "a.val.missingTokens": "{n} célula(s) com um marcador de valor em falta (NA, NaN, N/A, null) tratadas como vazias"
 }

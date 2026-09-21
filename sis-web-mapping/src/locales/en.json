@@ -510,5 +510,6 @@
   "a.moveUp": "Move up",
   "a.moveDown": "Move down",
   "theme.dark": "Dark mode",
-  "theme.light": "Light mode"
+  "theme.light": "Light mode",
+  "a.val.missingTokens": "{n} cell(s) with a missing-value token (NA, NaN, N/A, null) treated as empty"
 }

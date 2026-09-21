@@ -510,5 +510,6 @@
   "a.moveUp": "Выше",
   "a.moveDown": "Ниже",
   "theme.dark": "Тёмная тема",
-  "theme.light": "Светлая тема"
+  "theme.light": "Светлая тема",
+  "a.val.missingTokens": "{n} ячеек с обозначением пропущенного значения (NA, NaN, N/A, null) обработаны как пустые"
 }

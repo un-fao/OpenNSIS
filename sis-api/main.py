@@ -3035,13 +3035,18 @@ async def ingest_dataset(
             if not rows:
                 raise HTTPException(status_code=400, detail="No data rows in staging table")
 
-            # Helper to get a value from a row via mapping
+            # Helper to get a value from a row via mapping. Non-text
+            # destinations also treat the recognised missing tokens (NA, NaN,
+            # N/A, null) as empty — same policy as validate_dataset, so a file
+            # that validated clean can never crash a numeric cast here.
             def get_val(row, table, col):
                 info = col_map.get(table, {}).get(col)
                 if not info:
                     return None
                 v = row.get(info["csv_col"])
                 if v is None or v == "":
+                    return None
+                if (table, col) in ETL_TOKEN_NULL_DESTS and etl_missing(v):
                     return None
                 return v
 
@@ -3303,7 +3308,7 @@ async def ingest_dataset(
                                 conv = None  # no conversion needed
 
                             raw_val = row.get(info["csv_col"])
-                            if raw_val is None or raw_val == "":
+                            if etl_missing(raw_val):
                                 continue
                             try:
                                 val = float(raw_val)
@@ -3518,6 +3523,38 @@ async def edit_dataset_cells(
             return {"updated": updated, "errors": errors}
 
 
+# Missing-value tokens recognised in NON-TEXT CSV columns (issue #7): the
+# markers R (NA) and pandas (NaN) write by default, plus common spellings.
+# Deliberately a fixed list — user-defined sentinels such as -9999 stay
+# rejected, because they are indistinguishable from real measurements.
+# Text destinations (plot_code, horizon, ...) are exempt: there 'NA' is data.
+ETL_MISSING_TOKENS = {"na", "n/a", "nan", "null"}
+
+
+def etl_missing(v) -> bool:
+    """True when a staged CSV cell is empty or a recognised missing token."""
+    if v is None:
+        return True
+    s = str(v).strip()
+    return s == "" or s.lower() in ETL_MISSING_TOKENS
+
+
+# The (destination_table, destination_column) pairs the token policy applies
+# to — every mapped destination that is not free text.
+ETL_TOKEN_NULL_DESTS = {
+    ("plot", "type"),
+    ("plot", "altitude"),
+    ("plot", "positional_accuracy"),
+    ("plot", "sampling_date"),
+    ("plot", "geom (longitude)"),
+    ("plot", "geom (latitude)"),
+    ("element", "upper_depth"),
+    ("element", "lower_depth"),
+    ("element", "type"),
+    ("result_num", "value"),
+}
+
+
 @app.post("/api/etl/datasets/{table_name}/validate")
 async def validate_dataset(
     table_name: str,
@@ -3557,8 +3594,8 @@ async def validate_dataset(
 
     def check_value(v, rule):
         """Return None if valid, else error description."""
-        if v is None or v == "":
-            return None  # empty cells are allowed at validation stage
+        if etl_missing(v):
+            return None  # empty cells / missing tokens are allowed at validation stage
         kind = rule["kind"]
         if kind in ("int", "smallint"):
             try:
@@ -3683,10 +3720,14 @@ async def validate_dataset(
                     lower_col = csv_col
 
                 rule = RULES.get((dt, dc))
+                token_cells = 0   # 'NA'/'NaN'/... cells treated as empty — reported, not silent
                 if rule:
                     for row in rows:
                         rid = row["_row_id"]
-                        err = check_value(row.get(csv_col), rule)
+                        v = row.get(csv_col)
+                        if v not in (None, "") and etl_missing(v):
+                            token_cells += 1
+                        err = check_value(v, rule)
                         if err:
                             error_rows.add(rid)
                             if len(errors) < MAX_DISPLAY:
@@ -3705,8 +3746,7 @@ async def validate_dataset(
                         errors.append("missing " + ", ".join(missing_meta))
                         # mark every populated row so the user can see this column failed overall
                         for row in rows:
-                            v = row.get(csv_col)
-                            if v is not None and v != "":
+                            if not etl_missing(row.get(csv_col)):
                                 error_rows.add(row["_row_id"])
                     bounds = obs_bounds.get((m["property_num_id"], m["procedure_num_id"]), (None, None, None))
                     vmin, vmax, canonical_unit = bounds
@@ -3715,7 +3755,9 @@ async def validate_dataset(
                     for row in rows:
                         rid = row["_row_id"]
                         v = row.get(csv_col)
-                        if v is None or v == "":
+                        if etl_missing(v):
+                            if v not in (None, ""):
+                                token_cells += 1
                             continue
                         try:
                             n = float(v)
@@ -3752,6 +3794,8 @@ async def validate_dataset(
                     "errors": errors,
                     "error_rows": sorted(error_rows),
                 }
+                if token_cells:
+                    entry["missing_tokens"] = token_cells
                 # For Soil-property columns, surface the bounds that were applied
                 # so the popup can display them — also a sanity check for the user
                 # that the validator actually consulted observation_num.

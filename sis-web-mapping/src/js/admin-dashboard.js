@@ -4750,10 +4750,14 @@ class AdminDashboard {
       const errBlock = (r.errors && r.errors.length)
         ? `<div style="margin-top:4px;font-size:0.85em;color:var(--color-danger);background:var(--tint-error);padding:6px 8px;border-radius:3px;white-space:pre-wrap;">${e(r.errors.join('\n'))}</div>`
         : '';
+      const naNote = r.missing_tokens
+        ? `<div style="font-size:0.85em;color:var(--color-text-muted);margin-top:2px;">${t('a.val.missingTokens', {n: r.missing_tokens})}</div>`
+        : '';
       return `
         <div style="border:1px solid var(--color-border);border-radius:4px;padding:8px;margin-bottom:8px;">
           <div style="font-weight:bold;color:${color};">${icon} <code>${e(csvCol)}</code> → ${e(destLabel)}</div>
           <div style="font-size:0.85em;color:var(--color-text-muted);margin-top:2px;">${t('a.val.rule')} ${e(ruleDesc)}</div>
+          ${naNote}
           ${fmtBounds(r.applied_bounds)}
           ${errBlock}
         </div>`;

@@ -510,5 +510,6 @@
   "a.moveUp": "上移",
   "a.moveDown": "下移",
   "theme.dark": "深色模式",
-  "theme.light": "浅色模式"
+  "theme.light": "浅色模式",
+  "a.val.missingTokens": "{n} 个单元格包含缺失值标记（NA、NaN、N/A、null），已按空值处理"
 }
