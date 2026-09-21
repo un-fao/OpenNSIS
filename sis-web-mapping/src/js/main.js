@@ -700,7 +700,7 @@ function formatMetadata(m) {
             style="font-size:13px;font-weight:normal;padding:4px 10px;background:var(--color-primary,#2c5f2d);color:#fff;border-radius:4px;text-decoration:none;margin-left:12px;white-space:nowrap;"
             title="${t('meta.downloadXml')}">⬇ XML</a>`
       : '';
-    html += `<h3 style="margin-top:0;color:#2c3e50;border-bottom:2px solid #3498db;padding-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+    html += `<h3 style="margin-top:0;color:var(--color-text);border-bottom:2px solid #3498db;padding-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
       <span style="flex:1;">${e(title)}</span>${xmlBtn}
     </h3>`;
   }
@@ -814,10 +814,10 @@ function formatMetadata(m) {
     html += `<div style="margin:18px 0;"><h4 style="color:var(--color-text);margin-bottom:8px;">Contacts</h4>`;
     m.contacts.forEach(c => {
       html += `<div style="margin-bottom:10px;padding:10px;background:#f8f9fa;border-radius:5px;border-left:3px solid #27ae60;">
-        <div style="font-weight:bold;color:#2c3e50;">${e(c.individual_id || '')} · ${e(c.organisation_id || '')}</div>
+        <div style="font-weight:bold;color:var(--color-text);">${e(c.individual_id || '')} · ${e(c.organisation_id || '')}</div>
         ${c.position ? `<div><strong>Position:</strong> ${e(c.position)}</div>` : ''}
         ${c.role ? `<div><strong>Role:</strong> ${e(c.role)}${c.tag ? ' / ' + e(c.tag) : ''}</div>` : ''}
-        ${c.organisation_country || c.organisation_city ? `<div style="color:#555;font-size:13px;">${e([c.organisation_city, c.organisation_country].filter(Boolean).join(', '))}</div>` : ''}
+        ${c.organisation_country || c.organisation_city ? `<div style="color:var(--color-text-muted);font-size:13px;">${e([c.organisation_city, c.organisation_country].filter(Boolean).join(', '))}</div>` : ''}
         ${c.individual_email ? `<div><strong>Email:</strong> <a href="${e(safeMailto(c.individual_email))}" style="color:#3498db;">${e(c.individual_email)}</a></div>` : ''}
       </div>`;
     });
@@ -844,7 +844,7 @@ function formatMetadata(m) {
 
   // ---------- Footer: file identifier ----------
   if (m.file_identifier) {
-    html += `<div style="margin-top:20px;font-size:11px;color:#888;font-family:monospace;">file identifier: ${e(m.file_identifier)}</div>`;
+    html += `<div style="margin-top:20px;font-size:11px;color:var(--color-text-muted);font-family:monospace;">file identifier: ${e(m.file_identifier)}</div>`;
   }
 
   return html;
@@ -858,7 +858,7 @@ function sectionTable(title, rows, e, raw = false) {
   rows.forEach(([k, v]) => {
     const valueCell = raw ? v : e(String(v));
     html += `<tr style="border-bottom:1px solid #eee;">
-      <td style="padding:6px 8px;font-weight:bold;color:#555;width:32%;vertical-align:top;">${e(k)}</td>
+      <td style="padding:6px 8px;font-weight:bold;color:var(--color-text-muted);width:32%;vertical-align:top;">${e(k)}</td>
       <td style="padding:6px 8px;">${valueCell}</td>
     </tr>`;
   });
@@ -1471,14 +1471,14 @@ async function showDstPixelInfo(evt, popup, layerId, layerConfig) {
         <h3>${escapeHtml(title)}</h3>
         <table style="border-collapse:collapse;font-size:12px;width:100%;min-width:510px;">
           <thead>
-            <tr style="border-bottom:1px solid #ccc;color:#555;">
+            <tr style="border-bottom:1px solid #ccc;color:var(--color-text-muted);">
               <th style="padding:2px 6px;text-align:left;width:54%;">${t('dst.raster')}</th>
               <th style="padding:2px 6px;text-align:right;width:25%;">${t('dst.value')}</th>
               <th style="padding:2px 6px;text-align:center;">${t('dst.threshold')}</th>
               <th style="padding:2px 6px;text-align:right;">${t('dst.reclass')}</th>
             </tr>
           </thead>
-          <tbody>${rows || `<tr><td colspan="4" style="padding:4px 6px;color:#888;">${t('dst.noInputs')}</td></tr>`}</tbody>
+          <tbody>${rows || `<tr><td colspan="4" style="padding:4px 6px;color:var(--color-text-muted);">${t('dst.noInputs')}</td></tr>`}</tbody>
           <tfoot>
             <tr style="border-top:2px solid #999;font-weight:700;">
               <td style="padding:4px 6px;" colspan="3">${t('dst.output')} (${agg})</td>

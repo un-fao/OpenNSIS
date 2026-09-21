@@ -262,7 +262,7 @@ class AdminDashboard {
 
               <div class="admin-section">
                 <h3 class="admin-section-title">${t('a.admdiv.title')}</h3>
-                <p style="font-size:var(--fs-sm);color:#555;max-width:760px;">
+                <p style="font-size:var(--fs-sm);color:var(--color-text-muted);max-width:760px;">
                   ${t('a.admdiv.intro')}
                 </p>
                 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 16px;">
@@ -341,13 +341,13 @@ class AdminDashboard {
 
               <div class="admin-section" id="software-section">
                 <h3 class="admin-section-title">${t('a.sw.title')}</h3>
-                <p style="color:#555;font-size:var(--fs-sm);margin:0 0 var(--sp-3);">
+                <p style="color:var(--color-text-muted);font-size:var(--fs-sm);margin:0 0 var(--sp-3);">
                   ${t('a.sw.intro')} <code>un-fao/OpenNSIS</code> ${t('a.sw.intro2')} (<code>./update.sh</code>) ${t('a.sw.intro3')}
                 </p>
                 <div style="display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;">
                   <span>${t('a.sw.installed')}&nbsp;<code id="sw-current">…</code></span>
                   <button type="button" class="btn btn-sm btn-primary" id="sw-check-btn">${t('a.sw.check')}</button>
-                  <span id="sw-status" style="font-size:var(--fs-sm);color:#555;"></span>
+                  <span id="sw-status" style="font-size:var(--fs-sm);color:var(--color-text-muted);"></span>
                 </div>
                 <div id="sw-result" style="display:none;margin-top:var(--sp-3);"></div>
               </div>
@@ -356,7 +356,7 @@ class AdminDashboard {
 
               <div class="admin-section" id="glosis-section">
                 <h3 class="admin-section-title">${t('a.glosis.title')}</h3>
-                <p style="color:#555;font-size:var(--fs-sm);margin:0 0 var(--sp-3);">
+                <p style="color:var(--color-text-muted);font-size:var(--fs-sm);margin:0 0 var(--sp-3);">
                   ${t('a.glosis.p1')}<br>${t('a.glosis.p2')}<br>${t('a.glosis.p3')}
                 </p>
                 <div style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3);">
@@ -377,7 +377,7 @@ class AdminDashboard {
 
             <!-- Dashboard Tab -->
             <div id="dashboard-tab" class="tab-pane">
-              <div id="dashboard-empty" style="padding:var(--sp-5,24px);color:#777;">${t('a.dash.loading')}</div>
+              <div id="dashboard-empty" style="padding:var(--sp-5,24px);color:var(--color-text-muted);">${t('a.dash.loading')}</div>
               <div id="dashboard-content" style="display:none;">
                 <div class="stat-card-grid" id="stat-card-grid"></div>
                 <div class="chart-grid">
@@ -464,7 +464,7 @@ class AdminDashboard {
 
                     <!-- Preview -->
                     <details id="etl-preview-section" class="etl-section" open>
-                      <summary class="etl-section-title" style="cursor:pointer;">${t('a.etl.preview')} <span id="etl-preview-info" style="font-weight:normal;font-size:var(--fs-sm);color:#555;"></span></summary>
+                      <summary class="etl-section-title" style="cursor:pointer;">${t('a.etl.preview')} <span id="etl-preview-info" style="font-weight:normal;font-size:var(--fs-sm);color:var(--color-text-muted);"></span></summary>
                       <div class="etl-preview-scroll" style="margin-top:var(--sp-3);">
                         <table class="admin-table" id="etl-preview-table">
                           <thead id="etl-preview-thead"></thead>
@@ -835,7 +835,7 @@ class AdminDashboard {
             <div id="account-tab" class="tab-pane">
               <div class="admin-form" style="max-width:500px;">
                 <h3>${t('a.acct.title')}</h3>
-                <p style="color:#555;font-size:0.85em;margin-bottom:var(--sp-4);">
+                <p style="color:var(--color-text-muted);font-size:0.85em;margin-bottom:var(--sp-4);">
                   ${t('a.acct.intro')}
                 </p>
                 <form id="account-form" style="display:grid;grid-template-columns:auto 220px;gap:var(--sp-2) var(--sp-3);align-items:center;">
@@ -1104,14 +1104,14 @@ class AdminDashboard {
 
     this.layers.forEach(layer => {
       const cell = document.getElementById(`wms-status-${layer.layer_id}`);
-      if (cell) cell.innerHTML = '<span style="color:#888;">…</span>';
+      if (cell) cell.innerHTML = '<span style="color:var(--color-text-muted);">…</span>';
     });
 
     await Promise.all(this.layers.map(async (layer) => {
       const cell = document.getElementById(`wms-status-${layer.layer_id}`);
       if (!cell) return;
       if (!layer.get_legend_url) {
-        cell.innerHTML = `<span style="color:#888;" title="${t('a.noUrl')}">—</span>`;
+        cell.innerHTML = `<span style="color:var(--color-text-muted);" title="${t('a.noUrl')}">—</span>`;
         return;
       }
       try {
@@ -1252,7 +1252,7 @@ class AdminDashboard {
       <div style="background:var(--color-surface);color:var(--color-text);border-radius:8px;max-width:${width || 560}px;width:92%;max-height:88vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.3);">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #eee;">
           <h3 style="margin:0;font-size:17px;">${this.escapeHtml(title)}</h3>
-          <button type="button" class="pm-close" style="border:none;background:none;font-size:22px;cursor:pointer;color:#888;">&times;</button>
+          <button type="button" class="pm-close" style="border:none;background:none;font-size:22px;cursor:pointer;color:var(--color-text-muted);">&times;</button>
         </div>
         <div style="padding:18px;" class="pm-body">${bodyHtml}</div>
       </div>`;
@@ -1420,14 +1420,14 @@ class AdminDashboard {
       + others.map(p => `<option value="${this.escapeHtml(p.project_id)}">${this.escapeHtml(p.name || p.project_id)} (${this.escapeHtml(p.project_id)})</option>`).join('')
       + `</select>`;
     const typeBlock = (kind, label, count) => {
-      if (!count) return `<p style="color:#888;margin:6px 0;">${t('a.pm.noDeps', {label})}</p>`;
+      if (!count) return `<p style="color:var(--color-text-muted);margin:6px 0;">${t('a.pm.noDeps', {label})}</p>`;
       const hasTargets = others.length > 0;
       return `
       <div style="border:1px solid #eee;border-radius:6px;padding:10px;margin:8px 0;">
         <strong>${count.toLocaleString()} ${label}</strong>
         <div style="margin-top:6px;">
           <label style="display:block;margin:3px 0;"><input type="radio" name="pm-${kind}-action" value="delete" checked> ${t('a.pm.deleteThem')}</label>
-          <label style="display:block;margin:3px 0;${hasTargets ? '' : 'color:#aaa;'}">
+          <label style="display:block;margin:3px 0;${hasTargets ? '' : 'color:var(--color-text-subtle);'}">
             <input type="radio" name="pm-${kind}-action" value="reassign" ${hasTargets ? '' : 'disabled'}> ${t('a.pm.reassignTo')} ${hasTargets ? targetSelect(kind) : t('a.pm.noOther')}
           </label>
         </div>
@@ -2410,8 +2410,8 @@ class AdminDashboard {
     tr.className = 'dst-row';
     tr.innerHTML = `
       <td><select class="dst-row-layer" style="min-width:240px;">${opts}</select></td>
-      <td class="dst-row-min" style="text-align:right;color:#555;padding-right:6px;">${fmt(match?.stats_minimum)}</td>
-      <td class="dst-row-max" style="text-align:right;color:#555;padding-left:6px;padding-right:56px;">${fmt(match?.stats_maximum)}</td>
+      <td class="dst-row-min" style="text-align:right;color:var(--color-text-muted);padding-right:6px;">${fmt(match?.stats_minimum)}</td>
+      <td class="dst-row-max" style="text-align:right;color:var(--color-text-muted);padding-left:6px;padding-right:56px;">${fmt(match?.stats_maximum)}</td>
       <td style="padding-right:6px;"><input type="number" class="dst-row-below no-spinner" step="any" value="${step.false_score ?? 0}" style="width:35px;"></td>
       <td style="padding-left:6px;padding-right:6px;text-align:center;white-space:nowrap;">
         <input type="number" class="dst-row-threshold-val no-spinner" step="any" title="${t('a.dst.thresholdTip')}"
@@ -2772,7 +2772,7 @@ class AdminDashboard {
         status.textContent = t('a.sw.updateAvailable', {n});
         status.style.color = '#c0392b';
         const list = (r.commits || []).map(c => {
-          const d = c.date ? ` <span style="color:#888;">(${this.escapeHtml(c.date.slice(0, 10))})</span>` : '';
+          const d = c.date ? ` <span style="color:var(--color-text-muted);">(${this.escapeHtml(c.date.slice(0, 10))})</span>` : '';
           return `<li><code>${this.escapeHtml(c.sha)}</code> ${this.escapeHtml(c.message)}${d}</li>`;
         }).join('');
         result.innerHTML = `
@@ -2785,7 +2785,7 @@ class AdminDashboard {
               <summary style="cursor:pointer;">${t('a.sw.whatsNew', {n: (r.commits || []).length})}</summary>
               <ul style="margin:var(--sp-2) 0 0;padding-left:1.2em;font-size:var(--fs-sm);">${list}</ul>
             </details>
-            <p style="margin:var(--sp-3) 0 0;color:#777;font-size:var(--fs-xs);">
+            <p style="margin:var(--sp-3) 0 0;color:var(--color-text-muted);font-size:var(--fs-xs);">
               ${t('a.sw.checkOnly')}</p>
           </div>`;
         result.style.display = 'block';
@@ -3019,7 +3019,7 @@ class AdminDashboard {
       } else if (u.is_admin) {
         adminLabel = `<span class="badge badge-success toggle-admin" style="cursor:pointer;" title="${t('a.users.clickRevoke')}">${t('a.admin')}</span>`;
       } else {
-        adminLabel = `<span class="badge toggle-admin" style="cursor:pointer;background:#e0e0e0;color:#555;" title="${t('a.users.clickGrant')}">${t('a.user')}</span>`;
+        adminLabel = `<span class="badge toggle-admin" style="cursor:pointer;background:#e0e0e0;color:var(--color-text-muted);" title="${t('a.users.clickGrant')}">${t('a.user')}</span>`;
       }
       return `
         <tr>
@@ -3141,7 +3141,7 @@ class AdminDashboard {
                   title="${t('a.moveDown')}" ${rowIdx === this.layers.length - 1 ? 'disabled' : ''}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 10l6 6 6-6"/></svg></button>
         </td>
         <td><strong>${id}</strong></td>
-        <td title="${this.escapeHtml(layer.file_orig_name || '')}" style="font-size:var(--fs-sm);color:#555;">${this.escapeHtml(layer.file_orig_name || '-')}</td>
+        <td title="${this.escapeHtml(layer.file_orig_name || '')}" style="font-size:var(--fs-sm);color:var(--color-text-muted);">${this.escapeHtml(layer.file_orig_name || '-')}</td>
         <td style="width:120px;"><input class="layer-edit" data-layer-id="${id}" data-field="project_name" value="${this.escapeHtml(layer.project_name || '')}" placeholder="-" style="${editStyle}" title="${t('a.raster.editGroupTip')}"></td>
         <td><input class="layer-edit" data-layer-id="${id}" data-field="property_name" value="${this.escapeHtml(layer.property_name || '')}" placeholder="-" style="${editStyle}" title="${t('a.raster.editNameTip')}"></td>
         <td>${this._legendSwatchHtml(layer, id)}</td>
@@ -3149,7 +3149,7 @@ class AdminDashboard {
           <input type="range" class="layer-opacity" data-layer-id="${id}" min="0" max="1" step="0.05"
                  value="${layer.default_opacity == null ? 1 : layer.default_opacity}"
                  style="width:70px;" title="${t('a.raster.opacityTip')}">
-          <span class="layer-opacity-val" style="font-size:var(--fs-xs);color:#555;min-width:26px;">${layer.default_opacity == null ? '1' : layer.default_opacity}</span>
+          <span class="layer-opacity-val" style="font-size:var(--fs-xs);color:var(--color-text-muted);min-width:26px;">${layer.default_opacity == null ? '1' : layer.default_opacity}</span>
         </div></td>
         <td>${layer.publish
           ? `<span class="badge badge-success" style="cursor:pointer;" title="${t('a.admdiv.pubTip')}" onclick="adminDashboard.toggleLayerPublish('${idJs}', false)">${t('a.yes')}</span>`
@@ -3322,13 +3322,13 @@ class AdminDashboard {
             <input type="number" class="lg-n" min="2" max="20" step="1" value="${layer.num_intervals || 10}" style="width:70px;"></label>
         </div>
         <div class="lg-preview" style="height:26px;border-radius:4px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15);margin-bottom:10px;"></div>
-        <p style="font-size:var(--fs-xs);color:#777;margin:0 0 12px;">${t('a.lg.scope')}</p>
+        <p style="font-size:var(--fs-xs);color:var(--color-text-muted);margin:0 0 12px;">${t('a.lg.scope')}</p>
       </div>
 
       <div class="lg-pane" data-pane="custom" ${layer.custom_classes ? '' : 'hidden'}>
         <div class="lg-rows" style="max-height:46vh;overflow:auto;margin-bottom:6px;">${classRows}</div>
         <button type="button" class="btn btn-secondary btn-sm lg-add" style="margin-bottom:10px;">${t('a.lg.addClass')}</button>
-        <p style="font-size:var(--fs-xs);color:#777;margin:0 0 12px;">${t('a.lg.scopeCustom')}</p>
+        <p style="font-size:var(--fs-xs);color:var(--color-text-muted);margin:0 0 12px;">${t('a.lg.scopeCustom')}</p>
       </div>
 
       <div class="pm-status" style="font-size:12px;"></div>
@@ -3438,7 +3438,7 @@ class AdminDashboard {
     const { body } = this._openModal(t('a.lg.title') + layer.layer_id, `
       <div class="lg-rows" style="max-height:52vh;overflow:auto;margin-bottom:6px;">${rows}</div>
       <button type="button" class="btn btn-secondary btn-sm lg-add" style="margin-bottom:10px;">${t('a.lg.addClass')}</button>
-      <p style="font-size:var(--fs-xs);color:#777;margin:0 0 12px;">${t('a.lg.scopeCat')}</p>
+      <p style="font-size:var(--fs-xs);color:var(--color-text-muted);margin:0 0 12px;">${t('a.lg.scopeCat')}</p>
       <div class="pm-status" style="font-size:12px;"></div>
       <div style="margin-top:10px;text-align:right;">
         <button type="button" class="btn btn-secondary btn-sm pm-cancel">${t('a.cancel')}</button>
@@ -4651,7 +4651,7 @@ class AdminDashboard {
         }
         const text = r.status === 'OK' ? 'OK' : r.errors.join('; ');
         cell.textContent = text;
-        cell.style.color = r.status === 'OK' ? '#28a745' : '#dc3545';
+        cell.style.color = r.status === 'OK' ? 'var(--color-success)' : 'var(--color-danger)';
       });
 
       // Rebuild error-cell map and re-render preview to highlight
@@ -4664,7 +4664,7 @@ class AdminDashboard {
       this.renderEtlPreviewPage();
 
       statusEl.textContent = result.message;
-      statusEl.style.color = /OK/.test(result.message) ? '#28a745' : '#dc3545';
+      statusEl.style.color = /OK/.test(result.message) ? 'var(--color-success)' : 'var(--color-danger)';
 
       this.showEtlValidationPopup(result);
     } catch (e) {
@@ -4704,7 +4704,7 @@ class AdminDashboard {
     const reqRows = required.map(r => {
       const ok = !missing.includes(r);
       const icon = ok ? '✅' : '❌';
-      const color = ok ? '#28a745' : '#dc3545';
+      const color = ok ? 'var(--color-success)' : 'var(--color-danger)';
       return `<li style="color:${color};">${icon} ${e(r)}</li>`;
     }).join('');
 
@@ -4731,9 +4731,9 @@ class AdminDashboard {
             : '');
       const hasData = b.data_min !== null && b.data_min !== undefined;
       const dataLine = hasData
-        ? `<div style="font-size:0.85em;color:#555;margin-top:2px;">${t('a.val.yourData')} <strong>${e(String(b.data_min))}</strong>, ${t('a.val.max')} <strong>${e(String(b.data_max))}</strong> ${e(unit)}</div>`
+        ? `<div style="font-size:0.85em;color:var(--color-text-muted);margin-top:2px;">${t('a.val.yourData')} <strong>${e(String(b.data_min))}</strong>, ${t('a.val.max')} <strong>${e(String(b.data_max))}</strong> ${e(unit)}</div>`
         : '';
-      return `<div style="font-size:0.85em;color:#555;margin-top:2px;">${t('a.val.boundsApplied')} <strong>${e(minStr)}</strong> ${t('a.val.and')} <strong>${e(maxStr)}</strong> ${e(unit)}${e(conv)}</div>${dataLine}`;
+      return `<div style="font-size:0.85em;color:var(--color-text-muted);margin-top:2px;">${t('a.val.boundsApplied')} <strong>${e(minStr)}</strong> ${t('a.val.and')} <strong>${e(maxStr)}</strong> ${e(unit)}${e(conv)}</div>${dataLine}`;
     };
     const colRows = Object.entries(cols).map(([csvCol, r]) => {
       const dest = colDestMap[csvCol];
@@ -4746,18 +4746,18 @@ class AdminDashboard {
       }
       const ok = r.status === 'OK';
       const icon = ok ? '✅' : '❌';
-      const color = ok ? '#28a745' : '#dc3545';
+      const color = ok ? 'var(--color-success)' : 'var(--color-danger)';
       const errBlock = (r.errors && r.errors.length)
-        ? `<div style="margin-top:4px;font-size:0.85em;color:#dc3545;background:#fff5f5;padding:6px 8px;border-radius:3px;white-space:pre-wrap;">${e(r.errors.join('\n'))}</div>`
+        ? `<div style="margin-top:4px;font-size:0.85em;color:var(--color-danger);background:var(--tint-error);padding:6px 8px;border-radius:3px;white-space:pre-wrap;">${e(r.errors.join('\n'))}</div>`
         : '';
       return `
-        <div style="border:1px solid #e1e4e8;border-radius:4px;padding:8px;margin-bottom:8px;">
+        <div style="border:1px solid var(--color-border);border-radius:4px;padding:8px;margin-bottom:8px;">
           <div style="font-weight:bold;color:${color};">${icon} <code>${e(csvCol)}</code> → ${e(destLabel)}</div>
-          <div style="font-size:0.85em;color:#555;margin-top:2px;">${t('a.val.rule')} ${e(ruleDesc)}</div>
+          <div style="font-size:0.85em;color:var(--color-text-muted);margin-top:2px;">${t('a.val.rule')} ${e(ruleDesc)}</div>
           ${fmtBounds(r.applied_bounds)}
           ${errBlock}
         </div>`;
-    }).join('') || `<em style="color:#777;">${t('a.val.noCols')}</em>`;
+    }).join('') || `<em style="color:var(--color-text-muted);">${t('a.val.noCols')}</em>`;
 
     // Build/replace modal
     document.getElementById('etl-validation-modal')?.remove();
@@ -4766,15 +4766,15 @@ class AdminDashboard {
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:10001;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow:auto;';
     modal.innerHTML = `
       <div style="background:var(--color-surface);color:var(--color-text);border-radius:6px;max-width:780px;width:100%;box-shadow:0 4px 20px rgba(0,0,0,0.3);">
-        <div style="padding:14px 20px;border-bottom:1px solid #e1e4e8;display:flex;align-items:center;justify-content:space-between;">
-          <h3 style="margin:0;color:#2c3e50;">${t('a.val.title')}</h3>
-          <button id="etl-validation-close" type="button" style="background:transparent;border:0;font-size:22px;cursor:pointer;color:#555;">&times;</button>
+        <div style="padding:14px 20px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between;">
+          <h3 style="margin:0;color:var(--color-text);">${t('a.val.title')}</h3>
+          <button id="etl-validation-close" type="button" style="background:transparent;border:0;font-size:22px;cursor:pointer;color:var(--color-text-muted);">&times;</button>
         </div>
         <div style="padding:16px 20px;">
           <div style="margin-bottom:10px;font-size:0.95em;">
             <strong>${t('a.val.summary')}</strong>
-            <span style="color:${/OK/.test(result.message) ? '#28a745' : '#dc3545'};">${e(result.message || '')}</span>
-            <span style="color:#777;font-size:0.9em;margin-left:8px;">${t('a.val.rowsChecked', {n: result.total_rows ?? '?'})}</span>
+            <span style="color:${/OK/.test(result.message) ? 'var(--color-success)' : 'var(--color-danger)'};">${e(result.message || '')}</span>
+            <span style="color:var(--color-text-muted);font-size:0.9em;margin-left:8px;">${t('a.val.rowsChecked', {n: result.total_rows ?? '?'})}</span>
           </div>
 
           <h4 style="margin:16px 0 6px;">${t('a.val.required')}</h4>
@@ -4786,7 +4786,7 @@ class AdminDashboard {
           <h4 style="margin:16px 0 6px;">${t('a.val.perColumn')}</h4>
           ${colRows}
         </div>
-        <div style="padding:10px 20px;border-top:1px solid #e1e4e8;text-align:right;">
+        <div style="padding:10px 20px;border-top:1px solid var(--color-border);text-align:right;">
           <button id="etl-validation-export" type="button" class="btn btn-sm" style="background:#17a2b8;color:#fff;margin-right:8px;">${t('a.val.export')}</button>
           <button id="etl-validation-ok" type="button" class="btn btn-primary btn-sm">${t('a.close')}</button>
         </div>
@@ -4805,19 +4805,19 @@ class AdminDashboard {
   formatCountryBoundsBlock(cb) {
     const e = (s) => this.escapeHtml(String(s));
     if (!cb || !cb.checked) {
-      return `<div style="color:#777;font-size:0.9em;">${t('a.val.cbSkipped')}</div>`;
+      return `<div style="color:var(--color-text-muted);font-size:0.9em;">${t('a.val.cbSkipped')}</div>`;
     }
     const ok = cb.status === 'OK';
     const icon = ok ? '✅' : '❌';
-    const color = ok ? '#28a745' : '#dc3545';
+    const color = ok ? 'var(--color-success)' : 'var(--color-danger)';
     const previewRows = (cb.outside_rows_preview && cb.outside_rows_preview.length)
-      ? `<div style="font-size:0.85em;color:#dc3545;background:#fff5f5;padding:6px 8px;border-radius:3px;margin-top:6px;">${t('a.val.outsideRows', {n: cb.outside_rows_preview.length})} ${cb.outside_rows_preview.join(', ')}${cb.outside > cb.outside_rows_preview.length ? ', …' : ''}</div>`
+      ? `<div style="font-size:0.85em;color:var(--color-danger);background:var(--tint-error);padding:6px 8px;border-radius:3px;margin-top:6px;">${t('a.val.outsideRows', {n: cb.outside_rows_preview.length})} ${cb.outside_rows_preview.join(', ')}${cb.outside > cb.outside_rows_preview.length ? ', …' : ''}</div>`
       : '';
     return `
-      <div style="border:1px solid #e1e4e8;border-radius:4px;padding:8px;">
+      <div style="border:1px solid var(--color-border);border-radius:4px;padding:8px;">
         <div style="font-weight:bold;color:${color};">${icon} ${t('a.val.cbHeadline', {p: cb.percent_inside, c: cb.country_code, t: cb.threshold})}</div>
-        <div style="font-size:0.85em;color:#555;margin-top:2px;">${t('a.val.cbRule')}</div>
-        <div style="font-size:0.85em;color:#555;margin-top:2px;">${t('a.val.cbCounts', {n: cb.checked_rows, i: cb.inside, o: cb.outside})}</div>
+        <div style="font-size:0.85em;color:var(--color-text-muted);margin-top:2px;">${t('a.val.cbRule')}</div>
+        <div style="font-size:0.85em;color:var(--color-text-muted);margin-top:2px;">${t('a.val.cbCounts', {n: cb.checked_rows, i: cb.inside, o: cb.outside})}</div>
         ${previewRows}
       </div>`;
   }
@@ -4937,7 +4937,7 @@ class AdminDashboard {
     const container = document.getElementById('etl-datasets-list');
     if (!container) return;
     if (!this.etlDatasets.length) {
-      container.innerHTML = `<p style="font-size:var(--fs-sm);color:#555;">${t('a.noDatasets')}</p>`;
+      container.innerHTML = `<p style="font-size:var(--fs-sm);color:var(--color-text-muted);">${t('a.noDatasets')}</p>`;
       return;
     }
     const fmtDate = v => {
@@ -5158,7 +5158,7 @@ class AdminDashboard {
         <td><input type="color" class="admdiv-fill" data-id="${id}" value="${this.escapeHtml(d.fill_color || '#cccccc')}"></td>
         <td style="white-space:nowrap;">
           <input type="range" class="admdiv-opacity" data-id="${id}" value="${d.fill_opacity ?? 0}" min="0" max="1" step="0.05" style="width:70px;" title="${t('a.fillOpacityTip')}">
-          <span class="admdiv-opacity-val" style="font-size:var(--fs-xs);color:#555;min-width:26px;">${d.fill_opacity ?? 0}</span>
+          <span class="admdiv-opacity-val" style="font-size:var(--fs-xs);color:var(--color-text-muted);min-width:26px;">${d.fill_opacity ?? 0}</span>
         </td>
         <td><select class="admdiv-label" data-id="${id}" title="${t('a.admdiv.labelTip')}" style="max-width:120px;">
           <option value="">${t('a.admdiv.labelNone')}</option>
@@ -5166,7 +5166,7 @@ class AdminDashboard {
         </select></td>
         <td style="white-space:nowrap;">
           <input type="range" class="admdiv-minzoom" data-id="${id}" value="${d.min_zoom ?? 0}" min="0" max="18" step="1" style="width:70px;" title="${t('a.admdiv.minZoomTip')}">
-          <span class="admdiv-minzoom-val" style="font-size:var(--fs-xs);color:#555;min-width:18px;">${d.min_zoom ?? 0}</span>
+          <span class="admdiv-minzoom-val" style="font-size:var(--fs-xs);color:var(--color-text-muted);min-width:18px;">${d.min_zoom ?? 0}</span>
         </td>
         <td>${pub}</td>
         <td>${activeBadge}</td>
@@ -5356,7 +5356,7 @@ class AdminDashboard {
       const row = rows[i];
       const rid = row._row_id;
       const errSet = getErrCols(rid);
-      html.push(`<tr data-rid="${rid}"><td style="color:#777;">${rid}</td>` + columns.map(c => {
+      html.push(`<tr data-rid="${rid}"><td style="color:var(--color-text-muted);">${rid}</td>` + columns.map(c => {
         const v = row[c];
         const val = v == null ? '' : String(v);
         const cls = errSet.has(c) ? 'etl-preview-cell etl-preview-error' : 'etl-preview-cell';

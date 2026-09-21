@@ -59,9 +59,10 @@
     /* Transitions */
     --transition: 160ms ease;
 
-    /* Feedback tints (inline-edited table cells) */
+    /* Feedback tints (inline-edited table cells, validation error boxes) */
     --tint-pending: #fff3cd;
     --tint-saved:   #d4edda;
+    --tint-error:   #fff5f5;
 }
 
 /* =====================================================================
@@ -104,6 +105,7 @@
 
     --tint-pending: #574a14;
     --tint-saved:   #1e4230;
+    --tint-error:   #3a2226;
 }
 
 /* Panels whose light look is baked in as translucent white */
