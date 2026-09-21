@@ -508,5 +508,7 @@
   "a.raster.defaultOnTip": "Couche par défaut de la vue cartographique. Cliquez pour la retirer.",
   "a.raster.defaultOffTip": "Cliquez pour en faire la couche par défaut de la vue cartographique.",
   "a.moveUp": "Monter",
-  "a.moveDown": "Descendre"
+  "a.moveDown": "Descendre",
+  "theme.dark": "Mode sombre",
+  "theme.light": "Mode clair"
 }

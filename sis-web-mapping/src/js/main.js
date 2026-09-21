@@ -12,6 +12,7 @@ import { getCenter } from 'ol/extent';
 import api, { MAPSERVER_URL } from './api-client.js';
 import adminDashboard from './admin-dashboard.js';
 import { t, AVAILABLE, currentLang, setInstanceDefault, switchLanguage } from './i18n.js';
+import { initThemeButton } from './theme.js';
 
 // Global variables
 let map;
@@ -718,7 +719,7 @@ function formatMetadata(m) {
     html += `<div style="margin:15px 0;text-align:center;">
       <a href="${e(safe)}" target="_blank" rel="noopener noreferrer" title="${t('meta.openPreview')}">
         <img src="${e(safe)}" alt="${t('meta.preview')}"
-             style="max-width:100%;max-height:320px;border:1px solid #ddd;border-radius:4px;background:#fff;">
+             style="max-width:100%;max-height:320px;border:1px solid var(--color-border-strong);border-radius:4px;background:#fff;">
       </a>
     </div>`;
   }
@@ -786,7 +787,7 @@ function formatMetadata(m) {
     ...kw(m.keyword_place).map(k => ['place', k]),
   ];
   if (allKw.length) {
-    html += `<div style="margin:18px 0;"><h4 style="color:#2c3e50;margin-bottom:8px;">Keywords</h4>
+    html += `<div style="margin:18px 0;"><h4 style="color:var(--color-text);margin-bottom:8px;">Keywords</h4>
       <div style="display:flex;flex-wrap:wrap;gap:6px;">`
       + allKw.map(([type, k]) =>
           `<span style="background:#e8f4f8;color:#2980b9;padding:4px 10px;border-radius:14px;font-size:12px;" title="${e(type)}">${e(k)}</span>`
@@ -804,13 +805,13 @@ function formatMetadata(m) {
 
   // ---------- Lineage ----------
   if (m.lineage_statement) {
-    html += `<div style="margin:18px 0;"><h4 style="color:#2c3e50;margin-bottom:8px;">Lineage</h4>
+    html += `<div style="margin:18px 0;"><h4 style="color:var(--color-text);margin-bottom:8px;">Lineage</h4>
       <div style="padding:10px;background:#f8f9fa;border-radius:3px;line-height:1.5;">${e(m.lineage_statement)}</div></div>`;
   }
 
   // ---------- Contacts ----------
   if (Array.isArray(m.contacts) && m.contacts.length) {
-    html += `<div style="margin:18px 0;"><h4 style="color:#2c3e50;margin-bottom:8px;">Contacts</h4>`;
+    html += `<div style="margin:18px 0;"><h4 style="color:var(--color-text);margin-bottom:8px;">Contacts</h4>`;
     m.contacts.forEach(c => {
       html += `<div style="margin-bottom:10px;padding:10px;background:#f8f9fa;border-radius:5px;border-left:3px solid #27ae60;">
         <div style="font-weight:bold;color:#2c3e50;">${e(c.individual_id || '')} · ${e(c.organisation_id || '')}</div>
@@ -825,11 +826,11 @@ function formatMetadata(m) {
 
   // ---------- Online resources ----------
   if (Array.isArray(m.online_resources) && m.online_resources.length) {
-    html += `<div style="margin:18px 0;"><h4 style="color:#2c3e50;margin-bottom:8px;">${t('meta.onlineResources')}</h4>
+    html += `<div style="margin:18px 0;"><h4 style="color:var(--color-text);margin-bottom:8px;">${t('meta.onlineResources')}</h4>
       <div style="display:flex;flex-direction:column;gap:6px;">`
       + m.online_resources.map(u => {
           const icon = u.protocol?.startsWith('WWW:LINK') || u.protocol?.startsWith('WWW:DOWNLOAD') ? '📥' : '🔗';
-          return `<a href="${e(safeUrl(relMapserverUrl(u.url)))}" target="_blank" rel="noopener noreferrer" style="padding:8px;background:#fff;border:1px solid #ddd;border-radius:4px;text-decoration:none;color:#2c3e50;display:flex;gap:10px;align-items:center;">
+          return `<a href="${e(safeUrl(relMapserverUrl(u.url)))}" target="_blank" rel="noopener noreferrer" style="padding:8px;background:var(--color-surface);border:1px solid var(--color-border-strong);border-radius:4px;text-decoration:none;color:var(--color-text);display:flex;gap:10px;align-items:center;">
             <span style="font-size:18px;">${icon}</span>
             <div style="flex:1;">
               <div style="font-weight:600;">${e(u.url_name || u.protocol)}</div>
@@ -852,7 +853,7 @@ function formatMetadata(m) {
 // Helper: 2-column section with rows, with optional raw HTML in value cell.
 function sectionTable(title, rows, e, raw = false) {
   if (!rows.length) return '';
-  let html = `<div style="margin:18px 0;"><h4 style="color:#2c3e50;margin-bottom:8px;">${e(title)}</h4>
+  let html = `<div style="margin:18px 0;"><h4 style="color:var(--color-text);margin-bottom:8px;">${e(title)}</h4>
     <table style="width:100%;border-collapse:collapse;">`;
   rows.forEach(([k, v]) => {
     const valueCell = raw ? v : e(String(v));
@@ -877,8 +878,8 @@ async function showMetadataPopup(metadataUrl) {
   const modal = document.createElement('div');
   modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px;';
   modal.innerHTML = `
-    <div style="background: white; padding: 20px; border-radius: 8px; max-width: 880px; max-height: 90vh; overflow-y: auto; position: relative; width: 100%;">
-      <button id="metadata-close" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+    <div style="background: var(--color-surface); color: var(--color-text); padding: 20px; border-radius: 8px; max-width: 880px; max-height: 90vh; overflow-y: auto; position: relative; width: 100%;">
+      <button id="metadata-close" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 24px; cursor: pointer; color: var(--color-text-muted);">&times;</button>
       <h2 style="margin-top: 0;">${t('meta.title')}</h2>
       <div id="metadata-content" style="margin-top: 20px;">${t('meta.loading')}</div>
     </div>
@@ -1795,6 +1796,15 @@ function addLoginButton() {
 
   document.body.appendChild(loginBtn);
 
+  // Theme toggle — sun/moon, same glyph family, left of the login button.
+  const themeBtn = document.createElement('button');
+  themeBtn.id = 'theme-btn';
+  themeBtn.type = 'button';
+  themeBtn.className = 'map-glyph';
+  themeBtn.style.cssText = 'position: absolute; top: 20px; right: 96px; padding: 6px; background: none; border: none; cursor: pointer; z-index: 1001; line-height: 0;';
+  initThemeButton(themeBtn);
+  document.body.appendChild(themeBtn);
+
   // Language button — globe only, at the right of the Login button. The
   // visitor's choice persists in localStorage and overrides the instance
   // default (LANGUAGE setting).
@@ -1812,14 +1822,14 @@ function addLoginButton() {
 
   const langMenu = document.createElement('div');
   langMenu.id = 'lang-menu';
-  langMenu.style.cssText = 'position: absolute; top: 56px; right: 20px; background: #fff; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1002; display: none; min-width: 130px; overflow: hidden;';
+  langMenu.style.cssText = 'position: absolute; top: 56px; right: 20px; background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1002; display: none; min-width: 130px; overflow: hidden;';
   for (const [code, label] of AVAILABLE) {
     const item = document.createElement('div');
     item.textContent = label;
     item.style.cssText = 'padding: 8px 14px; cursor: pointer; font-size: 13px;'
-      + (code === currentLang() ? 'font-weight: 700; background: #f2f7f2;' : '');
-    item.addEventListener('mouseenter', () => { item.style.background = '#eef3ee'; });
-    item.addEventListener('mouseleave', () => { item.style.background = code === currentLang() ? '#f2f7f2' : ''; });
+      + (code === currentLang() ? 'font-weight: 700; background: var(--color-primary-light);' : '');
+    item.addEventListener('mouseenter', () => { item.style.background = 'var(--color-surface-hover)'; });
+    item.addEventListener('mouseleave', () => { item.style.background = code === currentLang() ? 'var(--color-primary-light)' : ''; });
     item.addEventListener('click', () => switchLanguage(code));
     langMenu.appendChild(item);
   }
@@ -2206,8 +2216,8 @@ function ensureProfilesDataModal() {
   modal.id = 'profiles-data-modal';
   modal.style.cssText = 'position:fixed;left:0;right:0;bottom:0;height:33vh;z-index:10000;display:flex;box-shadow:0 -4px 12px rgba(0,0,0,0.2);';
   modal.innerHTML = `
-    <div style="background:#fff;width:100%;height:100%;display:flex;flex-direction:column;border-top:1px solid #ccc;position:relative;">
-      <div id="profiles-data-resizer" title="${t('profiles.dragResize')}" style="position:absolute;top:0;left:0;right:0;height:6px;cursor:ns-resize;background:#eee;"></div>
+    <div style="background:var(--color-surface);color:var(--color-text);width:100%;height:100%;display:flex;flex-direction:column;border-top:1px solid var(--color-border-strong);position:relative;">
+      <div id="profiles-data-resizer" title="${t('profiles.dragResize')}" style="position:absolute;top:0;left:0;right:0;height:6px;cursor:ns-resize;background:var(--color-surface-alt);"></div>
       <style>
         #profiles-data-table { border-collapse: separate; border-spacing: 0; }
         #profiles-data-table th, #profiles-data-table td {
@@ -2239,9 +2249,9 @@ function ensureProfilesDataModal() {
       </div>
       <div style="padding:4px 16px;border-top:1px solid #eee;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:0.85em;">
         <div style="display:flex;align-items:center;gap:8px;position:relative;">
-          <span id="profiles-data-count" style="color:#555;"></span>
+          <span id="profiles-data-count" style="color:var(--color-text-muted);"></span>
           <button type="button" id="profiles-data-columns-btn" class="btn btn-primary" style="padding:2px 8px;font-size:0.9em;">${t('profiles.columns')}</button>
-          <div id="profiles-data-columns-popover" style="display:none;position:absolute;bottom:100%;left:0;margin-bottom:4px;background:#fff;border:1px solid #ccc;box-shadow:0 2px 8px rgba(0,0,0,0.15);padding:6px 8px;max-height:300px;overflow:auto;z-index:10;min-width:220px;"></div>
+          <div id="profiles-data-columns-popover" style="display:none;position:absolute;bottom:100%;left:0;margin-bottom:4px;background:var(--color-surface);border:1px solid var(--color-border-strong);box-shadow:0 2px 8px rgba(0,0,0,0.15);padding:6px 8px;max-height:300px;overflow:auto;z-index:10;min-width:220px;"></div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;">
           Rows:

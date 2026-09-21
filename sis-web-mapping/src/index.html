@@ -4,6 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Soil Information System</title>
+    <script>
+      // Apply the saved theme before first paint to avoid a light flash.
+      try {
+        var _t = localStorage.getItem('sis-theme');
+        if (_t !== 'dark' && _t !== 'light') {
+          _t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.dataset.theme = _t;
+      } catch (e) { document.documentElement.dataset.theme = 'light'; }
+    </script>
     <link rel="stylesheet" href="./css/main.css">
     <link rel="stylesheet" href="./css/admin-dashboard.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v7.5.1/ol.css">

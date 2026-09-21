@@ -508,5 +508,7 @@
   "a.raster.defaultOnTip": "这是地图视图的默认图层。点击取消。",
   "a.raster.defaultOffTip": "点击将其设为地图视图的默认图层。",
   "a.moveUp": "上移",
-  "a.moveDown": "下移"
+  "a.moveDown": "下移",
+  "theme.dark": "深色模式",
+  "theme.light": "浅色模式"
 }

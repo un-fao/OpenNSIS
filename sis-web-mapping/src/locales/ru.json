@@ -508,5 +508,7 @@
   "a.raster.defaultOnTip": "Слой по умолчанию на карте. Нажмите, чтобы убрать.",
   "a.raster.defaultOffTip": "Нажмите, чтобы сделать слоем по умолчанию на карте.",
   "a.moveUp": "Выше",
-  "a.moveDown": "Ниже"
+  "a.moveDown": "Ниже",
+  "theme.dark": "Тёмная тема",
+  "theme.light": "Светлая тема"
 }

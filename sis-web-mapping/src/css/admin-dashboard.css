@@ -1040,3 +1040,44 @@ input:checked + .toggle-slider:before {
 
 .ord-btn:hover:not(:disabled) { color: var(--color-primary); }
 .ord-btn:disabled { opacity: 0.25; cursor: default; }
+
+/* =====================================================================
+   Dark theme — overrides for the few admin styles whose light look is
+   hardcoded above (tokens themselves flip in main.css).
+   ===================================================================== */
+[data-theme="dark"] .login-error {
+    background: #3a2226;
+    border-color: #5c2e35;
+}
+
+[data-theme="dark"] .badge-success {
+    background: #1e3a2b;
+    color: #7fd6a4;
+    border-color: #2e5c40;
+}
+
+[data-theme="dark"] .badge-danger {
+    background: #3a2226;
+    color: #f0929e;
+    border-color: #5c2e35;
+}
+
+[data-theme="dark"] .sp-limit-status,
+[data-theme="dark"] .sp-blur-status,
+[data-theme="dark"] .sp-count-total { color: var(--color-text-muted); }
+[data-theme="dark"] .sp-count-pub { color: var(--color-success); }
+[data-theme="dark"] .sp-count-sep { color: var(--color-text-subtle); }
+[data-theme="dark"] .ord-btn { color: var(--color-text-muted); }
+
+[data-theme="dark"] .etl-preview-error {
+    background-color: #4a2020 !important;
+    color: #ff9b9b;
+}
+
+[data-theme="dark"] .etl-preview-cell:focus {
+    background-color: var(--color-surface);
+    color: var(--color-text);
+}
+
+/* Default-layer row tint (#fff8d6 inline) */
+[data-theme="dark"] .admin-table tr[style*="fff8d6"] { background: #4d4719 !important; }

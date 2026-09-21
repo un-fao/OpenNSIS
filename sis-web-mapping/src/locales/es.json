@@ -508,5 +508,7 @@
   "a.raster.defaultOnTip": "Es la capa predeterminada de la vista del mapa. Haga clic para quitarla.",
   "a.raster.defaultOffTip": "Haga clic para hacerla la capa predeterminada de la vista del mapa.",
   "a.moveUp": "Subir",
-  "a.moveDown": "Bajar"
+  "a.moveDown": "Bajar",
+  "theme.dark": "Modo oscuro",
+  "theme.light": "Modo claro"
 }

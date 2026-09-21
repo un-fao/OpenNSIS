@@ -508,5 +508,7 @@
   "a.raster.defaultOnTip": "É a camada predefinida da vista do mapa. Clique para a retirar.",
   "a.raster.defaultOffTip": "Clique para a tornar a camada predefinida da vista do mapa.",
   "a.moveUp": "Subir",
-  "a.moveDown": "Descer"
+  "a.moveDown": "Descer",
+  "theme.dark": "Modo escuro",
+  "theme.light": "Modo claro"
 }

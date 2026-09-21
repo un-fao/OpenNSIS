@@ -60,6 +60,57 @@
     --transition: 160ms ease;
 }
 
+/* =====================================================================
+   Dark theme — the same tokens, re-valued. data-theme lives on <html>,
+   set pre-paint by index.html (localStorage 'sis-theme', default follows
+   prefers-color-scheme) and flipped by the sun/moon buttons (js/theme.js).
+   Elements floating directly on the map (glyphs, scale bar, dynamic
+   legend pills) follow the BASEMAP via body.light-basemap, not the app
+   theme, and are deliberately untouched here.
+   ===================================================================== */
+:root[data-theme="dark"] {
+    color-scheme: dark;
+
+    --color-primary:        #55a05a;
+    --color-primary-hover:  #69b56e;
+    --color-primary-light:  rgba(85, 160, 90, 0.16);
+    --color-secondary:      #8fa0b0;
+    --color-secondary-hover:#a6b6c5;
+    --color-success:        #37b477;
+    --color-success-hover:  #2f9e68;
+    --color-danger:         #e05666;
+    --color-danger-hover:   #e8707e;
+    --color-warning:        #f0ad4e;
+    --color-accent:         #4aa3e0;
+
+    --color-bg:             #14191e;
+    --color-surface:        #1c242b;
+    --color-surface-alt:    #242e36;
+    --color-surface-hover:  #2b3640;
+    --color-border:         #33404a;
+    --color-border-strong:  #485763;
+    --color-text:           #e6ebef;
+    --color-text-muted:     #9aa7b2;
+    --color-text-subtle:    #7c8894;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.6);
+    --focus-ring: 0 0 0 3px rgba(85, 160, 90, 0.4);
+}
+
+/* Panels whose light look is baked in as translucent white */
+[data-theme="dark"] .layer-switcher { background: rgba(28, 36, 43, 0.95); }
+[data-theme="dark"] .popup { background-color: rgba(28, 36, 43, 0.98); }
+[data-theme="dark"] .popup:after { border-color: #1c242b transparent transparent; }
+[data-theme="dark"] .legend-container:not(.bare) { background: rgba(28, 36, 43, 0.95); }
+[data-theme="dark"] #loading-overlay { background: rgba(20, 25, 30, 0.92) !important; }
+
+/* Selected-row highlight (#fff8c4 inline) gets a dark amber */
+[data-theme="dark"] #profiles-data-table tr[style*="fff8c4"] { background: #57511f !important; }
+[data-theme="dark"] #profiles-data-table tr[style*="fff8c4"] td.pd-base { background: #4d4719 !important; }
+[data-theme="dark"] #profiles-data-table tbody tr[style*="fff8c4"] { background: #57511f !important; }
+
 * { box-sizing: border-box; }
 
 body {

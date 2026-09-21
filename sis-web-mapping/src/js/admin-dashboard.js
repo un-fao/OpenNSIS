@@ -5,6 +5,7 @@
 
 import api from './api-client.js';
 import { AVAILABLE as LANGUAGES, currentLang, switchLanguage, t } from './i18n.js';
+import { initThemeButton } from './theme.js';
 import Map from 'ol/Map';
 import View from 'ol/View';
 import { Tile as TileLayer } from 'ol/layer';
@@ -201,11 +202,12 @@ class AdminDashboard {
             <div class="dashboard-header-actions">
               <button class="close-dashboard" id="close-dashboard">${t('a.backToMap')}</button>
               <button class="logout-btn" id="logout-dashboard">${t('a.logout')}</button>
+              <button type="button" class="admin-lang-btn" id="admin-theme-btn"></button>
               <div style="position:relative;display:flex;align-items:center;">
                 <button type="button" class="admin-lang-btn" id="admin-lang-btn" title="${t('lang.label')}" aria-label="${t('lang.label')}">
                   <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3.6 8.5h16.8M3.6 15.5h16.8"/></svg>
                 </button>
-                <div id="admin-lang-menu" style="position:absolute;top:calc(100% + 8px);right:0;background:#fff;border:1px solid #ddd;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:none;min-width:130px;overflow:hidden;z-index:10001;"></div>
+                <div id="admin-lang-menu" style="position:absolute;top:calc(100% + 8px);right:0;background:var(--color-surface);color:var(--color-text);border:1px solid var(--color-border-strong);border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:none;min-width:130px;overflow:hidden;z-index:10001;"></div>
               </div>
             </div>
           </div>
@@ -866,16 +868,19 @@ class AdminDashboard {
   attachEventListeners() {
     // Language switcher — same globe/dropdown as the map view. Switching
     // reloads the page; a sessionStorage flag makes main.js reopen the panel.
+    const themeBtn = document.getElementById('admin-theme-btn');
+    if (themeBtn) initThemeButton(themeBtn);
+
     const langBtn = document.getElementById('admin-lang-btn');
     const langMenu = document.getElementById('admin-lang-menu');
     if (langBtn && langMenu) {
       for (const [code, label] of LANGUAGES) {
         const item = document.createElement('div');
         item.textContent = label;
-        item.style.cssText = 'padding:8px 14px;cursor:pointer;font-size:13px;color:#333;'
-          + (code === currentLang() ? 'font-weight:700;background:#f2f7f2;' : '');
-        item.addEventListener('mouseenter', () => { item.style.background = '#eef3ee'; });
-        item.addEventListener('mouseleave', () => { item.style.background = code === currentLang() ? '#f2f7f2' : ''; });
+        item.style.cssText = 'padding:8px 14px;cursor:pointer;font-size:13px;color:var(--color-text);'
+          + (code === currentLang() ? 'font-weight:700;background:var(--color-primary-light);' : '');
+        item.addEventListener('mouseenter', () => { item.style.background = 'var(--color-surface-hover)'; });
+        item.addEventListener('mouseleave', () => { item.style.background = code === currentLang() ? 'var(--color-primary-light)' : ''; });
         item.addEventListener('click', () => {
           try { sessionStorage.setItem('sis_reopen_admin', '1'); } catch (e) { /* private mode */ }
           switchLanguage(code);
@@ -1244,7 +1249,7 @@ class AdminDashboard {
     overlay.id = 'project-modal-overlay';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;display:flex;align-items:center;justify-content:center;';
     overlay.innerHTML = `
-      <div style="background:#fff;border-radius:8px;max-width:${width || 560}px;width:92%;max-height:88vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.3);">
+      <div style="background:var(--color-surface);color:var(--color-text);border-radius:8px;max-width:${width || 560}px;width:92%;max-height:88vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.3);">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #eee;">
           <h3 style="margin:0;font-size:17px;">${this.escapeHtml(title)}</h3>
           <button type="button" class="pm-close" style="border:none;background:none;font-size:22px;cursor:pointer;color:#888;">&times;</button>
@@ -2771,7 +2776,7 @@ class AdminDashboard {
           return `<li><code>${this.escapeHtml(c.sha)}</code> ${this.escapeHtml(c.message)}${d}</li>`;
         }).join('');
         result.innerHTML = `
-          <div style="border:1px solid #e0c36b;background:#fff8e1;border-radius:6px;padding:var(--sp-3);">
+          <div style="border:1px solid #e0c36b;background:#fff8e1;color:#4a3c08;border-radius:6px;padding:var(--sp-3);">
             <p style="margin:0 0 var(--sp-2);">${t('a.sw.newerAvailable')}
               (<code>${this.escapeHtml(r.current)}</code> → <code>${this.escapeHtml(r.latest || '')}</code>).
               ${t('a.sw.applyRun')}</p>
@@ -3882,7 +3887,7 @@ class AdminDashboard {
             <input type="range" class="sym-opacity" min="0" max="1" step="0.05" value="${cur.opacity}" style="flex:1;">
             <span class="sym-opacity-val" style="font-size:var(--fs-xs);min-width:26px;">${cur.opacity}</span></span></label>
       </div>
-      <div class="sym-preview" style="display:flex;align-items:center;justify-content:center;height:64px;background:#eef3ee;border-radius:6px;margin-bottom:12px;"></div>
+      <div class="sym-preview" style="display:flex;align-items:center;justify-content:center;height:64px;background:var(--color-surface-alt);border-radius:6px;margin-bottom:12px;"></div>
       <div class="pm-status" style="font-size:12px;"></div>
       <div style="margin-top:10px;text-align:right;">
         <button type="button" class="btn btn-secondary btn-sm pm-cancel">${t('a.cancel')}</button>
@@ -4760,7 +4765,7 @@ class AdminDashboard {
     modal.id = 'etl-validation-modal';
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:10001;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow:auto;';
     modal.innerHTML = `
-      <div style="background:#fff;border-radius:6px;max-width:780px;width:100%;box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+      <div style="background:var(--color-surface);color:var(--color-text);border-radius:6px;max-width:780px;width:100%;box-shadow:0 4px 20px rgba(0,0,0,0.3);">
         <div style="padding:14px 20px;border-bottom:1px solid #e1e4e8;display:flex;align-items:center;justify-content:space-between;">
           <h3 style="margin:0;color:#2c3e50;">${t('a.val.title')}</h3>
           <button id="etl-validation-close" type="button" style="background:transparent;border:0;font-size:22px;cursor:pointer;color:#555;">&times;</button>

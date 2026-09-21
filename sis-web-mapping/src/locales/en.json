@@ -508,5 +508,7 @@
   "a.raster.defaultOnTip": "This is the map view's default layer. Click to clear.",
   "a.raster.defaultOffTip": "Click to make this the map view's default layer.",
   "a.moveUp": "Move up",
-  "a.moveDown": "Move down"
+  "a.moveDown": "Move down",
+  "theme.dark": "Dark mode",
+  "theme.light": "Light mode"
 }
