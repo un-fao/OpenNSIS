@@ -1332,7 +1332,7 @@ class AdminDashboard {
     const cc = isNew ? '' : (project.country_id || '');
     const idRow = isNew
       ? `<input class="pm-id" placeholder="${t('a.pm.idPh')}" title="${t('a.pm.idRuleTip')}" style="width:100%;box-sizing:border-box;margin-bottom:12px;" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">`
-      : `<input class="pm-id" value="${this.escapeHtml(pid)}" disabled style="width:100%;box-sizing:border-box;margin-bottom:12px;background:#f2f2f2;color:#666;">`;
+      : `<input class="pm-id" value="${this.escapeHtml(pid)}" disabled style="width:100%;box-sizing:border-box;margin-bottom:12px;background:var(--color-surface-alt);color:var(--color-text-muted);">`;
     const { body } = this._openModal(isNew ? t('a.pm.newProject') : t('a.pm.editProject') + (project.name || pid), `
       <label style="display:block;font-weight:600;margin-bottom:4px;">${t('a.pm.projectId')}</label>
       ${idRow}
@@ -3193,7 +3193,7 @@ class AdminDashboard {
     });
 
     tbody.querySelectorAll('.layer-edit').forEach(el => {
-      el.addEventListener('focus', () => { el.style.border = '1px solid #ccc'; el.style.background = '#fff'; });
+      el.addEventListener('focus', () => { el.style.border = '1px solid var(--color-border-strong)'; el.style.background = 'var(--color-surface)'; });
       el.addEventListener('keydown', e => { if (e.key === 'Enter') el.blur(); });
       el.addEventListener('blur', async () => {
         el.style.border = '1px solid transparent';
@@ -5384,7 +5384,7 @@ class AdminDashboard {
     const orig = td.dataset.orig;
     const newVal = td.textContent;
     if (newVal === orig) return;
-    td.style.backgroundColor = '#fff3cd';
+    td.style.backgroundColor = 'var(--tint-pending)';
     try {
       const result = await api.editDatasetCells(tableName, [{ row_id: rid, column: col, value: newVal }]);
       if (result.updated) {
@@ -5392,7 +5392,7 @@ class AdminDashboard {
         // Update local row data
         const row = (this.etlPreviewRows || []).find(r => r._row_id === rid);
         if (row) row[col] = newVal;
-        td.style.backgroundColor = '#d4edda';
+        td.style.backgroundColor = 'var(--tint-saved)';
         setTimeout(() => { td.style.backgroundColor = ''; }, 800);
         // Debounce revalidate
         clearTimeout(this._etlRevalidateTimer);

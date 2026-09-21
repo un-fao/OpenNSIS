@@ -58,6 +58,10 @@
 
     /* Transitions */
     --transition: 160ms ease;
+
+    /* Feedback tints (inline-edited table cells) */
+    --tint-pending: #fff3cd;
+    --tint-saved:   #d4edda;
 }
 
 /* =====================================================================
@@ -97,6 +101,9 @@
     --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.5);
     --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.6);
     --focus-ring: 0 0 0 3px rgba(85, 160, 90, 0.4);
+
+    --tint-pending: #574a14;
+    --tint-saved:   #1e4230;
 }
 
 /* Panels whose light look is baked in as translucent white */
