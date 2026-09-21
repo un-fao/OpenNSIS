@@ -131,6 +131,24 @@ h1, h2, h3, h4, h5 {
     line-height: var(--lh-tight);
 }
 
+/* Every text-like form control follows the theme tokens — many inputs in
+   the admin tables/grids declare no background and would fall back to the
+   browser's own (light) rendering, turning white-on-white in dark mode.
+   :where() keeps specificity at bare `input`, so any class rule still wins. */
+input:where(:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="button"]):not([type="submit"])),
+select,
+textarea {
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    caret-color: var(--color-text);
+}
+
+/* Chrome autofill paints its own white — repaint it with the tokens. */
+[data-theme="dark"] input:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px var(--color-surface) inset;
+    -webkit-text-fill-color: var(--color-text);
+}
+
 /* =====================================================================
    Header
    ===================================================================== */
