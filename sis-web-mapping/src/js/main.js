@@ -2262,16 +2262,16 @@ function ensureProfilesDataModal() {
         #profiles-data-table thead th {
           position: sticky;
           top: 0;
-          background: #f5f5f5;
+          background: var(--color-surface-alt);
           z-index: 2;
-          box-shadow: inset 0 -1px 0 #ccc;
+          box-shadow: inset 0 -1px 0 var(--color-border-strong);
         }
         #profiles-data-table td.pd-base,
         #profiles-data-table th.pd-base {
           width: 1%;
-          background: #f0f4f8;
+          background: var(--color-surface-alt);
         }
-        #profiles-data-table thead th.pd-base { background: #e4ecf3; }
+        #profiles-data-table thead th.pd-base { background: var(--color-surface-hover); }
         #profiles-data-table tr[style*="background:#fff8c4"] td.pd-base { background: #f5ecb4; }
       </style>
       <div style="overflow:auto;flex:1;padding:6px 16px 0 16px;font-size:0.78em;">
@@ -2280,7 +2280,7 @@ function ensureProfilesDataModal() {
           <tbody id="profiles-data-tbody"></tbody>
         </table>
       </div>
-      <div style="padding:4px 16px;border-top:1px solid #eee;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:0.85em;">
+      <div style="padding:4px 16px;border-top:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:0.85em;">
         <div style="display:flex;align-items:center;gap:8px;position:relative;">
           <span id="profiles-data-count" style="color:var(--color-text-muted);"></span>
           <button type="button" id="profiles-data-columns-btn" class="btn btn-primary" style="padding:2px 8px;font-size:0.9em;">${t('profiles.columns')}</button>
