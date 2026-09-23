@@ -3638,10 +3638,17 @@ async def validate_dataset(
 
     with get_db() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Dataset exists?
-            cur.execute("SELECT table_name FROM api.uploaded_dataset WHERE table_name = %s", (table_name,))
-            if not cur.fetchone():
+            # Dataset exists? (source decides whether the lab ID is compulsory)
+            cur.execute("SELECT table_name, source FROM api.uploaded_dataset WHERE table_name = %s", (table_name,))
+            ds_row = cur.fetchone()
+            if not ds_row:
                 raise HTTPException(status_code=404, detail="Dataset not found")
+            ds_source = (ds_row.get("source") or "csv")
+            # Laboratory-API data always has a reception ID at the source, so
+            # losing it in transit is a defect; legacy CSVs get no such demand.
+            required_destinations = list(REQUIRED_DESTINATIONS)
+            if ds_source == "lims-api":
+                required_destinations.append(("Lab sample ID", "specimen", "sample_lab_id"))
 
             # Load mappings
             cur.execute("""
@@ -3726,6 +3733,15 @@ async def validate_dataset(
 
                 rule = RULES.get((dt, dc))
                 token_cells = 0   # 'NA'/'NaN'/... cells treated as empty — reported, not silent
+                if ds_source == "lims-api" and dt == "specimen" and dc == "sample_lab_id":
+                    for row in rows:
+                        rid = row["_row_id"]
+                        if etl_missing(row.get(csv_col)):
+                            error_rows.add(rid)
+                            if len(errors) < MAX_DISPLAY:
+                                errors.append(f"row {rid}: missing lab ID (compulsory for laboratory-API data)")
+                            else:
+                                truncated = True
                 if rule:
                     for row in rows:
                         rid = row["_row_id"]
@@ -4067,10 +4083,11 @@ async def validate_dataset(
                 if r["status"] != "OK":
                     total_errors += len([e for e in r["errors"] if e != "..."])
 
-            # Required destinations: every entry in REQUIRED_DESTINATIONS must be mapped
+            # Required destinations: every entry must be mapped (the list grows
+            # by 'Lab sample ID' for laboratory-API datasets).
             mapped_targets = {(m["destination_table"], m["destination_column"]) for m in mappings}
             missing_required = [
-                lbl for (lbl, t, c) in REQUIRED_DESTINATIONS if (t, c) not in mapped_targets
+                lbl for (lbl, t, c) in required_destinations if (t, c) not in mapped_targets
             ]
 
             # Dataset-level note
