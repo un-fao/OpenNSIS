@@ -511,5 +511,7 @@
   "a.moveDown": "Descer",
   "theme.dark": "Modo escuro",
   "theme.light": "Modo claro",
-  "a.val.missingTokens": "{n} célula(s) com um marcador de valor em falta (NA, NaN, N/A, null) tratadas como vazias"
+  "a.val.missingTokens": "{n} célula(s) com um marcador de valor em falta (NA, NaN, N/A, null) tratadas como vazias",
+  "a.val.r.fieldId": "identificador de texto livre atribuído à amostra na recolha em campo; sem verificação de formato",
+  "a.val.r.labId": "identificador de texto livre atribuído pelo laboratório na receção; sem verificação de formato"
 }

@@ -3252,10 +3252,15 @@ async def ingest_dataset(
                         if element_id in specimens_cache:
                             specimen_id = specimens_cache[element_id]
                         else:
+                            # Chain-of-custody identifiers (optional mappings):
+                            # the bag's field-collection ID and the lab's
+                            # reception ID (migration 023).
+                            spec_sample_field_id = get_val(row, "specimen", "sample_field_id")
+                            spec_sample_lab_id = get_val(row, "specimen", "sample_lab_id")
                             cur.execute("""
-                                INSERT INTO soil_data.specimen (element_id)
-                                VALUES (%s) RETURNING specimen_id
-                            """, (element_id,))
+                                INSERT INTO soil_data.specimen (element_id, sample_field_id, sample_lab_id)
+                                VALUES (%s, %s, %s) RETURNING specimen_id
+                            """, (element_id, spec_sample_field_id, spec_sample_lab_id))
                             specimen_id = cur.fetchone()["specimen_id"]
                             specimens_cache[element_id] = specimen_id
 

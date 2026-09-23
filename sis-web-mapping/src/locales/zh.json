@@ -511,5 +511,7 @@
   "a.moveDown": "下移",
   "theme.dark": "深色模式",
   "theme.light": "浅色模式",
-  "a.val.missingTokens": "{n} 个单元格包含缺失值标记（NA、NaN、N/A、null），已按空值处理"
+  "a.val.missingTokens": "{n} 个单元格包含缺失值标记（NA、NaN、N/A、null），已按空值处理",
+  "a.val.r.fieldId": "野外采样时赋予样品的自由文本标识符；不检查格式",
+  "a.val.r.labId": "实验室接收时分配的自由文本标识符；不检查格式"
 }

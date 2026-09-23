@@ -4263,6 +4263,8 @@ class AdminDashboard {
       { label: 'Lower depth',                           table: 'element',    column: 'lower_depth',         required: true  },
       { label: 'Layer type (Horizon or Layer)',         table: 'element',    column: 'type',                required: false },
       { label: 'Horizon',                               table: 'element',    column: 'horizon',             required: false },
+      { label: 'Field sample ID',                       table: 'specimen',   column: 'sample_field_id',            required: false },
+      { label: 'Lab sample ID',                         table: 'specimen',   column: 'sample_lab_id',              required: false },
       { label: 'Soil property',                         table: 'result_num', column: 'value',               required: true  },
     ];
   }
@@ -4689,6 +4691,8 @@ class AdminDashboard {
       'element|lower_depth':      t('a.val.r.lowerDepth'),
       'element|type':             t('a.val.r.elementType'),
       'element|horizon':          t('a.val.r.horizon'),
+      'specimen|sample_field_id':        t('a.val.r.fieldId'),
+      'specimen|sample_lab_id':          t('a.val.r.labId'),
       'result_num|value':         t('a.val.r.resultNum'),
     };
   }

@@ -511,5 +511,7 @@
   "a.moveDown": "Move down",
   "theme.dark": "Dark mode",
   "theme.light": "Light mode",
-  "a.val.missingTokens": "{n} cell(s) with a missing-value token (NA, NaN, N/A, null) treated as empty"
+  "a.val.missingTokens": "{n} cell(s) with a missing-value token (NA, NaN, N/A, null) treated as empty",
+  "a.val.r.fieldId": "free-text identifier given to the sample at field collection; no format check",
+  "a.val.r.labId": "free-text identifier assigned by the laboratory at reception; no format check"
 }

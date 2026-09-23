@@ -511,5 +511,7 @@
   "a.moveDown": "Descendre",
   "theme.dark": "Mode sombre",
   "theme.light": "Mode clair",
-  "a.val.missingTokens": "{n} cellule(s) avec un marqueur de valeur manquante (NA, NaN, N/A, null) traitées comme vides"
+  "a.val.missingTokens": "{n} cellule(s) avec un marqueur de valeur manquante (NA, NaN, N/A, null) traitées comme vides",
+  "a.val.r.fieldId": "identifiant en texte libre attribué à l'échantillon lors de la collecte sur le terrain ; aucun contrôle de format",
+  "a.val.r.labId": "identifiant en texte libre attribué par le laboratoire à la réception ; aucun contrôle de format"
 }
