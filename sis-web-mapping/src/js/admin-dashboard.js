@@ -4991,7 +4991,7 @@ class AdminDashboard {
       !this.etlDatasets.some(d => d.lims_connection_id === c.connection_id));
     const connRows = orphanConns.map(c => `<tr>
             <td style="font-weight:600;">${this.escapeHtml(c.name)}</td>
-            <td><span class="badge" style="${srcStyle}">LIMS</span></td>
+            <td><span class="badge" style="${srcStyle}">API</span></td>
             <td>-</td>
             <td>${c.last_fetch_at ? new Date(c.last_fetch_at).toISOString().slice(0, 10) : '-'}</td>
             <td>-</td>
