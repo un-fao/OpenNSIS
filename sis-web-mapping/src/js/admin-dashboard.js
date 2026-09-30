@@ -5035,7 +5035,7 @@ class AdminDashboard {
             <td>
               ${d.lims_connection_id && latestByConn[d.lims_connection_id] === d.table_name
                   && conns.some(c => c.connection_id === d.lims_connection_id)
-                ? `<button class="btn btn-primary btn-sm" style="margin-right:4px;" onclick="adminDashboard.fetchLimsConnection(${d.lims_connection_id})">${importIcon}${t('a.lims.fetch')}</button>`
+                ? `<button class="btn btn-primary btn-sm" style="margin-right:4px;" onclick="adminDashboard.fetchLimsConnection(${d.lims_connection_id})">${t('a.lims.fetch')}</button>`
                 : ''}
               <button class="btn btn-primary btn-sm" onclick="adminDashboard.openDataset('${tnJs}')">${t('a.etl.open')}</button>
               <button class="btn btn-sm" style="background:#28a745;color:#fff;margin-left:4px;${ingested ? 'opacity:0.5;pointer-events:none;' : ''}" onclick="adminDashboard.ingestDataset('${tnJs}')"${ingested ? ' disabled' : ''}>${t('a.etl.ingest')}</button>
