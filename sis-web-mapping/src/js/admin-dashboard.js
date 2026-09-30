@@ -5211,16 +5211,15 @@ class AdminDashboard {
     const key = document.getElementById('lims-new-key')?.value.trim();
     if (!name || !url || !key) { alert(t('a.lims.fillAll')); return; }
     try {
-      const created = await api.authenticatedRequest('/api/lims/connections', {
+      await api.authenticatedRequest('/api/lims/connections', {
         method: 'POST', body: JSON.stringify({ name, base_url: url, api_key: key })
       });
       ['lims-new-name', 'lims-new-url', 'lims-new-key'].forEach(id => {
         const el = document.getElementById(id); if (el) el.value = '';
       });
+      // The connection appears as a row in Data source; its first
+      // import runs when the user hits Open on that row.
       await this.loadLimsConnections(); this.renderLimsConnections(); this.renderEtlDatasets();
-      // First import straight away: the connection materialises as a
-      // dataset row in Data source, ready to open, map and ingest.
-      if (created && created.connection_id) await this.fetchLimsConnection(created.connection_id);
     } catch (e) { alert(e.message); }
   }
 
