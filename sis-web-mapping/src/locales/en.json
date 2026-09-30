@@ -533,5 +533,7 @@
   "a.etl.dataSource": "Data source",
   "a.etl.csvFile": "CSV file",
   "a.etl.chooseFile": "Choose file…",
-  "a.etl.noFile": "No file selected"
+  "a.etl.noFile": "No file selected",
+  "a.lims.importing": "Importing from the laboratory…",
+  "a.lims.checking": "Checking for new data…"
 }

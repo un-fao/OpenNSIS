@@ -4998,8 +4998,8 @@ class AdminDashboard {
             <td>-</td>
             <td>-</td>
             <td>-</td>
-            <td><button type="button" class="btn btn-primary btn-sm" onclick="adminDashboard.fetchLimsConnection(${c.connection_id})">${t('a.etl.open')}</button></td>
-            <td class="etl-result" style="font-size:var(--fs-xs);max-width:300px;white-space:pre-wrap;">${this.escapeHtml(c.last_fetch_note || '')}</td>
+            <td><button type="button" id="lims-conn-open-${c.connection_id}" class="btn btn-primary btn-sm" onclick="adminDashboard.fetchLimsConnection(${c.connection_id})">${t('a.etl.open')}</button></td>
+            <td class="etl-result" id="lims-conn-result-${c.connection_id}" style="font-size:var(--fs-xs);max-width:300px;white-space:pre-wrap;">${this.escapeHtml(c.last_fetch_note || '')}</td>
           </tr>`).join('');
     const fmtDate = v => {
       if (!v) return '-';
@@ -5039,7 +5039,7 @@ class AdminDashboard {
               <button class="btn btn-sm" style="background:#28a745;color:#fff;margin-left:4px;${ingested ? 'opacity:0.5;pointer-events:none;' : ''}" onclick="adminDashboard.ingestDataset('${tnJs}')"${ingested ? ' disabled' : ''}>${t('a.etl.ingest')}</button>
               ${this.isAdmin ? `<button class="btn btn-sm" style="background:#dc3545;color:#fff;margin-left:4px;" onclick="adminDashboard.deleteDataset('${tnJs}')">${t('a.delete')}</button>` : ''}
             </td>
-            <td class="etl-result" style="font-size:var(--fs-xs);max-width:300px;white-space:pre-wrap;">${this.escapeHtml(d.note || '')}</td>
+            <td class="etl-result" id="etl-result-${tn}" style="font-size:var(--fs-xs);max-width:300px;white-space:pre-wrap;">${this.escapeHtml(d.note || '')}</td>
           </tr>`;
         }).join('');
         })()}
@@ -5247,6 +5247,9 @@ class AdminDashboard {
   // nothing changed). New data -> a fresh dataset stages and opens;
   // otherwise (or if the lab is unreachable) the existing one opens.
   async openLimsLatest(connectionId, tableName) {
+    const cell = document.getElementById(`etl-result-${tableName}`);
+    const prev = cell ? cell.textContent : '';
+    if (cell) cell.textContent = t('a.lims.checking');
     try {
       const r = await api.authenticatedRequest(`/api/lims/connections/${connectionId}/fetch`, {
         method: 'POST', body: JSON.stringify({})
@@ -5261,24 +5264,39 @@ class AdminDashboard {
     } catch (e) {
       console.warn('LIMS freshness check failed, opening the existing dataset:', e);
     }
+    if (cell) cell.textContent = prev;
     this.openDataset(tableName);
   }
 
   async fetchLimsConnection(id) {
     // Like a CSV upload: the dataset stages without a project — the user
-    // picks it in the detail panel that opens right after.
+    // picks it in the detail panel that opens right after. All feedback
+    // lives in the row's Result cell; no dialogues.
+    const btn = document.getElementById(`lims-conn-open-${id}`);
+    const cell = document.getElementById(`lims-conn-result-${id}`);
+    if (btn) btn.disabled = true;
+    if (cell) cell.textContent = t('a.lims.importing');
     try {
       const r = await api.authenticatedRequest(`/api/lims/connections/${id}/fetch`, {
         method: 'POST', body: JSON.stringify({})
       });
-      alert(r.message || '');
-      await this.loadLimsConnections(); this.renderLimsConnections(); this.renderEtlDatasets();
+      await this.loadLimsConnections(); this.renderLimsConnections();
       if (r.table_name) {
         await this.loadEtlDatasets();
         this.renderEtlDatasets();
         this.openDataset(r.table_name);
+      } else {
+        this.renderEtlDatasets();
+        const after = document.getElementById(`lims-conn-result-${id}`);
+        if (after) after.textContent = r.message || '';
       }
-    } catch (e) { alert(e.message); }
+    } catch (e) {
+      this.renderEtlDatasets();
+      const after = document.getElementById(`lims-conn-result-${id}`);
+      if (after) after.textContent = t('a.err.prefix') + e.message;
+      const btnAfter = document.getElementById(`lims-conn-open-${id}`);
+      if (btnAfter) btnAfter.disabled = false;
+    }
   }
 
   async deleteLimsConnection(id) {

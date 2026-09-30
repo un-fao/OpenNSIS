@@ -533,5 +533,7 @@
   "a.etl.dataSource": "数据来源",
   "a.etl.csvFile": "CSV 文件",
   "a.etl.chooseFile": "选择文件…",
-  "a.etl.noFile": "未选择文件"
+  "a.etl.noFile": "未选择文件",
+  "a.lims.importing": "正在从实验室导入…",
+  "a.lims.checking": "正在检查新数据…"
 }
