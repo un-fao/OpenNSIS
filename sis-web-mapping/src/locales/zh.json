@@ -528,7 +528,7 @@
   "a.lims.testFail": "连接失败：",
   "a.lims.noProfile": "警告：实验室 API 未声明 opennsis 配置。",
   "a.lims.fillAll": "名称、API 地址和密钥均为必填。",
-  "a.lims.confirmDelete": "删除此实验室连接？已获取的数据集将保留。",
+  "a.lims.confirmDelete": "删除此实验室连接？存在数据集的连接无法删除——请先在“数据来源”中删除其数据集。",
   "a.lims.source": "来源",
   "a.etl.dataSource": "数据来源",
   "a.etl.csvFile": "CSV 文件",

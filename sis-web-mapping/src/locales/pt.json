@@ -528,7 +528,7 @@
   "a.lims.testFail": "Falha na ligação:",
   "a.lims.noProfile": "Aviso: a API do laboratório não declara o perfil opennsis.",
   "a.lims.fillAll": "Nome, URL e chave da API são obrigatórios.",
-  "a.lims.confirmDelete": "Eliminar esta ligação de laboratório? Os conjuntos recolhidos são mantidos.",
+  "a.lims.confirmDelete": "Eliminar esta ligação de laboratório? Uma ligação com conjuntos de dados não pode ser eliminada — elimine primeiro os seus conjuntos em Fonte de dados.",
   "a.lims.source": "Origem",
   "a.etl.dataSource": "Fonte de dados",
   "a.etl.csvFile": "Ficheiro CSV",

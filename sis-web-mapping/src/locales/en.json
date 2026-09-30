@@ -528,7 +528,7 @@
   "a.lims.testFail": "Connection failed:",
   "a.lims.noProfile": "Warning: the laboratory API does not declare the opennsis profile.",
   "a.lims.fillAll": "Name, API URL and API key are all required.",
-  "a.lims.confirmDelete": "Delete this laboratory connection? Its fetched datasets are kept.",
+  "a.lims.confirmDelete": "Delete this laboratory connection? A connection with datasets cannot be deleted — delete its datasets in Data source first.",
   "a.lims.source": "Source",
   "a.etl.dataSource": "Data source",
   "a.etl.csvFile": "CSV file",

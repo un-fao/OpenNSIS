@@ -2938,10 +2938,19 @@ async def delete_lims_connection(connection_id: int,
     with get_db() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             row = _lims_connection_row(cur, connection_id)
+            # A connection with datasets cannot go: losing the link would
+            # orphan their provenance and the mapping inheritance chain.
+            cur.execute("SELECT count(*) AS n FROM api.uploaded_dataset WHERE lims_connection_id = %s",
+                        (connection_id,))
+            n = cur.fetchone()["n"]
+            if n:
+                raise HTTPException(status_code=400, detail=(
+                    f"{n} dataset(s) still reference this connection — "
+                    f"delete them in Data source first"))
             cur.execute("DELETE FROM api.lims_connection WHERE connection_id = %s", (connection_id,))
             log_audit(current_user["user_id"], None, "lims_connection_deleted",
                       {"connection_id": connection_id, "name": row["name"]}, None)
-            return {"message": f"Connection '{row['name']}' deleted (its datasets are kept)"}
+            return {"message": f"Connection '{row['name']}' deleted"}
 
 
 @app.post("/api/lims/connections/{connection_id}/test")
