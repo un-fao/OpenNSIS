@@ -2853,8 +2853,10 @@ def _lims_connection_row(cur, connection_id):
 
 
 @app.get("/api/lims/connections")
-async def list_lims_connections(current_user: dict = Depends(get_current_admin_user)):
-    """List laboratory connections. The API key is masked to its last 4 chars."""
+async def list_lims_connections(current_user: dict = Depends(get_current_user)):
+    """List laboratory connections. Any signed-in user sees them (they import
+    from the Soil profiles tab); the endpoint URL and the masked API key are
+    admin-only detail."""
     with get_db() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
@@ -2865,7 +2867,12 @@ async def list_lims_connections(current_user: dict = Depends(get_current_admin_u
                         WHERE d.lims_connection_id = c.connection_id) AS dataset_count
                 FROM api.lims_connection c ORDER BY c.name
             """)
-            return cur.fetchall()
+            rows = cur.fetchall()
+            if not current_user.get("is_admin"):
+                for r in rows:
+                    r.pop("base_url", None)
+                    r.pop("api_key_masked", None)
+            return rows
 
 
 @app.post("/api/lims/connections", status_code=status.HTTP_201_CREATED)
@@ -2970,7 +2977,7 @@ def _lims_number(v):
 
 @app.post("/api/lims/connections/{connection_id}/fetch")
 async def fetch_from_lims(connection_id: int, payload: Optional[dict] = None,
-                          current_user: dict = Depends(get_current_admin_user)):
+                          current_user: dict = Depends(get_current_user)):
     """Fetch released samples from the laboratory and stage them as an ETL
     dataset (source='lims-api'). Optional payload: {"project_id": "...",
     "force": true} — force skips the change-feed short-circuit."""

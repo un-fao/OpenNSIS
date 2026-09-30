@@ -108,12 +108,16 @@ class AdminDashboard {
         this.admDivInited = true;
       }
       this.loadAdminDivisions().then(() => this.renderAdminDivisions());
-      this.loadLimsConnections().then(() => this.renderLimsConnections());
     } else {
       if (adminTabBtn) adminTabBtn.style.display = 'none';
       if (adminPane) adminPane.style.display = 'none';
       this.switchTab('layers');
     }
+
+    this.loadLimsConnections().then(() => {
+      this.renderLimsConnections();
+      this.renderLimsImportArea();
+    });
 
     await this.loadLayers();
     this.renderLayers();
@@ -464,6 +468,7 @@ class AdminDashboard {
                       <button type="button" class="btn btn-primary btn-sm" id="etl-upload-btn">${t('a.etl.uploadCsv')}</button>
                       <span id="etl-upload-status" style="font-size:var(--fs-sm);"></span>
                     </div>
+                    <div id="lims-import-area"></div>
                     <div id="etl-datasets-list"></div>
                   </div>
 
@@ -5150,12 +5155,27 @@ class AdminDashboard {
             <td>${c.dataset_count ?? 0}</td>
             <td>
               <button class="btn btn-sm" onclick="adminDashboard.testLimsConnection(${c.connection_id})">${t('a.lims.test')}</button>
-              <button class="btn btn-primary btn-sm" style="margin-left:4px;" onclick="adminDashboard.fetchLimsConnection(${c.connection_id})">${t('a.lims.fetch')}</button>
               <button class="btn btn-sm" style="background:#dc3545;color:#fff;margin-left:4px;" onclick="adminDashboard.deleteLimsConnection(${c.connection_id})">${t('a.delete')}</button>
             </td>
           </tr>`).join('')}
         </tbody>
       </table>`;
+  }
+
+  // The Soil profiles tab counterpart: any signed-in user imports from an
+  // enabled connection — the laboratory analogue of uploading a CSV.
+  renderLimsImportArea() {
+    const box = document.getElementById('lims-import-area');
+    if (!box) return;
+    const rows = (this.limsConnections || []).filter(c => c.enabled);
+    if (!rows.length) { box.innerHTML = ''; return; }
+    box.innerHTML = `
+      <div style="display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;margin-bottom:var(--sp-4);">
+        <span style="font-weight:600;">${t('a.lims.importTitle')}</span>
+        ${rows.map(c => `
+          <button type="button" class="btn btn-primary btn-sm" onclick="adminDashboard.fetchLimsConnection(${c.connection_id})">${t('a.lims.fetch')}: ${this.escapeHtml(c.name)}</button>`).join('')}
+        <span style="font-size:var(--fs-xs);color:var(--color-text-muted);">${this.escapeHtml((rows.find(c => c.last_fetch_note) || {}).last_fetch_note || '')}</span>
+      </div>`;
   }
 
   async addLimsConnection() {
@@ -5170,7 +5190,7 @@ class AdminDashboard {
       ['lims-new-name', 'lims-new-url', 'lims-new-key'].forEach(id => {
         const el = document.getElementById(id); if (el) el.value = '';
       });
-      await this.loadLimsConnections(); this.renderLimsConnections();
+      await this.loadLimsConnections(); this.renderLimsConnections(); this.renderLimsImportArea();
     } catch (e) { alert(e.message); }
   }
 
@@ -5179,7 +5199,7 @@ class AdminDashboard {
       await api.authenticatedRequest(`/api/lims/connections/${id}`, {
         method: 'PUT', body: JSON.stringify({ enabled })
       });
-      await this.loadLimsConnections(); this.renderLimsConnections();
+      await this.loadLimsConnections(); this.renderLimsConnections(); this.renderLimsImportArea();
     } catch (e) { alert(e.message); }
   }
 
@@ -5209,7 +5229,7 @@ class AdminDashboard {
         method: 'POST', body: JSON.stringify({ project_id: pid })
       });
       alert(r.message || '');
-      await this.loadLimsConnections(); this.renderLimsConnections();
+      await this.loadLimsConnections(); this.renderLimsConnections(); this.renderLimsImportArea();
       if (r.table_name) {
         await this.loadEtlDatasets();
         this.renderEtlDatasets();
@@ -5222,7 +5242,7 @@ class AdminDashboard {
     if (!confirm(t('a.lims.confirmDelete'))) return;
     try {
       await api.authenticatedRequest(`/api/lims/connections/${id}`, { method: 'DELETE' });
-      await this.loadLimsConnections(); this.renderLimsConnections();
+      await this.loadLimsConnections(); this.renderLimsConnections(); this.renderLimsImportArea();
     } catch (e) { alert(e.message); }
   }
 

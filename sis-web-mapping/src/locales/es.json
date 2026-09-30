@@ -524,7 +524,7 @@
   "a.lims.lastFetch": "Última descarga",
   "a.lims.datasets": "Conjuntos",
   "a.lims.test": "Probar",
-  "a.lims.fetch": "Descargar ahora",
+  "a.lims.fetch": "Importar",
   "a.lims.testOk": "Conexión correcta.",
   "a.lims.testFail": "Fallo de conexión:",
   "a.lims.noProfile": "Aviso: la API del laboratorio no declara el perfil opennsis.",
@@ -533,5 +533,6 @@
   "a.lims.needProject": "Cree primero un proyecto: los datos descargados deben pertenecer a un proyecto.",
   "a.lims.pickProject": "Escriba el ID del proyecto de destino:",
   "a.lims.badProject": "ID de proyecto desconocido.",
-  "a.lims.source": "Origen"
+  "a.lims.source": "Origen",
+  "a.lims.importTitle": "Importar del laboratorio (LIMS):"
 }

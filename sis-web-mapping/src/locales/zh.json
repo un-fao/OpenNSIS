@@ -524,7 +524,7 @@
   "a.lims.lastFetch": "上次获取",
   "a.lims.datasets": "数据集",
   "a.lims.test": "测试",
-  "a.lims.fetch": "立即获取",
+  "a.lims.fetch": "导入",
   "a.lims.testOk": "连接正常。",
   "a.lims.testFail": "连接失败：",
   "a.lims.noProfile": "警告：实验室 API 未声明 opennsis 配置。",
@@ -533,5 +533,6 @@
   "a.lims.needProject": "请先创建项目：获取的数据必须属于某个项目。",
   "a.lims.pickProject": "输入目标项目 ID：",
   "a.lims.badProject": "未知的项目 ID。",
-  "a.lims.source": "来源"
+  "a.lims.source": "来源",
+  "a.lims.importTitle": "从实验室导入（LIMS）："
 }

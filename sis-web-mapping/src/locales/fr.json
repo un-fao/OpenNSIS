@@ -524,7 +524,7 @@
   "a.lims.lastFetch": "Dernière récupération",
   "a.lims.datasets": "Jeux de données",
   "a.lims.test": "Tester",
-  "a.lims.fetch": "Récupérer maintenant",
+  "a.lims.fetch": "Importer",
   "a.lims.testOk": "Connexion réussie.",
   "a.lims.testFail": "Échec de la connexion :",
   "a.lims.noProfile": "Attention : l'API du laboratoire ne déclare pas le profil opennsis.",
@@ -533,5 +533,6 @@
   "a.lims.needProject": "Créez d'abord un projet : les données récupérées doivent appartenir à un projet.",
   "a.lims.pickProject": "Saisissez l'ID du projet de destination :",
   "a.lims.badProject": "ID de projet inconnu.",
-  "a.lims.source": "Source"
+  "a.lims.source": "Source",
+  "a.lims.importTitle": "Importer depuis le laboratoire (LIMS) :"
 }
