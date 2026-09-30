@@ -2788,11 +2788,400 @@ async def upload_csv(
 
 @app.get("/api/etl/datasets")
 async def list_datasets(current_user: dict = Depends(get_current_user)):
-    """List all uploaded datasets."""
+    """List all uploaded datasets (with the laboratory name for fetched ones)."""
     with get_db() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT * FROM api.uploaded_dataset ORDER BY table_name DESC")
+            cur.execute("""
+                SELECT d.*, lc.name AS lims_connection_name
+                FROM api.uploaded_dataset d
+                LEFT JOIN api.lims_connection lc ON lc.connection_id = d.lims_connection_id
+                ORDER BY d.table_name DESC
+            """)
             return cur.fetchall()
+
+
+# =====================================================================
+# Laboratory (LIMS) API connections — fetch analysed samples straight
+# from a laboratory exchange API (SoilFER-LIMS v2 contract) into the
+# ordinary ETL staging pipeline. A dataset fetched here is a normal
+# api.uploaded_dataset row with source='lims-api' (migration 024) and a
+# reference to its connection (migration 025); mapping, validation and
+# ingest apply unchanged. Parameter mappings are inherited from the
+# previous fetch of the SAME connection — mapped once per laboratory,
+# reused for every later fetch.
+# =====================================================================
+
+LIMS_PAGE_LIMIT = 500   # SoilFER-LIMS capabilities maxLimit
+
+# Staged column → ETL destination, applied automatically on every fetch.
+LIMS_FIXED_COLUMNS = [
+    ("profile_code",    "plot",     "plot_code"),
+    ("longitude",       "plot",     "geom (longitude)"),
+    ("latitude",        "plot",     "geom (latitude)"),
+    ("sampling_date",   "plot",     "sampling_date"),
+    ("upper_depth",     "element",  "upper_depth"),
+    ("lower_depth",     "element",  "lower_depth"),
+    ("altitude",        "plot",     "altitude"),
+    ("field_sample_id", "specimen", "sample_field_id"),
+    ("lab_sample_id",   "specimen", "sample_lab_id"),
+]
+
+
+def _lims_get(base_url, api_key, path, params=None):
+    """GET against a laboratory exchange API; HTTP errors become 502s."""
+    url = base_url.rstrip('/') + path
+    try:
+        r = http_requests.get(url, params=params or {}, timeout=30,
+                              headers={"X-API-Key": api_key, "Accept": "application/json"})
+    except http_requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Laboratory API unreachable: {e}")
+    if r.status_code != 200:
+        raise HTTPException(status_code=502, detail=(
+            f"Laboratory API returned HTTP {r.status_code} for {path}: {r.text[:200]}"))
+    try:
+        return r.json()
+    except ValueError:
+        raise HTTPException(status_code=502, detail=f"Laboratory API returned non-JSON for {path}")
+
+
+def _lims_connection_row(cur, connection_id):
+    cur.execute("SELECT * FROM api.lims_connection WHERE connection_id = %s", (connection_id,))
+    row = cur.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Laboratory connection not found")
+    return row
+
+
+@app.get("/api/lims/connections")
+async def list_lims_connections(current_user: dict = Depends(get_current_admin_user)):
+    """List laboratory connections. The API key is masked to its last 4 chars."""
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT c.connection_id, c.name, c.base_url, c.enabled,
+                       c.last_fetch_at, c.last_fetch_note, c.created_at,
+                       '…' || right(c.api_key, 4) AS api_key_masked,
+                       (SELECT count(*) FROM api.uploaded_dataset d
+                        WHERE d.lims_connection_id = c.connection_id) AS dataset_count
+                FROM api.lims_connection c ORDER BY c.name
+            """)
+            return cur.fetchall()
+
+
+@app.post("/api/lims/connections", status_code=status.HTTP_201_CREATED)
+async def create_lims_connection(payload: dict, current_user: dict = Depends(get_current_admin_user)):
+    name = (payload.get("name") or "").strip()
+    base_url = (payload.get("base_url") or "").strip().rstrip('/')
+    api_key = (payload.get("api_key") or "").strip()
+    if not name or not base_url or not api_key:
+        raise HTTPException(status_code=400, detail="name, base_url and api_key are required")
+    if not re.match(r"^https?://", base_url):
+        raise HTTPException(status_code=400, detail="base_url must start with http:// or https://")
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            try:
+                cur.execute("""
+                    INSERT INTO api.lims_connection (name, base_url, api_key)
+                    VALUES (%s, %s, %s) RETURNING connection_id
+                """, (name, base_url, api_key))
+            except psycopg2.errors.UniqueViolation:
+                raise HTTPException(status_code=400, detail="A connection with this name already exists")
+            cid = cur.fetchone()["connection_id"]
+            log_audit(current_user["user_id"], None, "lims_connection_created",
+                      {"connection_id": cid, "name": name, "base_url": base_url}, None)
+            return {"connection_id": cid, "name": name, "base_url": base_url}
+
+
+@app.put("/api/lims/connections/{connection_id}")
+async def update_lims_connection(connection_id: int, payload: dict,
+                                 current_user: dict = Depends(get_current_admin_user)):
+    sets, params = [], []
+    if "name" in payload:
+        v = (payload.get("name") or "").strip()
+        if not v:
+            raise HTTPException(status_code=400, detail="name cannot be empty")
+        sets.append("name = %s"); params.append(v)
+    if "base_url" in payload:
+        v = (payload.get("base_url") or "").strip().rstrip('/')
+        if not re.match(r"^https?://", v):
+            raise HTTPException(status_code=400, detail="base_url must start with http:// or https://")
+        sets.append("base_url = %s"); params.append(v)
+        # a different endpoint invalidates the old sync state
+        sets.append("sync_cursor = NULL")
+    if payload.get("api_key"):
+        sets.append("api_key = %s"); params.append(payload["api_key"].strip())
+    if "enabled" in payload:
+        sets.append("enabled = %s"); params.append(bool(payload["enabled"]))
+    if not sets:
+        raise HTTPException(status_code=400, detail="Nothing to update")
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            _lims_connection_row(cur, connection_id)
+            cur.execute(f"UPDATE api.lims_connection SET {', '.join(sets)} WHERE connection_id = %s",
+                        params + [connection_id])
+            log_audit(current_user["user_id"], None, "lims_connection_updated",
+                      {"connection_id": connection_id, "fields": [x.split(' =')[0] for x in sets]}, None)
+            return {"message": "Connection updated"}
+
+
+@app.delete("/api/lims/connections/{connection_id}")
+async def delete_lims_connection(connection_id: int,
+                                 current_user: dict = Depends(get_current_admin_user)):
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            row = _lims_connection_row(cur, connection_id)
+            cur.execute("DELETE FROM api.lims_connection WHERE connection_id = %s", (connection_id,))
+            log_audit(current_user["user_id"], None, "lims_connection_deleted",
+                      {"connection_id": connection_id, "name": row["name"]}, None)
+            return {"message": f"Connection '{row['name']}' deleted (its datasets are kept)"}
+
+
+@app.post("/api/lims/connections/{connection_id}/test")
+async def test_lims_connection(connection_id: int,
+                               current_user: dict = Depends(get_current_admin_user)):
+    """Call the lab's capabilities endpoint and report what it supports."""
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            row = _lims_connection_row(cur, connection_id)
+    caps = _lims_get(row["base_url"], row["api_key"], "/api/v2/data-exchange/capabilities")
+    profiles = caps.get("supportedProfiles") or []
+    return {
+        "ok": True,
+        "contractVersion": caps.get("contractVersion"),
+        "sourceSystemId": caps.get("sourceSystemId"),
+        "profiles": profiles,
+        "opennsis_profile": "opennsis" in profiles,
+        "limits": caps.get("limits"),
+    }
+
+
+def _lims_number(v):
+    """A numeric observation value as its staged text form, else ''."""
+    if isinstance(v, bool) or v is None:
+        return ""
+    if isinstance(v, (int, float)):
+        return str(v)
+    try:
+        float(str(v))
+        return str(v).strip()
+    except ValueError:
+        return ""
+
+
+@app.post("/api/lims/connections/{connection_id}/fetch")
+async def fetch_from_lims(connection_id: int, payload: Optional[dict] = None,
+                          current_user: dict = Depends(get_current_admin_user)):
+    """Fetch released samples from the laboratory and stage them as an ETL
+    dataset (source='lims-api'). Optional payload: {"project_id": "...",
+    "force": true} — force skips the change-feed short-circuit."""
+    payload = payload or {}
+    project_id = payload.get("project_id")
+    force = bool(payload.get("force"))
+
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            lims = _lims_connection_row(cur, connection_id)
+    if not lims["enabled"]:
+        raise HTTPException(status_code=400, detail="This connection is disabled")
+    base, key = lims["base_url"], lims["api_key"]
+
+    caps = _lims_get(base, key, "/api/v2/data-exchange/capabilities")
+    if "opennsis" not in (caps.get("supportedProfiles") or []):
+        raise HTTPException(status_code=502, detail=(
+            "The laboratory API does not declare the 'opennsis' exchange profile"))
+
+    # Change-feed short-circuit: nothing new since the stored cursor → no fetch.
+    if lims["sync_cursor"] and not force:
+        ch = _lims_get(base, key, "/api/v2/data-exchange/changes",
+                       {"cursor": lims["sync_cursor"], "limit": 1})
+        if not ch.get("count"):
+            with get_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""UPDATE api.lims_connection
+                                   SET last_fetch_at = now(), last_fetch_note = 'No changes'
+                                   WHERE connection_id = %s""", (connection_id,))
+            return {"message": "No changes at the laboratory since the last fetch",
+                    "fetched": 0, "table_name": None}
+
+    # Pull every released sample under the strict opennsis profile, paged.
+    samples, seen, page = [], set(), 1
+    while True:
+        batch = _lims_get(base, key, "/api/v2/data-exchange/samples",
+                          {"profile": "opennsis", "limit": LIMS_PAGE_LIMIT, "page": page}
+                          ).get("data") or []
+        fresh = [b for b in batch if b.get("specimenId") not in seen]
+        if not fresh:
+            break
+        for b in fresh:
+            seen.add(b.get("specimenId"))
+        samples.extend(fresh)
+        if len(batch) < LIMS_PAGE_LIMIT:
+            break
+        page += 1
+    samples = [s for s in samples if s.get("publicationStatus", "RELEASED") == "RELEASED"]
+
+    if not samples:
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""UPDATE api.lims_connection
+                               SET last_fetch_at = now(), last_fetch_note = 'No released samples'
+                               WHERE connection_id = %s""", (connection_id,))
+        return {"message": "The laboratory has no released samples", "fetched": 0, "table_name": None}
+
+    # ---- transform: fixed provenance columns + one column per parameter ----
+    param_codes = []
+    for smp in samples:
+        for o in (smp.get("observations") or []):
+            code = (o.get("parameterCode") or o.get("parameter") or "").strip()
+            if code and code not in param_codes:
+                param_codes.append(code)
+
+    fixed_names = [c[0] for c in LIMS_FIXED_COLUMNS]
+    pcol_names, used = [], set(fixed_names)
+    for code in param_codes:
+        name = re.sub(r'[^a-zA-Z0-9_]', '_', code.lower()) or "param"
+        base_name, n = name, 2
+        while name in used:
+            name = f"{base_name}_{n}"; n += 1
+        used.add(name)
+        pcol_names.append(name)
+    headers = fixed_names + pcol_names
+
+    rows = []
+    for smp in samples:
+        sampling = smp.get("sampling") or {}
+        loc = sampling.get("location") or {}
+        coords = loc.get("coordinates") or [None, None]
+        dep = sampling.get("depths") or {}
+        top, bottom = dep.get("topCm"), dep.get("bottomCm")
+        if top is None and bottom is None:
+            # National convention: a sample with no declared depths is the
+            # standard 0-20 cm topsoil sample (user decision, issue #7 era).
+            top, bottom = 0, 20
+        prof = (smp.get("profile") or {}).get("code") or smp.get("fieldSampleId") or smp.get("specimenId")
+        by_code = {}
+        for o in (smp.get("observations") or []):
+            code = (o.get("parameterCode") or o.get("parameter") or "").strip()
+            if code and code not in by_code and (o.get("censoring") in (None, "NONE")):
+                val = _lims_number((o.get("normalized") or {}).get("value"))
+                if val == "":
+                    val = _lims_number((o.get("asMeasured") or {}).get("value"))
+                by_code[code] = val
+        row = [
+            str(prof or ""),
+            "" if coords[0] is None else str(coords[0]),
+            "" if len(coords) < 2 or coords[1] is None else str(coords[1]),
+            str(sampling.get("collectionDate") or ""),
+            "" if top is None else str(top),
+            "" if bottom is None else str(bottom),
+            "" if loc.get("elevationMeters") is None else str(loc.get("elevationMeters")),
+            str(smp.get("fieldSampleId") or ""),
+            str(smp.get("labSampleId") or ""),
+        ] + [by_code.get(code, "") for code in param_codes]
+        rows.append(row)
+
+    ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+    safe_conn = re.sub(r'[^a-zA-Z0-9_]', '_', lims["name"].lower())[:30]
+    table_name = f"lims_{safe_conn}_{ts}"
+    file_label = f"{lims['name']} (laboratory API)"
+
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Mapping inheritance: the newest previous dataset of this lab.
+            cur.execute("""
+                SELECT c.column_name, c.destination_table, c.destination_column,
+                       c.property_num_id, c.procedure_num_id, c.unit_of_measure_id
+                FROM api.uploaded_dataset_column c
+                JOIN api.uploaded_dataset d ON d.table_name = c.table_name
+                WHERE d.lims_connection_id = %s
+                  AND d.table_name = (SELECT max(table_name) FROM api.uploaded_dataset
+                                      WHERE lims_connection_id = %s)
+            """, (connection_id, connection_id))
+            inherited = {r["column_name"]: r for r in cur.fetchall()}
+
+            col_defs = pgsql.SQL(', ').join(
+                [pgsql.SQL("_row_id SERIAL PRIMARY KEY")] +
+                [pgsql.SQL("{} TEXT").format(pgsql.Identifier(h)) for h in headers])
+            cur.execute(pgsql.SQL("CREATE TABLE {}.{} ({})").format(
+                pgsql.Identifier('soil_data_upload'), pgsql.Identifier(table_name), col_defs))
+            insert_sql = pgsql.SQL("INSERT INTO {}.{} ({}) VALUES ({})").format(
+                pgsql.Identifier('soil_data_upload'), pgsql.Identifier(table_name),
+                pgsql.SQL(', ').join(pgsql.Identifier(h) for h in headers),
+                pgsql.SQL(', ').join([pgsql.Placeholder()] * len(headers)))
+            for row in rows:
+                cur.execute(insert_sql, row)
+
+            country_id = _project_country_id(cur, project_id) or _instance_country_code(cur)
+            cur.execute("""
+                INSERT INTO api.uploaded_dataset
+                    (table_name, file_name, user_id, status, n_rows, n_col,
+                     country_id, project_id, source, lims_connection_id)
+                VALUES (%s, %s, %s, 'Uploaded', %s, %s, %s, %s, 'lims-api', %s)
+            """, (table_name, file_label, current_user['user_id'], len(rows), len(headers),
+                  country_id, project_id, connection_id))
+
+            inherited_n = 0
+            for i, h in enumerate(headers):
+                fixed = next((fc for fc in LIMS_FIXED_COLUMNS if fc[0] == h), None)
+                if fixed:
+                    cur.execute("""
+                        INSERT INTO api.uploaded_dataset_column
+                            (table_name, column_name, ignore_column,
+                             destination_table, destination_column)
+                        VALUES (%s, %s, false, %s, %s)
+                    """, (table_name, h, fixed[1], fixed[2]))
+                    continue
+                code = param_codes[i - len(fixed_names)]
+                prev = inherited.get(h)
+                if prev and prev["destination_table"]:
+                    cur.execute("""
+                        INSERT INTO api.uploaded_dataset_column
+                            (table_name, column_name, ignore_column, note,
+                             destination_table, destination_column,
+                             property_num_id, procedure_num_id, unit_of_measure_id)
+                        VALUES (%s, %s, false, %s, %s, %s, %s, %s, %s)
+                    """, (table_name, h, code,
+                          prev["destination_table"], prev["destination_column"],
+                          prev["property_num_id"], prev["procedure_num_id"],
+                          prev["unit_of_measure_id"]))
+                    inherited_n += 1
+                else:
+                    cur.execute("""
+                        INSERT INTO api.uploaded_dataset_column
+                            (table_name, column_name, ignore_column, note)
+                        VALUES (%s, %s, true, %s)
+                    """, (table_name, h, code))
+
+            # Drain the change feed so the stored cursor marks "now".
+            cursor_val, ch_params = lims["sync_cursor"], None
+            while True:
+                ch_params = {"limit": LIMS_PAGE_LIMIT}
+                if cursor_val:
+                    ch_params["cursor"] = cursor_val
+                try:
+                    ch = _lims_get(base, key, "/api/v2/data-exchange/changes", ch_params)
+                except HTTPException:
+                    break   # a broken cursor must not fail the fetch itself
+                cursor_val = ch.get("nextCursor") or cursor_val
+                if not ch.get("hasMore"):
+                    break
+
+            note = f"{len(rows)} samples, {len(param_codes)} parameters, {inherited_n} mappings inherited"
+            cur.execute("""UPDATE api.lims_connection
+                           SET sync_cursor = %s, last_fetch_at = now(), last_fetch_note = %s
+                           WHERE connection_id = %s""", (cursor_val, note, connection_id))
+
+            log_audit(current_user['user_id'], None, "lims_fetched",
+                      {"connection_id": connection_id, "table_name": table_name,
+                       "rows": len(rows), "parameters": param_codes}, None)
+
+    return {
+        "table_name": table_name,
+        "fetched": len(rows),
+        "parameters": param_codes,
+        "inherited_mappings": inherited_n,
+        "message": f"Fetched {len(rows)} released samples from {lims['name']} — {note}",
+    }
 
 # Rows returned to the preview/mapping table. The UI paginates these client-
 # side (100/page), so a 100-row cap made every CSV a single, un-navigable page.

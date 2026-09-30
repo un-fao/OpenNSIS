@@ -108,6 +108,7 @@ class AdminDashboard {
         this.admDivInited = true;
       }
       this.loadAdminDivisions().then(() => this.renderAdminDivisions());
+      this.loadLimsConnections().then(() => this.renderLimsConnections());
     } else {
       if (adminTabBtn) adminTabBtn.style.display = 'none';
       if (adminPane) adminPane.style.display = 'none';
@@ -256,6 +257,18 @@ class AdminDashboard {
                   <span id="setting-btn-text"></span>
                   <button id="cancel-setting" type="button"></button>
                 </form>
+              </div>
+
+              <div class="admin-section">
+                <h3 class="admin-section-title">${t('a.lims.title')}</h3>
+                <p style="font-size:var(--fs-sm);color:var(--color-text-muted);margin:4px 0 10px;">${t('a.lims.intro')}</p>
+                <div id="lims-connections-list"></div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center;">
+                  <input type="text" id="lims-new-name" placeholder="${t('a.lims.name')}" style="width:170px;">
+                  <input type="text" id="lims-new-url" placeholder="https://lims.example.org" style="width:250px;">
+                  <input type="password" id="lims-new-key" placeholder="${t('a.lims.key')}" style="width:250px;" autocomplete="new-password">
+                  <button type="button" class="btn btn-primary btn-sm" id="lims-add-btn">${t('a.lims.add')}</button>
+                </div>
               </div>
 
               <hr class="admin-divider">
@@ -868,6 +881,8 @@ class AdminDashboard {
   attachEventListeners() {
     // Language switcher — same globe/dropdown as the map view. Switching
     // reloads the page; a sessionStorage flag makes main.js reopen the panel.
+    document.getElementById('lims-add-btn')?.addEventListener('click', () => this.addLimsConnection());
+
     const themeBtn = document.getElementById('admin-theme-btn');
     if (themeBtn) initThemeButton(themeBtn);
 
@@ -4955,14 +4970,18 @@ class AdminDashboard {
     };
     container.innerHTML = `
       <table class="admin-table">
-        <thead><tr><th>${t('a.etl.table')}</th><th>${t('a.user')}</th><th>${t('a.etl.uploaded')}</th><th>${t('a.etl.ingested')}</th><th>${t('a.status')}</th><th>${t('a.etl.cols')}</th><th>${t('a.etl.rows')}</th><th>${t('a.actions')}</th><th>${t('a.etl.result')}</th></tr></thead>
+        <thead><tr><th>${t('a.etl.table')}</th><th>${t('a.lims.source')}</th><th>${t('a.user')}</th><th>${t('a.etl.uploaded')}</th><th>${t('a.etl.ingested')}</th><th>${t('a.status')}</th><th>${t('a.etl.cols')}</th><th>${t('a.etl.rows')}</th><th>${t('a.actions')}</th><th>${t('a.etl.result')}</th></tr></thead>
         <tbody>${this.etlDatasets.map(d => {
           const tn = this.escapeHtml(d.table_name);
           const tnJs = this.escapeJsAttr(d.table_name);
           const ingested = d.status === 'Ingested' || d.status === 'Partial';
           const noPrune = d.status === 'Uploaded' || d.status === 'Removed' || !d.status;
+          const src = d.source === 'lims-api'
+            ? `<span class="badge badge-success">${this.escapeHtml(d.lims_connection_name || 'Lab API')}</span>`
+            : `<span class="badge" style="background:var(--color-surface-alt);color:var(--color-text-muted);border:1px solid var(--color-border);">CSV</span>`;
           return `<tr data-table="${tn}">
             <td>${tn}</td>
+            <td>${src}</td>
             <td>${this.escapeHtml(d.user_id || '-')}</td>
             <td>${fmtDate(d.upload_date)}</td>
             <td>${fmtDate(d.ingestion_date)}</td>
@@ -5098,6 +5117,115 @@ class AdminDashboard {
   }
 
   // ==================== Administrative divisions ====================
+
+  // ==================== Laboratory (LIMS) connections ====================
+  async loadLimsConnections() {
+    try {
+      this.limsConnections = await api.authenticatedRequest('/api/lims/connections');
+    } catch (e) {
+      console.error('loadLimsConnections:', e);
+      this.limsConnections = [];
+    }
+  }
+
+  renderLimsConnections() {
+    const box = document.getElementById('lims-connections-list');
+    if (!box) return;
+    const rows = this.limsConnections || [];
+    if (!rows.length) {
+      box.innerHTML = `<p style="font-size:var(--fs-sm);color:var(--color-text-muted);">${t('a.lims.none')}</p>`;
+      return;
+    }
+    box.innerHTML = `
+      <table class="admin-table">
+        <thead><tr><th>${t('a.lims.name')}</th><th>${t('a.lims.url')}</th><th>${t('a.lims.key')}</th><th>${t('a.active')}</th><th>${t('a.lims.lastFetch')}</th><th>${t('a.lims.datasets')}</th><th>${t('a.actions')}</th></tr></thead>
+        <tbody>${rows.map(c => `
+          <tr>
+            <td>${this.escapeHtml(c.name)}</td>
+            <td style="font-family:monospace;font-size:var(--fs-xs);">${this.escapeHtml(c.base_url)}</td>
+            <td style="font-family:monospace;">${this.escapeHtml(c.api_key_masked || '')}</td>
+            <td>${c.enabled
+              ? `<span class="badge badge-success" style="cursor:pointer;" onclick="adminDashboard.toggleLimsConnection(${c.connection_id}, false)">${t('a.yes')}</span>`
+              : `<span class="badge badge-danger" style="cursor:pointer;" onclick="adminDashboard.toggleLimsConnection(${c.connection_id}, true)">${t('a.no')}</span>`}</td>
+            <td style="font-size:var(--fs-xs);">${c.last_fetch_at ? new Date(c.last_fetch_at).toISOString().slice(0, 16).replace('T', ' ') : '-'}${c.last_fetch_note ? '<br>' + this.escapeHtml(c.last_fetch_note) : ''}</td>
+            <td>${c.dataset_count ?? 0}</td>
+            <td>
+              <button class="btn btn-sm" onclick="adminDashboard.testLimsConnection(${c.connection_id})">${t('a.lims.test')}</button>
+              <button class="btn btn-primary btn-sm" style="margin-left:4px;" onclick="adminDashboard.fetchLimsConnection(${c.connection_id})">${t('a.lims.fetch')}</button>
+              <button class="btn btn-sm" style="background:#dc3545;color:#fff;margin-left:4px;" onclick="adminDashboard.deleteLimsConnection(${c.connection_id})">${t('a.delete')}</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  async addLimsConnection() {
+    const name = document.getElementById('lims-new-name')?.value.trim();
+    const url = document.getElementById('lims-new-url')?.value.trim();
+    const key = document.getElementById('lims-new-key')?.value.trim();
+    if (!name || !url || !key) { alert(t('a.lims.fillAll')); return; }
+    try {
+      await api.authenticatedRequest('/api/lims/connections', {
+        method: 'POST', body: JSON.stringify({ name, base_url: url, api_key: key })
+      });
+      ['lims-new-name', 'lims-new-url', 'lims-new-key'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+      });
+      await this.loadLimsConnections(); this.renderLimsConnections();
+    } catch (e) { alert(e.message); }
+  }
+
+  async toggleLimsConnection(id, enabled) {
+    try {
+      await api.authenticatedRequest(`/api/lims/connections/${id}`, {
+        method: 'PUT', body: JSON.stringify({ enabled })
+      });
+      await this.loadLimsConnections(); this.renderLimsConnections();
+    } catch (e) { alert(e.message); }
+  }
+
+  async testLimsConnection(id) {
+    try {
+      const r = await api.authenticatedRequest(`/api/lims/connections/${id}/test`, {
+        method: 'POST', body: JSON.stringify({})
+      });
+      alert(`${t('a.lims.testOk')}\n${r.sourceSystemId || ''} (contract ${r.contractVersion || '?'})\n`
+        + (r.opennsis_profile ? 'opennsis \u2713' : t('a.lims.noProfile')));
+    } catch (e) { alert(t('a.lims.testFail') + ' ' + e.message); }
+  }
+
+  async fetchLimsConnection(id) {
+    await this.loadProjects();
+    const projs = this.projects || [];
+    if (!projs.length) { alert(t('a.lims.needProject')); return; }
+    let pid = projs[0].project_id;
+    if (projs.length > 1) {
+      const entered = prompt(t('a.lims.pickProject') + '\n' + projs.map(p => p.project_id).join(', '), pid);
+      if (entered === null) return;
+      pid = entered.trim();
+      if (!projs.some(p => p.project_id === pid)) { alert(t('a.lims.badProject')); return; }
+    }
+    try {
+      const r = await api.authenticatedRequest(`/api/lims/connections/${id}/fetch`, {
+        method: 'POST', body: JSON.stringify({ project_id: pid })
+      });
+      alert(r.message || '');
+      await this.loadLimsConnections(); this.renderLimsConnections();
+      if (r.table_name) {
+        await this.loadEtlDatasets();
+        this.renderEtlDatasets();
+        this.openDataset(r.table_name);
+      }
+    } catch (e) { alert(e.message); }
+  }
+
+  async deleteLimsConnection(id) {
+    if (!confirm(t('a.lims.confirmDelete'))) return;
+    try {
+      await api.authenticatedRequest(`/api/lims/connections/${id}`, { method: 'DELETE' });
+      await this.loadLimsConnections(); this.renderLimsConnections();
+    } catch (e) { alert(e.message); }
+  }
 
   initAdminDivisionsTab() {
     document.getElementById('admdiv-upload-btn').addEventListener('click', () => this.uploadAdminDivision());
