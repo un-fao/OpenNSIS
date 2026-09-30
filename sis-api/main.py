@@ -2997,6 +2997,7 @@ async def fetch_from_lims(connection_id: int, payload: Optional[dict] = None,
     payload = payload or {}
     project_id = payload.get("project_id")
     force = bool(payload.get("force"))
+    started = time.monotonic()
 
     with get_db() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -3133,13 +3134,15 @@ async def fetch_from_lims(connection_id: int, payload: Optional[dict] = None,
                 cur.execute(insert_sql, row)
 
             country_id = _project_country_id(cur, project_id) or _instance_country_code(cur)
+            fetch_note = (f"{len(rows)} samples, {len(param_codes)} parameters, "
+                          f"fetched in {time.monotonic() - started:.1f} s")
             cur.execute("""
                 INSERT INTO api.uploaded_dataset
                     (table_name, file_name, user_id, status, n_rows, n_col,
-                     country_id, project_id, source, lims_connection_id)
-                VALUES (%s, %s, %s, 'Uploaded', %s, %s, %s, %s, 'lims-api', %s)
+                     country_id, project_id, source, lims_connection_id, note)
+                VALUES (%s, %s, %s, 'Uploaded', %s, %s, %s, %s, 'lims-api', %s, %s)
             """, (table_name, file_label, current_user['user_id'], len(rows), len(headers),
-                  country_id, project_id, connection_id))
+                  country_id, project_id, connection_id, fetch_note))
 
             inherited_n = 0
             for i, h in enumerate(headers):
@@ -3188,7 +3191,7 @@ async def fetch_from_lims(connection_id: int, payload: Optional[dict] = None,
                 if not ch.get("hasMore"):
                     break
 
-            note = f"{len(rows)} samples, {len(param_codes)} parameters, {inherited_n} mappings inherited"
+            note = fetch_note + f", {inherited_n} mappings inherited"
             cur.execute("""UPDATE api.lims_connection
                            SET sync_cursor = %s, last_fetch_at = now(), last_fetch_note = %s
                            WHERE connection_id = %s""", (cursor_val, note, connection_id))
