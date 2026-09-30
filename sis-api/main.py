@@ -2828,12 +2828,15 @@ LIMS_FIXED_COLUMNS = [
 ]
 
 
-def _lims_get(base_url, api_key, path, params=None):
-    """GET against a laboratory exchange API; HTTP errors become 502s."""
+def _lims_get(base_url, api_key, path, params=None, session=None):
+    """GET against a laboratory exchange API; HTTP errors become 502s.
+    Pass a requests.Session when making several calls — connection reuse
+    saves a TCP+TLS handshake per request, which dominates fetch time."""
     url = base_url.rstrip('/') + path
+    client = session or http_requests
     try:
-        r = http_requests.get(url, params=params or {}, timeout=30,
-                              headers={"X-API-Key": api_key, "Accept": "application/json"})
+        r = client.get(url, params=params or {}, timeout=30,
+                       headers={"X-API-Key": api_key, "Accept": "application/json"})
     except http_requests.RequestException as e:
         raise HTTPException(status_code=502, detail=f"Laboratory API unreachable: {e}")
     if r.status_code != 200:
@@ -3001,8 +3004,9 @@ async def fetch_from_lims(connection_id: int, payload: Optional[dict] = None,
     if not lims["enabled"]:
         raise HTTPException(status_code=400, detail="This connection is disabled")
     base, key = lims["base_url"], lims["api_key"]
+    sess = http_requests.Session()
 
-    caps = _lims_get(base, key, "/api/v2/data-exchange/capabilities")
+    caps = _lims_get(base, key, "/api/v2/data-exchange/capabilities", session=sess)
     if "opennsis" not in (caps.get("supportedProfiles") or []):
         raise HTTPException(status_code=502, detail=(
             "The laboratory API does not declare the 'opennsis' exchange profile"))
@@ -3010,7 +3014,7 @@ async def fetch_from_lims(connection_id: int, payload: Optional[dict] = None,
     # Change-feed short-circuit: nothing new since the stored cursor → no fetch.
     if lims["sync_cursor"] and not force:
         ch = _lims_get(base, key, "/api/v2/data-exchange/changes",
-                       {"cursor": lims["sync_cursor"], "limit": 1})
+                       {"cursor": lims["sync_cursor"], "limit": 1}, session=sess)
         if not ch.get("count"):
             with get_db() as conn:
                 with conn.cursor() as cur:
@@ -3024,8 +3028,8 @@ async def fetch_from_lims(connection_id: int, payload: Optional[dict] = None,
     samples, seen, page = [], set(), 1
     while True:
         batch = _lims_get(base, key, "/api/v2/data-exchange/samples",
-                          {"profile": "opennsis", "limit": LIMS_PAGE_LIMIT, "page": page}
-                          ).get("data") or []
+                          {"profile": "opennsis", "limit": LIMS_PAGE_LIMIT, "page": page},
+                          session=sess).get("data") or []
         fresh = [b for b in batch if b.get("specimenId") not in seen]
         if not fresh:
             break
@@ -3176,7 +3180,8 @@ async def fetch_from_lims(connection_id: int, payload: Optional[dict] = None,
                 if cursor_val:
                     ch_params["cursor"] = cursor_val
                 try:
-                    ch = _lims_get(base, key, "/api/v2/data-exchange/changes", ch_params)
+                    ch = _lims_get(base, key, "/api/v2/data-exchange/changes", ch_params,
+                                   session=sess)
                 except HTTPException:
                     break   # a broken cursor must not fail the fetch itself
                 cursor_val = ch.get("nextCursor") or cursor_val
