@@ -3321,7 +3321,7 @@ async def save_dataset_columns(
                         procedure_num_id = %s,
                         unit_of_measure_id = %s,
                         ignore_column = %s,
-                        note = %s
+                        note = COALESCE(%s, note)
                     WHERE table_name = %s AND column_name = %s
                 """, (
                     col.get("destination_table"),
