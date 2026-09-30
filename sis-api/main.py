@@ -3570,6 +3570,11 @@ async def ingest_dataset(
 
             for i, row in enumerate(rows):
                 row_num = i + 2  # 1-based + header
+                # Each row works under a savepoint: a failing row rolls back
+                # alone and is reported, instead of aborting the whole
+                # transaction and turning every later statement into
+                # InFailedSqlTransaction (a 500 with the real cause hidden).
+                cur.execute("SAVEPOINT ingest_row")
                 try:
                     # --- plot ---
                     plot_id = None
@@ -3777,6 +3782,7 @@ async def ingest_dataset(
                     ingested += 1
 
                 except Exception as e:
+                    cur.execute("ROLLBACK TO SAVEPOINT ingest_row")
                     errors.append(f"Row {row_num}: {str(e)}")
                     if len(errors) > 50:
                         errors.append("... too many errors, stopping")
