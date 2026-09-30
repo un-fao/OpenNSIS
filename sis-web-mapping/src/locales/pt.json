@@ -534,5 +534,6 @@
   "a.lims.pickProject": "Escreva o ID do projeto de destino:",
   "a.lims.badProject": "ID de projeto desconhecido.",
   "a.lims.source": "Origem",
-  "a.lims.importTitle": "Importar do laboratório (LIMS):"
+  "a.lims.importTitle": "Importar do laboratório (LIMS):",
+  "a.etl.dataSource": "Fonte de dados"
 }

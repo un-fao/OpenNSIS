@@ -534,5 +534,6 @@
   "a.lims.pickProject": "Type the project ID to fetch into:",
   "a.lims.badProject": "Unknown project ID.",
   "a.lims.source": "Source",
-  "a.lims.importTitle": "Import from laboratory (LIMS):"
+  "a.lims.importTitle": "Import from laboratory (LIMS):",
+  "a.etl.dataSource": "Data source"
 }

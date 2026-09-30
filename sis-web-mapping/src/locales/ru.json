@@ -534,5 +534,6 @@
   "a.lims.pickProject": "Введите ID целевого проекта:",
   "a.lims.badProject": "Неизвестный ID проекта.",
   "a.lims.source": "Источник",
-  "a.lims.importTitle": "Импорт из лаборатории (LIMS):"
+  "a.lims.importTitle": "Импорт из лаборатории (LIMS):",
+  "a.etl.dataSource": "Источник данных"
 }

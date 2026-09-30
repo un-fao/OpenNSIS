@@ -458,7 +458,7 @@ class AdminDashboard {
 
               <!-- Upload CSV (formerly the standalone ETL tab) -->
               <section class="layers-section">
-                <h3 class="layers-section-title">${t('a.etl.uploadCsv')}</h3>
+                <h3 class="layers-section-title">${t('a.etl.dataSource')}</h3>
                 <div class="etl-steps">
 
                   <!-- List view (always visible unless detail panel open) -->
