@@ -535,5 +535,6 @@
   "a.etl.chooseFile": "Выбрать файл…",
   "a.etl.noFile": "Файл не выбран",
   "a.lims.importing": "Импорт из лаборатории…",
-  "a.lims.checking": "Проверка новых данных…"
+  "a.lims.checking": "Проверка новых данных…",
+  "a.licenceHelp": "Какая лицензия?"
 }

@@ -516,7 +516,7 @@ class AdminDashboard {
                         <div class="etl-metadata-grid" style="margin-bottom:var(--sp-4);">
                           <label for="etl-abstract">${t('a.etl.abstract')}</label>
                           <div><textarea id="etl-abstract" rows="6" style="width:400px;max-width:none;font-family:inherit;font-size:var(--fs-sm);padding:4px 8px;border:1px solid var(--color-border-strong);border-radius:var(--radius-sm);" placeholder="${t('a.etl.abstractPh')}"></textarea></div>
-                          <label for="etl-license">${t('a.licence')}</label>
+                          <label for="etl-license">${t('a.licence')} <a href="https://creativecommons.org/chooser/" target="_blank" rel="noopener" title="${t('a.licenceHelp')}" style="font-size:var(--fs-xs);margin-left:6px;">${t('a.licenceHelp')} \u2197</a></label>
                           <div>
                             <select id="etl-license" style="width:100%;">
                               <option value="">${t('a.select')}</option>
@@ -694,7 +694,7 @@ class AdminDashboard {
                     <option value="UNCT">UNCT</option>
                   </select>
 
-                  <label>${t('a.licence')}</label>
+                  <label>${t('a.licence')} <a href="https://creativecommons.org/chooser/" target="_blank" rel="noopener" title="${t('a.licenceHelp')}" style="font-size:var(--fs-xs);margin-left:6px;">${t('a.licenceHelp')} \u2197</a></label>
                   <select id="raster-license" style="width:220px;">
                     <option value="">${t('a.select')}</option>
                     <option value="CC BY">CC BY</option>
