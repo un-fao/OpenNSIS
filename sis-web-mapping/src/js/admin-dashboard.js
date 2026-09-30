@@ -4991,9 +4991,10 @@ class AdminDashboard {
           const tnJs = this.escapeJsAttr(d.table_name);
           const ingested = d.status === 'Ingested' || d.status === 'Partial';
           const noPrune = d.status === 'Uploaded' || d.status === 'Removed' || !d.status;
+          const srcStyle = 'background:var(--color-surface-alt);color:var(--color-text-muted);border:1px solid var(--color-border);';
           const src = d.source === 'lims-api'
-            ? `<span class="badge badge-success">${this.escapeHtml(d.lims_connection_name || 'Lab API')}</span>`
-            : `<span class="badge" style="background:var(--color-surface-alt);color:var(--color-text-muted);border:1px solid var(--color-border);">CSV</span>`;
+            ? `<span class="badge" style="${srcStyle}">${this.escapeHtml(d.lims_connection_name || 'Lab API')}</span>`
+            : `<span class="badge" style="${srcStyle}">CSV</span>`;
           return `<tr data-table="${tn}">
             <td>${tn}</td>
             <td>${src}</td>
