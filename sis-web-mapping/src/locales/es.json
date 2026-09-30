@@ -531,7 +531,6 @@
   "a.lims.fillAll": "Nombre, URL y clave de la API son obligatorios.",
   "a.lims.confirmDelete": "¿Eliminar esta conexión de laboratorio? Sus conjuntos descargados se conservan.",
   "a.lims.source": "Origen",
-  "a.lims.importTitle": "Importar del laboratorio (LIMS)",
   "a.etl.dataSource": "Fuente de datos",
   "a.etl.csvFile": "Archivo CSV",
   "a.etl.chooseFile": "Elegir archivo…",

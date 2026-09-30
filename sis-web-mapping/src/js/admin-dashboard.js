@@ -116,7 +116,7 @@ class AdminDashboard {
 
     this.loadLimsConnections().then(() => {
       this.renderLimsConnections();
-      this.renderLimsImportArea();
+      this.renderEtlDatasets();
     });
 
     await this.loadLayers();
@@ -474,7 +474,6 @@ class AdminDashboard {
                           <span id="etl-upload-status" style="font-size:var(--fs-sm);"></span>
                         </div>
                       </div>
-                      <div id="lims-import-area" class="etl-source-card" hidden></div>
                     </div>
                     <div id="etl-datasets-list"></div>
                   </div>
@@ -4978,10 +4977,27 @@ class AdminDashboard {
   renderEtlDatasets() {
     const container = document.getElementById('etl-datasets-list');
     if (!container) return;
-    if (!this.etlDatasets.length) {
+    const conns = (this.limsConnections || []).filter(c => c.enabled);
+    if (!this.etlDatasets.length && !conns.length) {
       container.innerHTML = `<p style="font-size:var(--fs-sm);color:var(--color-text-muted);">${t('a.noDatasets')}</p>`;
       return;
     }
+    const srcStyle = 'background:var(--color-surface-alt);color:var(--color-text-muted);border:1px solid var(--color-border);';
+    const importIcon = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="vertical-align:-2px;margin-right:6px;"><path d="M12 3v9m0 0l-3.5-3.5M12 12l3.5-3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" stroke-linecap="round"/></svg>';
+    // Each enabled laboratory connection is a standing source row: Import
+    // stages a fresh dataset from it and opens the detail panel.
+    const connRows = conns.map(c => `<tr>
+            <td style="font-weight:600;">${this.escapeHtml(c.name)}</td>
+            <td><span class="badge" style="${srcStyle}">LIMS</span></td>
+            <td>-</td>
+            <td>${c.last_fetch_at ? new Date(c.last_fetch_at).toISOString().slice(0, 10) : '-'}</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td><button type="button" class="btn btn-primary btn-sm" onclick="adminDashboard.fetchLimsConnection(${c.connection_id})">${importIcon}${t('a.lims.fetch')}</button></td>
+            <td class="etl-result" style="font-size:var(--fs-xs);max-width:300px;white-space:pre-wrap;">${this.escapeHtml(c.last_fetch_note || '')}</td>
+          </tr>`).join('');
     const fmtDate = v => {
       if (!v) return '-';
       const d = new Date(v);
@@ -4990,12 +5006,11 @@ class AdminDashboard {
     container.innerHTML = `
       <table class="admin-table">
         <thead><tr><th>${t('a.etl.table')}</th><th>${t('a.lims.source')}</th><th>${t('a.user')}</th><th>${t('a.etl.uploaded')}</th><th>${t('a.etl.ingested')}</th><th>${t('a.status')}</th><th>${t('a.etl.cols')}</th><th>${t('a.etl.rows')}</th><th>${t('a.actions')}</th><th>${t('a.etl.result')}</th></tr></thead>
-        <tbody>${this.etlDatasets.map(d => {
+        <tbody>${connRows}${this.etlDatasets.map(d => {
           const tn = this.escapeHtml(d.table_name);
           const tnJs = this.escapeJsAttr(d.table_name);
           const ingested = d.status === 'Ingested' || d.status === 'Partial';
           const noPrune = d.status === 'Uploaded' || d.status === 'Removed' || !d.status;
-          const srcStyle = 'background:var(--color-surface-alt);color:var(--color-text-muted);border:1px solid var(--color-border);';
           const src = d.source === 'lims-api'
             ? `<span class="badge" style="${srcStyle}">${this.escapeHtml(d.lims_connection_name || 'Lab API')}</span>`
             : `<span class="badge" style="${srcStyle}">CSV</span>`;
@@ -5178,24 +5193,6 @@ class AdminDashboard {
       </table>`;
   }
 
-  // The Soil profiles tab counterpart: any signed-in user imports from an
-  // enabled connection — the laboratory analogue of uploading a CSV.
-  renderLimsImportArea() {
-    const box = document.getElementById('lims-import-area');
-    if (!box) return;
-    const rows = (this.limsConnections || []).filter(c => c.enabled);
-    if (!rows.length) { box.hidden = true; box.innerHTML = ''; return; }
-    box.hidden = false;
-    const note = (rows.find(c => c.last_fetch_note) || {}).last_fetch_note || '';
-    const icon = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="vertical-align:-2px;margin-right:6px;"><path d="M12 3v9m0 0l-3.5-3.5M12 12l3.5-3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" stroke-linecap="round"/></svg>';
-    box.innerHTML = `
-      <div class="etl-source-title">${t('a.lims.importTitle')}</div>
-      <div class="etl-source-body">
-        ${rows.map(c => `<button type="button" class="btn btn-primary btn-sm" onclick="adminDashboard.fetchLimsConnection(${c.connection_id})">${icon}${this.escapeHtml(c.name)}</button>`).join('')}
-        ${note ? `<span class="etl-file-name" title="${this.escapeHtml(note)}">${this.escapeHtml(note)}</span>` : ''}
-      </div>`;
-  }
-
   async addLimsConnection() {
     const name = document.getElementById('lims-new-name')?.value.trim();
     const url = document.getElementById('lims-new-url')?.value.trim();
@@ -5208,7 +5205,7 @@ class AdminDashboard {
       ['lims-new-name', 'lims-new-url', 'lims-new-key'].forEach(id => {
         const el = document.getElementById(id); if (el) el.value = '';
       });
-      await this.loadLimsConnections(); this.renderLimsConnections(); this.renderLimsImportArea();
+      await this.loadLimsConnections(); this.renderLimsConnections(); this.renderEtlDatasets();
     } catch (e) { alert(e.message); }
   }
 
@@ -5217,7 +5214,7 @@ class AdminDashboard {
       await api.authenticatedRequest(`/api/lims/connections/${id}`, {
         method: 'PUT', body: JSON.stringify({ enabled })
       });
-      await this.loadLimsConnections(); this.renderLimsConnections(); this.renderLimsImportArea();
+      await this.loadLimsConnections(); this.renderLimsConnections(); this.renderEtlDatasets();
     } catch (e) { alert(e.message); }
   }
 
@@ -5239,7 +5236,7 @@ class AdminDashboard {
         method: 'POST', body: JSON.stringify({})
       });
       alert(r.message || '');
-      await this.loadLimsConnections(); this.renderLimsConnections(); this.renderLimsImportArea();
+      await this.loadLimsConnections(); this.renderLimsConnections(); this.renderEtlDatasets();
       if (r.table_name) {
         await this.loadEtlDatasets();
         this.renderEtlDatasets();
@@ -5252,7 +5249,7 @@ class AdminDashboard {
     if (!confirm(t('a.lims.confirmDelete'))) return;
     try {
       await api.authenticatedRequest(`/api/lims/connections/${id}`, { method: 'DELETE' });
-      await this.loadLimsConnections(); this.renderLimsConnections(); this.renderLimsImportArea();
+      await this.loadLimsConnections(); this.renderLimsConnections(); this.renderEtlDatasets();
     } catch (e) { alert(e.message); }
   }
 

@@ -531,7 +531,6 @@
   "a.lims.fillAll": "名称、API 地址和密钥均为必填。",
   "a.lims.confirmDelete": "删除此实验室连接？已获取的数据集将保留。",
   "a.lims.source": "来源",
-  "a.lims.importTitle": "从实验室导入（LIMS）",
   "a.etl.dataSource": "数据来源",
   "a.etl.csvFile": "CSV 文件",
   "a.etl.chooseFile": "选择文件…",

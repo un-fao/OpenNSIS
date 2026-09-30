@@ -531,7 +531,6 @@
   "a.lims.fillAll": "Name, API URL and API key are all required.",
   "a.lims.confirmDelete": "Delete this laboratory connection? Its fetched datasets are kept.",
   "a.lims.source": "Source",
-  "a.lims.importTitle": "Import from laboratory (LIMS)",
   "a.etl.dataSource": "Data source",
   "a.etl.csvFile": "CSV file",
   "a.etl.chooseFile": "Choose file…",
