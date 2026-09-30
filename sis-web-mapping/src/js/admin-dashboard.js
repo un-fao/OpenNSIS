@@ -4080,7 +4080,6 @@ class AdminDashboard {
     const fmt = (n) => Number(n || 0).toLocaleString();
     const cards = [
       { label: 'Projects', value: fmt(t.project_count), accent: 'c' },
-      { label: 'Sites', value: fmt(t.site_count), accent: 'e' },
       { label: 'Profiles', value: fmt(t.profile_count), accent: 'a' },
       { label: 'Properties', value: fmt(t.property_count), accent: 'd' },
       { label: 'Measurements', value: fmt(t.observation_count), accent: 'b' },
