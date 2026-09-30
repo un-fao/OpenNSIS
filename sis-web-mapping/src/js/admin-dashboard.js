@@ -5228,19 +5228,11 @@ class AdminDashboard {
   }
 
   async fetchLimsConnection(id) {
-    await this.loadProjects();
-    const projs = this.projects || [];
-    if (!projs.length) { alert(t('a.lims.needProject')); return; }
-    let pid = projs[0].project_id;
-    if (projs.length > 1) {
-      const entered = prompt(t('a.lims.pickProject') + '\n' + projs.map(p => p.project_id).join(', '), pid);
-      if (entered === null) return;
-      pid = entered.trim();
-      if (!projs.some(p => p.project_id === pid)) { alert(t('a.lims.badProject')); return; }
-    }
+    // Like a CSV upload: the dataset stages without a project — the user
+    // picks it in the detail panel that opens right after.
     try {
       const r = await api.authenticatedRequest(`/api/lims/connections/${id}/fetch`, {
-        method: 'POST', body: JSON.stringify({ project_id: pid })
+        method: 'POST', body: JSON.stringify({})
       });
       alert(r.message || '');
       await this.loadLimsConnections(); this.renderLimsConnections(); this.renderLimsImportArea();
