@@ -463,12 +463,19 @@ class AdminDashboard {
 
                   <!-- List view (always visible unless detail panel open) -->
                   <div id="etl-list-view">
-                    <div style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-4);">
-                      <input type="file" id="etl-file-input" accept=".csv">
-                      <button type="button" class="btn btn-primary btn-sm" id="etl-upload-btn">${t('a.etl.uploadCsv')}</button>
-                      <span id="etl-upload-status" style="font-size:var(--fs-sm);"></span>
+                    <div class="etl-source-row">
+                      <div class="etl-source-card">
+                        <div class="etl-source-title">${t('a.etl.csvFile')}</div>
+                        <div class="etl-source-body">
+                          <input type="file" id="etl-file-input" accept=".csv" hidden>
+                          <label for="etl-file-input" class="btn btn-secondary btn-sm" style="margin:0;cursor:pointer;">${t('a.etl.chooseFile')}</label>
+                          <span id="etl-file-name" class="etl-file-name">${t('a.etl.noFile')}</span>
+                          <button type="button" class="btn btn-primary btn-sm" id="etl-upload-btn">${t('a.etl.uploadCsv')}</button>
+                          <span id="etl-upload-status" style="font-size:var(--fs-sm);"></span>
+                        </div>
+                      </div>
+                      <div id="lims-import-area" class="etl-source-card" hidden></div>
                     </div>
-                    <div id="lims-import-area"></div>
                     <div id="etl-datasets-list"></div>
                   </div>
 
@@ -972,6 +979,10 @@ class AdminDashboard {
     });
 
     // ETL upload
+    document.getElementById('etl-file-input')?.addEventListener('change', (e) => {
+      const el = document.getElementById('etl-file-name');
+      if (el) el.textContent = e.target.files?.[0]?.name || t('a.etl.noFile');
+    });
     document.getElementById('etl-upload-btn').addEventListener('click', () => {
       this.handleEtlUpload();
     });
@@ -5168,13 +5179,15 @@ class AdminDashboard {
     const box = document.getElementById('lims-import-area');
     if (!box) return;
     const rows = (this.limsConnections || []).filter(c => c.enabled);
-    if (!rows.length) { box.innerHTML = ''; return; }
+    if (!rows.length) { box.hidden = true; box.innerHTML = ''; return; }
+    box.hidden = false;
+    const note = (rows.find(c => c.last_fetch_note) || {}).last_fetch_note || '';
+    const icon = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="vertical-align:-2px;margin-right:6px;"><path d="M12 3v9m0 0l-3.5-3.5M12 12l3.5-3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" stroke-linecap="round"/></svg>';
     box.innerHTML = `
-      <div style="display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;margin-bottom:var(--sp-4);">
-        <span style="font-weight:600;">${t('a.lims.importTitle')}</span>
-        ${rows.map(c => `
-          <button type="button" class="btn btn-primary btn-sm" onclick="adminDashboard.fetchLimsConnection(${c.connection_id})">${t('a.lims.fetch')}: ${this.escapeHtml(c.name)}</button>`).join('')}
-        <span style="font-size:var(--fs-xs);color:var(--color-text-muted);">${this.escapeHtml((rows.find(c => c.last_fetch_note) || {}).last_fetch_note || '')}</span>
+      <div class="etl-source-title">${t('a.lims.importTitle')}</div>
+      <div class="etl-source-body">
+        ${rows.map(c => `<button type="button" class="btn btn-primary btn-sm" onclick="adminDashboard.fetchLimsConnection(${c.connection_id})">${icon}${this.escapeHtml(c.name)}</button>`).join('')}
+        ${note ? `<span class="etl-file-name" title="${this.escapeHtml(note)}">${this.escapeHtml(note)}</span>` : ''}
       </div>`;
   }
 

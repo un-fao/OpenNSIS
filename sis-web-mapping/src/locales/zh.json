@@ -534,6 +534,9 @@
   "a.lims.pickProject": "输入目标项目 ID：",
   "a.lims.badProject": "未知的项目 ID。",
   "a.lims.source": "来源",
-  "a.lims.importTitle": "从实验室导入（LIMS）：",
-  "a.etl.dataSource": "数据来源"
+  "a.lims.importTitle": "从实验室导入（LIMS）",
+  "a.etl.dataSource": "数据来源",
+  "a.etl.csvFile": "CSV 文件",
+  "a.etl.chooseFile": "选择文件…",
+  "a.etl.noFile": "未选择文件"
 }

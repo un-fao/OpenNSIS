@@ -534,6 +534,9 @@
   "a.lims.pickProject": "Escreva o ID do projeto de destino:",
   "a.lims.badProject": "ID de projeto desconhecido.",
   "a.lims.source": "Origem",
-  "a.lims.importTitle": "Importar do laboratório (LIMS):",
-  "a.etl.dataSource": "Fonte de dados"
+  "a.lims.importTitle": "Importar do laboratório (LIMS)",
+  "a.etl.dataSource": "Fonte de dados",
+  "a.etl.csvFile": "Ficheiro CSV",
+  "a.etl.chooseFile": "Escolher ficheiro…",
+  "a.etl.noFile": "Nenhum ficheiro selecionado"
 }
