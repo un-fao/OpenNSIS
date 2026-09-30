@@ -1446,7 +1446,11 @@ class AdminDashboard {
     try { dep = await api.getProjectDependents(pid); }
     catch (e) { alert(t('a.pm.loadDepsFailed') + e.message); return; }
     const cc = dep.country_id || project.country_id || '';
-    const others = (this.projects || []).filter(p => String(p.project_id) !== String(pid));
+    // Reassignment can only stay within the same country — the project key
+    // is (country_id, project_id), so a cross-country target cannot exist.
+    const others = (this.projects || []).filter(p =>
+      String(p.project_id) !== String(pid)
+      && (!cc || !p.country_id || String(p.country_id) === String(cc)));
     const targetSelect = (kind) => `<select class="pm-${kind}-target" style="margin-left:8px;">`
       + others.map(p => `<option value="${this.escapeHtml(p.project_id)}">${this.escapeHtml(p.name || p.project_id)} (${this.escapeHtml(p.project_id)})</option>`).join('')
       + `</select>`;

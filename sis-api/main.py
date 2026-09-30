@@ -2447,8 +2447,9 @@ async def delete_project_managed(
                     cur.execute("SELECT 1 FROM soil_data.project WHERE country_id=%s AND project_id=%s",
                                 (cc, tgt))
                     if not cur.fetchone():
-                        raise HTTPException(status_code=400,
-                                            detail=f"{kind}: target project '{tgt}' not found")
+                        raise HTTPException(status_code=400, detail=(
+                            f"{kind}: target project '{tgt}' not found in "
+                            f"country {cc} — reassignment cannot cross countries"))
                     return tgt
                 return None
 
