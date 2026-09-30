@@ -4984,9 +4984,13 @@ class AdminDashboard {
     }
     const srcStyle = 'background:var(--color-surface-alt);color:var(--color-text-muted);border:1px solid var(--color-border);';
     const importIcon = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="vertical-align:-2px;margin-right:6px;"><path d="M12 3v9m0 0l-3.5-3.5M12 12l3.5-3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" stroke-linecap="round"/></svg>';
-    // Each enabled laboratory connection is a standing source row: Import
-    // stages a fresh dataset from it and opens the detail panel.
-    const connRows = conns.map(c => `<tr>
+    // A connection normally lives through its dataset rows (adding one
+    // auto-imports, and the latest API row per connection re-imports); a
+    // bare connection row appears only while a connection has no dataset
+    // at all — e.g. its initial import failed — so it stays reachable.
+    const orphanConns = conns.filter(c =>
+      !this.etlDatasets.some(d => d.lims_connection_id === c.connection_id));
+    const connRows = orphanConns.map(c => `<tr>
             <td style="font-weight:600;">${this.escapeHtml(c.name)}</td>
             <td><span class="badge" style="${srcStyle}">LIMS</span></td>
             <td>-</td>
@@ -5006,7 +5010,14 @@ class AdminDashboard {
     container.innerHTML = `
       <table class="admin-table">
         <thead><tr><th>${t('a.etl.table')}</th><th>${t('a.lims.source')}</th><th>${t('a.user')}</th><th>${t('a.etl.uploaded')}</th><th>${t('a.etl.ingested')}</th><th>${t('a.status')}</th><th>${t('a.etl.cols')}</th><th>${t('a.etl.rows')}</th><th>${t('a.actions')}</th><th>${t('a.etl.result')}</th></tr></thead>
-        <tbody>${connRows}${this.etlDatasets.map(d => {
+        <tbody>${connRows}${(() => {
+          const latestByConn = {};
+          this.etlDatasets.forEach(d => {
+            if (d.lims_connection_id && !(d.lims_connection_id in latestByConn)) {
+              latestByConn[d.lims_connection_id] = d.table_name;   // list is newest-first
+            }
+          });
+          return this.etlDatasets.map(d => {
           const tn = this.escapeHtml(d.table_name);
           const tnJs = this.escapeJsAttr(d.table_name);
           const ingested = d.status === 'Ingested' || d.status === 'Partial';
@@ -5022,13 +5033,18 @@ class AdminDashboard {
             <td>${d.n_col ?? '-'}</td>
             <td>${d.n_rows ?? '-'}</td>
             <td>
+              ${d.lims_connection_id && latestByConn[d.lims_connection_id] === d.table_name
+                  && conns.some(c => c.connection_id === d.lims_connection_id)
+                ? `<button class="btn btn-primary btn-sm" style="margin-right:4px;" onclick="adminDashboard.fetchLimsConnection(${d.lims_connection_id})">${importIcon}${t('a.lims.fetch')}</button>`
+                : ''}
               <button class="btn btn-primary btn-sm" onclick="adminDashboard.openDataset('${tnJs}')">${t('a.etl.open')}</button>
               <button class="btn btn-sm" style="background:#28a745;color:#fff;margin-left:4px;${ingested ? 'opacity:0.5;pointer-events:none;' : ''}" onclick="adminDashboard.ingestDataset('${tnJs}')"${ingested ? ' disabled' : ''}>${t('a.etl.ingest')}</button>
               ${this.isAdmin ? `<button class="btn btn-sm" style="background:#dc3545;color:#fff;margin-left:4px;" onclick="adminDashboard.deleteDataset('${tnJs}')">${t('a.delete')}</button>` : ''}
             </td>
             <td class="etl-result" style="font-size:var(--fs-xs);max-width:300px;white-space:pre-wrap;">${this.escapeHtml(d.note || '')}</td>
           </tr>`;
-        }).join('')}
+        }).join('');
+        })()}
         </tbody>
       </table>`;
   }
@@ -5197,13 +5213,16 @@ class AdminDashboard {
     const key = document.getElementById('lims-new-key')?.value.trim();
     if (!name || !url || !key) { alert(t('a.lims.fillAll')); return; }
     try {
-      await api.authenticatedRequest('/api/lims/connections', {
+      const created = await api.authenticatedRequest('/api/lims/connections', {
         method: 'POST', body: JSON.stringify({ name, base_url: url, api_key: key })
       });
       ['lims-new-name', 'lims-new-url', 'lims-new-key'].forEach(id => {
         const el = document.getElementById(id); if (el) el.value = '';
       });
       await this.loadLimsConnections(); this.renderLimsConnections(); this.renderEtlDatasets();
+      // First import straight away: the connection materialises as a
+      // dataset row in Data source, ready to open, map and ingest.
+      if (created && created.connection_id) await this.fetchLimsConnection(created.connection_id);
     } catch (e) { alert(e.message); }
   }
 
