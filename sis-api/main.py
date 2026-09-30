@@ -3051,12 +3051,23 @@ async def fetch_from_lims(connection_id: int, payload: Optional[dict] = None,
         return {"message": "The laboratory has no released samples", "fetched": 0, "table_name": None}
 
     # ---- transform: fixed provenance columns + one column per parameter ----
-    param_codes = []
+    param_codes, param_meta = [], {}
     for smp in samples:
         for o in (smp.get("observations") or []):
             code = (o.get("parameterCode") or o.get("parameter") or "").strip()
-            if code and code not in param_codes:
+            if not code:
+                continue
+            if code not in param_codes:
                 param_codes.append(code)
+            if code not in param_meta:
+                method = o.get("method") or {}
+                param_meta[code] = {
+                    "name": (o.get("parameterName") or "").strip(),
+                    "method": (method.get("name") or "").strip(),
+                    "standard": (method.get("standard") or "").strip(),
+                    "unit": (o.get("controlledUnit")
+                             or (o.get("normalized") or {}).get("unit") or "").strip(),
+                }
 
     fixed_names = [c[0] for c in LIMS_FIXED_COLUMNS]
     pcol_names, used = [], set(fixed_names)
@@ -3156,6 +3167,18 @@ async def fetch_from_lims(connection_id: int, payload: Optional[dict] = None,
                     """, (table_name, h, fixed[1], fixed[2]))
                     continue
                 code = param_codes[i - len(fixed_names)]
+                # The note shows the laboratory's own description next to the
+                # mapping dropdowns: parameter name, method (standard), unit.
+                meta = param_meta.get(code) or {}
+                note_bits = [code]
+                if meta.get("name") and meta["name"] != code:
+                    note_bits.append(meta["name"])
+                if meta.get("method"):
+                    note_bits.append(meta["method"]
+                                     + (f" ({meta['standard']})" if meta.get("standard") else ""))
+                if meta.get("unit"):
+                    note_bits.append(f"unit: {meta['unit']}")
+                note = " \u00b7 ".join(note_bits)
                 prev = inherited.get(h)
                 if prev and prev["destination_table"]:
                     cur.execute("""
@@ -3164,17 +3187,20 @@ async def fetch_from_lims(connection_id: int, payload: Optional[dict] = None,
                              destination_table, destination_column,
                              property_num_id, procedure_num_id, unit_of_measure_id)
                         VALUES (%s, %s, false, %s, %s, %s, %s, %s, %s)
-                    """, (table_name, h, code,
+                    """, (table_name, h, note,
                           prev["destination_table"], prev["destination_column"],
                           prev["property_num_id"], prev["procedure_num_id"],
                           prev["unit_of_measure_id"]))
                     inherited_n += 1
                 else:
+                    # Laboratory results ARE soil properties — pre-select the
+                    # destination; the user completes property/procedure/unit.
                     cur.execute("""
                         INSERT INTO api.uploaded_dataset_column
-                            (table_name, column_name, ignore_column, note)
-                        VALUES (%s, %s, true, %s)
-                    """, (table_name, h, code))
+                            (table_name, column_name, ignore_column, note,
+                             destination_table, destination_column)
+                        VALUES (%s, %s, false, %s, 'result_num', 'value')
+                    """, (table_name, h, note))
 
             # Drain the change feed so the stored cursor marks "now".
             cursor_val, ch_params = lims["sync_cursor"], None

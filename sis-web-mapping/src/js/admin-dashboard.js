@@ -5666,9 +5666,12 @@ class AdminDashboard {
       const valColor = validation === 'OK' ? '#28a745' : (validation ? '#dc3545' : '#555');
 
       const linkSS = 'margin-left:4px;font-size:var(--fs-xs);text-decoration:none;';
+      const labNote = existing.note && existing.note !== col
+        ? `<div style="font-size:var(--fs-xs);color:var(--color-text-muted);max-width:260px;white-space:normal;margin-top:2px;">${this.escapeHtml(existing.note)}</div>`
+        : '';
       return `
         <tr data-col="${this.escapeHtml(col)}">
-          <td><strong>${this.escapeHtml(col)}</strong></td>
+          <td><strong>${this.escapeHtml(col)}</strong>${labNote}</td>
           <td><select class="etl-dest" style="${ss}">${destOpts}</select></td>
           <td style="white-space:nowrap;">
             <select class="etl-prop" style="${ss}${hideResult}">${propOpts}</select>
