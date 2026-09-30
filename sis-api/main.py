@@ -3683,6 +3683,19 @@ async def ingest_dataset(
                             if elem_key in elements_cache:
                                 element_id = elements_cache[elem_key]
                             else:
+                                # Re-ingests (e.g. each laboratory-API snapshot)
+                                # must update, not duplicate: reuse the layer
+                                # when this profile already has it.
+                                cur.execute("""
+                                    SELECT element_id FROM soil_data.element
+                                    WHERE profile_id = %s AND upper_depth = %s AND lower_depth = %s
+                                    LIMIT 1
+                                """, (profile_id, upper_i, lower_i))
+                                existing_elem = cur.fetchone()
+                                if existing_elem:
+                                    element_id = existing_elem["element_id"]
+                                    elements_cache[elem_key] = element_id
+                            if element_id is None:
                                 cur.execute("""
                                     INSERT INTO soil_data.element (profile_id, upper_depth, lower_depth, type, horizon)
                                     VALUES (%s, %s, %s, %s, %s)
@@ -3699,14 +3712,27 @@ async def ingest_dataset(
                         else:
                             # Chain-of-custody identifiers (optional mappings):
                             # the bag's field-collection ID and the lab's
-                            # reception ID (migration 023).
+                            # reception ID (migration 023). A re-ingested
+                            # element keeps its specimen, identifiers refreshed.
                             spec_sample_field_id = get_val(row, "specimen", "sample_field_id")
                             spec_sample_lab_id = get_val(row, "specimen", "sample_lab_id")
-                            cur.execute("""
-                                INSERT INTO soil_data.specimen (element_id, sample_field_id, sample_lab_id)
-                                VALUES (%s, %s, %s) RETURNING specimen_id
-                            """, (element_id, spec_sample_field_id, spec_sample_lab_id))
-                            specimen_id = cur.fetchone()["specimen_id"]
+                            cur.execute("SELECT specimen_id FROM soil_data.specimen WHERE element_id = %s LIMIT 1",
+                                        (element_id,))
+                            existing_spec = cur.fetchone()
+                            if existing_spec:
+                                specimen_id = existing_spec["specimen_id"]
+                                cur.execute("""
+                                    UPDATE soil_data.specimen
+                                    SET sample_field_id = COALESCE(%s, sample_field_id),
+                                        sample_lab_id = COALESCE(%s, sample_lab_id)
+                                    WHERE specimen_id = %s
+                                """, (spec_sample_field_id, spec_sample_lab_id, specimen_id))
+                            else:
+                                cur.execute("""
+                                    INSERT INTO soil_data.specimen (element_id, sample_field_id, sample_lab_id)
+                                    VALUES (%s, %s, %s) RETURNING specimen_id
+                                """, (element_id, spec_sample_field_id, spec_sample_lab_id))
+                                specimen_id = cur.fetchone()["specimen_id"]
                             specimens_cache[element_id] = specimen_id
 
                     # --- result_num (one per result_num-mapped column) ---
