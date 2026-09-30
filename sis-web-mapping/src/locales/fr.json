@@ -524,7 +524,6 @@
   "a.lims.lastFetch": "Dernière récupération",
   "a.lims.datasets": "Jeux de données",
   "a.lims.test": "Tester",
-  "a.lims.fetch": "Importer",
   "a.lims.testOk": "Connexion réussie.",
   "a.lims.testFail": "Échec de la connexion :",
   "a.lims.noProfile": "Attention : l'API du laboratoire ne déclare pas le profil opennsis.",

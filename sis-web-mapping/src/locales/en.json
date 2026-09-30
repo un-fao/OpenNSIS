@@ -524,7 +524,6 @@
   "a.lims.lastFetch": "Last fetch",
   "a.lims.datasets": "Datasets",
   "a.lims.test": "Test",
-  "a.lims.fetch": "Import",
   "a.lims.testOk": "Connection OK.",
   "a.lims.testFail": "Connection failed:",
   "a.lims.noProfile": "Warning: the laboratory API does not declare the opennsis profile.",

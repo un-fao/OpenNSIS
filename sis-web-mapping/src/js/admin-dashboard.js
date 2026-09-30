@@ -4983,7 +4983,6 @@ class AdminDashboard {
       return;
     }
     const srcStyle = 'background:var(--color-surface-alt);color:var(--color-text-muted);border:1px solid var(--color-border);';
-    const importIcon = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="vertical-align:-2px;margin-right:6px;"><path d="M12 3v9m0 0l-3.5-3.5M12 12l3.5-3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" stroke-linecap="round"/></svg>';
     // A connection normally lives through its dataset rows (adding one
     // auto-imports, and the latest API row per connection re-imports); a
     // bare connection row appears only while a connection has no dataset
@@ -4999,7 +4998,7 @@ class AdminDashboard {
             <td>-</td>
             <td>-</td>
             <td>-</td>
-            <td><button type="button" class="btn btn-primary btn-sm" onclick="adminDashboard.fetchLimsConnection(${c.connection_id})">${importIcon}${t('a.lims.fetch')}</button></td>
+            <td><button type="button" class="btn btn-primary btn-sm" onclick="adminDashboard.fetchLimsConnection(${c.connection_id})">${t('a.etl.open')}</button></td>
             <td class="etl-result" style="font-size:var(--fs-xs);max-width:300px;white-space:pre-wrap;">${this.escapeHtml(c.last_fetch_note || '')}</td>
           </tr>`).join('');
     const fmtDate = v => {
@@ -5035,9 +5034,8 @@ class AdminDashboard {
             <td>
               ${d.lims_connection_id && latestByConn[d.lims_connection_id] === d.table_name
                   && conns.some(c => c.connection_id === d.lims_connection_id)
-                ? `<button class="btn btn-primary btn-sm" style="margin-right:4px;" onclick="adminDashboard.fetchLimsConnection(${d.lims_connection_id})">${t('a.lims.fetch')}</button>`
-                : ''}
-              <button class="btn btn-primary btn-sm" onclick="adminDashboard.openDataset('${tnJs}')">${t('a.etl.open')}</button>
+                ? `<button class="btn btn-primary btn-sm" onclick="adminDashboard.openLimsLatest(${d.lims_connection_id}, '${tnJs}')">${t('a.etl.open')}</button>`
+                : `<button class="btn btn-primary btn-sm" onclick="adminDashboard.openDataset('${tnJs}')">${t('a.etl.open')}</button>`}
               <button class="btn btn-sm" style="background:#28a745;color:#fff;margin-left:4px;${ingested ? 'opacity:0.5;pointer-events:none;' : ''}" onclick="adminDashboard.ingestDataset('${tnJs}')"${ingested ? ' disabled' : ''}>${t('a.etl.ingest')}</button>
               ${this.isAdmin ? `<button class="btn btn-sm" style="background:#dc3545;color:#fff;margin-left:4px;" onclick="adminDashboard.deleteDataset('${tnJs}')">${t('a.delete')}</button>` : ''}
             </td>
@@ -5243,6 +5241,28 @@ class AdminDashboard {
       alert(`${t('a.lims.testOk')}\n${r.sourceSystemId || ''} (contract ${r.contractVersion || '?'})\n`
         + (r.opennsis_profile ? 'opennsis \u2713' : t('a.lims.noProfile')));
     } catch (e) { alert(t('a.lims.testFail') + ' ' + e.message); }
+  }
+
+  // Open on the newest API dataset row: quietly check the laboratory for
+  // new data first (the change-feed cursor makes this a cheap no-op when
+  // nothing changed). New data -> a fresh dataset stages and opens;
+  // otherwise (or if the lab is unreachable) the existing one opens.
+  async openLimsLatest(connectionId, tableName) {
+    try {
+      const r = await api.authenticatedRequest(`/api/lims/connections/${connectionId}/fetch`, {
+        method: 'POST', body: JSON.stringify({})
+      });
+      if (r && r.table_name) {
+        await this.loadLimsConnections();
+        await this.loadEtlDatasets();
+        this.renderEtlDatasets();
+        this.openDataset(r.table_name);
+        return;
+      }
+    } catch (e) {
+      console.warn('LIMS freshness check failed, opening the existing dataset:', e);
+    }
+    this.openDataset(tableName);
   }
 
   async fetchLimsConnection(id) {

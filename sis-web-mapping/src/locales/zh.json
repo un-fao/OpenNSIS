@@ -524,7 +524,6 @@
   "a.lims.lastFetch": "上次获取",
   "a.lims.datasets": "数据集",
   "a.lims.test": "测试",
-  "a.lims.fetch": "导入",
   "a.lims.testOk": "连接正常。",
   "a.lims.testFail": "连接失败：",
   "a.lims.noProfile": "警告：实验室 API 未声明 opennsis 配置。",
