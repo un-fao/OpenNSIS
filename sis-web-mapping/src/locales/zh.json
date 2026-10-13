@@ -2,6 +2,8 @@
   "app.loading": "正在加载土壤信息系统...",
   "lang.label": "语言",
   "groups.baseLayers": "底图图层",
+  "groups.chemical": "化学",
+  "groups.physical": "物理",
   "groups.maps": "地图",
   "groups.soilProfiles": "土壤剖面",
   "basemap.satellite": "卫星影像",

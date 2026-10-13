@@ -2,6 +2,8 @@
   "app.loading": "A carregar o Sistema de Informação de Solos...",
   "lang.label": "Idioma",
   "groups.baseLayers": "Camadas base",
+  "groups.chemical": "Químicas",
+  "groups.physical": "Físicas",
   "groups.maps": "Mapas",
   "groups.soilProfiles": "Perfis de solo",
   "basemap.satellite": "Satélite",

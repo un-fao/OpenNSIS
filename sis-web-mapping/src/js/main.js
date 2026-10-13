@@ -186,8 +186,8 @@ async function loadLayers() {
     // Main raster groups come from the catalogue classification keywords:
     // chemical and physical properties first, and anything unclassified
     // falls back to its project group as before.
-    const CHEM_GROUP = 'Chemical';
-    const PHYS_GROUP = 'Physical';
+    const CHEM_GROUP = t('groups.chemical');
+    const PHYS_GROUP = t('groups.physical');
     const groupedLayers = layers.reduce((acc, layer) => {
       const kws = (layer.keywords || []).map(k => String(k).toLowerCase());
       let group;

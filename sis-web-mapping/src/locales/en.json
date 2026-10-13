@@ -2,6 +2,8 @@
   "app.loading": "Loading Soil Information System...",
   "lang.label": "Language",
   "groups.baseLayers": "Base layers",
+  "groups.chemical": "Chemical",
+  "groups.physical": "Physical",
   "groups.maps": "Maps",
   "groups.soilProfiles": "Soil profiles",
   "basemap.satellite": "Satellite",

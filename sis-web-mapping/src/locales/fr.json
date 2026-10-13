@@ -2,6 +2,8 @@
   "app.loading": "Chargement du Système d'information sur les sols...",
   "lang.label": "Langue",
   "groups.baseLayers": "Couches de base",
+  "groups.chemical": "Chimiques",
+  "groups.physical": "Physiques",
   "groups.maps": "Cartes",
   "groups.soilProfiles": "Profils de sol",
   "basemap.satellite": "Satellite",

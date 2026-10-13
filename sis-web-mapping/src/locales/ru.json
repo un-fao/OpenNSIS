@@ -2,6 +2,8 @@
   "app.loading": "Загрузка Почвенной информационной системы...",
   "lang.label": "Язык",
   "groups.baseLayers": "Базовые слои",
+  "groups.chemical": "Химические",
+  "groups.physical": "Физические",
   "groups.maps": "Карты",
   "groups.soilProfiles": "Почвенные профили",
   "basemap.satellite": "Спутник",

@@ -2,6 +2,8 @@
   "app.loading": "Cargando el Sistema de Información de Suelos...",
   "lang.label": "Idioma",
   "groups.baseLayers": "Capas base",
+  "groups.chemical": "Químicas",
+  "groups.physical": "Físicas",
   "groups.maps": "Mapas",
   "groups.soilProfiles": "Perfiles de suelo",
   "basemap.satellite": "Satélite",
