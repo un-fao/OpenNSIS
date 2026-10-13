@@ -528,7 +528,27 @@ async def delete_user(user_id: str, current_user: dict = Depends(get_current_adm
             # Clearing user_id is the one audit mutation the append-only
             # trigger permits — entries stay, attribution is anonymised.
             cur.execute("UPDATE api.audit SET user_id = NULL WHERE user_id = %s", (user_id,))
-            cur.execute("DELETE FROM api.user WHERE user_id = %s", (user_id,))
+            # Uploaded datasets and DST recipes must survive their owner:
+            # transfer them to the acting admin, keeping the original
+            # uploader's name in the dataset note.
+            cur.execute("""
+                UPDATE api.uploaded_dataset
+                   SET user_id = %s,
+                       note = TRIM(COALESCE(note || ' ', '') ||
+                                   '[originally uploaded by ' || user_id || ']')
+                 WHERE user_id = %s
+            """, (current_user['user_id'], user_id))
+            cur.execute("UPDATE api.dst_recipe SET created_by = %s WHERE created_by = %s",
+                        (current_user['user_id'], user_id))
+            cur.execute("UPDATE api.dst_recipe SET run_triggered_by = %s WHERE run_triggered_by = %s",
+                        (current_user['user_id'], user_id))
+            try:
+                cur.execute("DELETE FROM api.user WHERE user_id = %s", (user_id,))
+            except psycopg2.IntegrityError:
+                conn.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="User still owns records that must be deleted or reassigned first.")
             if cur.rowcount == 0:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
             log_audit(current_user['user_id'], None, "user_deleted", {"deleted_user": user_id}, None)
