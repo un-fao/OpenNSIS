@@ -1116,3 +1116,635 @@ body.light-basemap .scale-line .ol-scale-line-inner::after { background: #2b2b2b
 
     .layer-item { flex-wrap: wrap; }
 }
+
+/* =====================================================================
+   TERROIR RESTYLE — staged preview, DO NOT COMMIT.
+   The soil-horizon design language from the OpenNSIS presentation
+   decks brought into the app: paper ground, humus text, horizon
+   browns, deep-teal action colour, Bricolage Grotesque display type.
+   Pure overrides over the stock tokens/components — delete this block
+   and the font links in index.html to restore the stock look.
+   ===================================================================== */
+:root {
+    --font-display: "Bricolage Grotesque", Georgia, serif;
+    --font-sans: "Source Sans 3", -apple-system, "Segoe UI", Arial, sans-serif;
+    --font-mono: "IBM Plex Mono", "Courier New", monospace;
+
+    --color-primary:        #1D5F73;
+    --color-primary-hover:  #174C5C;
+    --color-primary-light:  rgba(29, 95, 115, 0.10);
+    --color-secondary:      #63452C;
+    --color-secondary-hover:#4E361F;
+    --color-success:        #3E7D4E;
+    --color-success-hover:  #346A42;
+    --color-danger:         #B3402F;
+    --color-danger-hover:   #983627;
+    --color-warning:        #C98A2B;
+    --color-accent:         #1D5F73;
+
+    --color-bg:             #F4F1EA;
+    --color-surface:        #FDFCF9;
+    --color-surface-alt:    #F0EBE1;
+    --color-surface-hover:  #E9E2D4;
+    --color-border:         #E0D8C8;
+    --color-border-strong:  #C6BAA2;
+    --color-text:           #2A241C;
+    --color-text-muted:     #6E6354;
+    --color-text-subtle:    #978B77;
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --shadow-sm: 0 1px 2px rgba(42, 36, 28, 0.08);
+    --shadow-md: 0 4px 14px rgba(42, 36, 28, 0.12);
+    --shadow-lg: 0 16px 40px rgba(42, 36, 28, 0.20);
+    --focus-ring: 0 0 0 3px rgba(29, 95, 115, 0.30);
+
+    --tint-pending: #F6E8C6;
+    --tint-saved:   #DCEBDD;
+    --tint-error:   #F7E3DE;
+}
+
+:root[data-theme="dark"] {
+    --color-primary:        #4FA3BD;
+    --color-primary-hover:  #67B5CC;
+    --color-primary-light:  rgba(79, 163, 189, 0.14);
+    --color-secondary:      #B79A77;
+    --color-secondary-hover:#C9AF8F;
+    --color-success:        #5CB07A;
+    --color-success-hover:  #74C190;
+    --color-danger:         #E0705D;
+    --color-danger-hover:   #EA8878;
+    --color-warning:        #D9A648;
+    --color-accent:         #4FA3BD;
+
+    --color-bg:             #16110C;
+    --color-surface:        #201913;
+    --color-surface-alt:    #2A221A;
+    --color-surface-hover:  #342A20;
+    --color-border:         #3D3227;
+    --color-border-strong:  #584938;
+    --color-text:           #EFE8DC;
+    --color-text-muted:     #B5A68F;
+    --color-text-subtle:    #8C7E69;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.55);
+    --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.65);
+    --focus-ring: 0 0 0 3px rgba(79, 163, 189, 0.40);
+
+    --tint-pending: #4A3D14;
+    --tint-saved:   #1F3B28;
+    --tint-error:   #46261F;
+}
+
+body { font-family: var(--font-sans); }
+h1, h2, h3, h4, h5 { font-family: var(--font-display); letter-spacing: -0.01em; }
+.mono, code { font-family: var(--font-mono); }
+
+::selection { background: rgba(29, 95, 115, 0.22); }
+* { scrollbar-width: thin; scrollbar-color: var(--color-border-strong) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+    background: var(--color-border-strong);
+    border-radius: 99px; border: 3px solid transparent; background-clip: content-box;
+}
+*::-webkit-scrollbar-track { background: transparent; }
+
+.header h1 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.015em; }
+
+/* Floating panels: warm glass */
+.layer-switcher {
+    background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+    backdrop-filter: saturate(160%) blur(14px);
+    -webkit-backdrop-filter: saturate(160%) blur(14px);
+    border-radius: var(--radius-lg);
+    border-color: color-mix(in srgb, var(--color-border) 70%, transparent);
+    box-shadow: var(--shadow-lg);
+}
+.layer-switcher-header {
+    background: transparent;
+    border-bottom-color: color-mix(in srgb, var(--color-border) 60%, transparent);
+    border-top-left-radius: var(--radius-lg);
+    border-top-right-radius: var(--radius-lg);
+}
+.layer-group-header { font-family: var(--font-display); letter-spacing: 0.01em; }
+
+.popup {
+    border-radius: var(--radius-lg);
+    background-color: color-mix(in srgb, var(--color-surface) 96%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-lg);
+}
+.popup:after { border-color: var(--color-surface) transparent transparent; }
+[data-theme="dark"] .popup:after { border-color: var(--color-surface) transparent transparent; }
+
+.legend-container:not(.bare) {
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+[data-theme="dark"] .layer-switcher { background: color-mix(in srgb, var(--color-surface) 90%, transparent); }
+[data-theme="dark"] .legend-container:not(.bare) { background: color-mix(in srgb, var(--color-surface) 92%, transparent); }
+[data-theme="dark"] .popup { background-color: color-mix(in srgb, var(--color-surface) 96%, transparent); }
+
+#profiles-data-table thead th { font-family: var(--font-sans); letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* =====================================================================
+   TERROIR v2 — IMMERSIVE PASS (map view). Staged preview, DO NOT COMMIT.
+   Motion, glass depth and structure on top of the v1 palette.
+   ===================================================================== */
+@media (prefers-reduced-motion: no-preference) {
+    @keyframes tr-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+    @keyframes tr-drop { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: none; } }
+    @keyframes tr-pop  { 0% { opacity: 0; transform: scale(.92); } 60% { opacity: 1; transform: scale(1.02); } 100% { transform: scale(1); } }
+    @keyframes tr-slideup { from { transform: translateY(100%); } to { transform: none; } }
+
+    .header         { animation: tr-drop .7s cubic-bezier(.2,.8,.2,1) both; }
+    .layer-switcher { animation: tr-rise .7s .12s cubic-bezier(.2,.8,.2,1) both; }
+    .map-controls   { animation: tr-drop .7s .22s cubic-bezier(.2,.8,.2,1) both; }
+    #theme-btn, #login-btn, #lang-btn { animation: tr-drop .7s .3s cubic-bezier(.2,.8,.2,1) both; }
+    .legend-container { animation: tr-rise .5s both; }
+    .popup          { animation: tr-pop .32s cubic-bezier(.2,.9,.3,1.35) both; }
+    #profiles-data-modal { animation: tr-slideup .45s cubic-bezier(.2,.8,.2,1) both; }
+}
+
+/* Oversized, confident title */
+.header { gap: var(--sp-3); }
+.header h1 { font-size: 27px; font-weight: 700; letter-spacing: -0.02em; }
+
+/* Layer panel: deep frosted glass with an inner light edge */
+.layer-switcher {
+    border-radius: 22px;
+    background: linear-gradient(to bottom,
+        color-mix(in srgb, var(--color-surface) 93%, transparent),
+        color-mix(in srgb, var(--color-surface) 82%, transparent));
+    backdrop-filter: blur(22px) saturate(170%);
+    -webkit-backdrop-filter: blur(22px) saturate(170%);
+    border: 1px solid color-mix(in srgb, var(--color-surface) 35%, var(--color-border));
+    box-shadow: 0 24px 60px rgba(26, 20, 12, 0.30),
+                inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+[data-theme="dark"] .layer-switcher {
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55),
+                inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.layer-switcher-header { border-top-left-radius: 22px; border-top-right-radius: 22px; }
+.layer-item { border-radius: 10px; transition: background var(--transition), transform var(--transition); }
+.layer-item:hover { transform: translateX(3px); }
+.layer-tag { transition: background var(--transition), color var(--transition), transform var(--transition); }
+.layer-tag:hover { transform: translateY(-1px); }
+
+/* Popup + legend share the glass */
+.popup {
+    border-radius: 18px;
+    box-shadow: 0 24px 60px rgba(26, 20, 12, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+.legend-container:not(.bare) {
+    border-radius: 14px;
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    box-shadow: 0 14px 40px rgba(26, 20, 12, 0.25);
+}
+
+/* Attribute table: glass chrome */
+#profiles-data-modal > div { border-top-left-radius: 18px; border-top-right-radius: 18px; overflow: hidden; }
+#profiles-data-modal {
+    box-shadow: 0 -18px 50px rgba(26, 20, 12, 0.30) !important;
+}
+
+/* Springy floating glyphs */
+.zoom-controls button, #login-btn, #lang-btn, #theme-btn, .collapse-btn {
+    transition: transform .18s cubic-bezier(.2,.9,.3,1.4), opacity var(--transition);
+}
+.zoom-controls button:hover { transform: scale(1.18); opacity: 1; }
+
+/* =====================================================================
+   TERROIR v2 — depth-profile raster popup. Staged preview, DO NOT COMMIT.
+   A click on a soil-property raster renders the value at every published
+   depth interval as a stacked profile: horizon band, depth label, MEAN
+   prominent, uncertainty muted in parentheses.
+   ===================================================================== */
+.soil-profile-card { min-width: 240px; max-width: 330px; }
+.soil-profile-card .spc-head h3 {
+    margin: 0 0 2px;
+    font-family: var(--font-display);
+    font-size: 16px;
+    line-height: 1.25;
+    color: var(--color-text);
+}
+.soil-profile-card .spc-sub {
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-subtle);
+    margin-bottom: 10px;
+}
+.spc-rows {
+    border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: color-mix(in srgb, var(--color-surface-alt) 45%, transparent);
+}
+.spc-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: var(--spc-h, 48px);
+    padding: 4px 12px 4px 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+}
+.spc-row:last-child { border-bottom: none; }
+.spc-band {
+    align-self: stretch;
+    flex: 0 0 16px;
+    width: 16px;
+    background: linear-gradient(180deg,
+        color-mix(in srgb, var(--spc-c, #73573C) 88%, #fff),
+        var(--spc-c, #73573C));
+}
+.spc-row.active {
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+.spc-row.active .spc-band {
+    box-shadow: inset -3px 0 0 var(--color-accent);
+}
+.spc-depth {
+    flex: 0 0 auto;
+    min-width: 76px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--color-text-muted);
+}
+.spc-val {
+    margin-left: auto;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    white-space: nowrap;
+}
+.spc-stat {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--color-text-subtle);
+}
+.spc-mean {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--color-text);
+}
+.spc-mean.spc-nodata { font-weight: 400; color: var(--color-text-subtle); }
+.spc-unit { font-size: 11px; color: var(--color-text-muted); }
+.spc-unc {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-text-subtle);
+}
+.spc-foot {
+    margin-top: 8px;
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--color-text-subtle);
+}
+@media (prefers-reduced-motion: no-preference) {
+    .spc-row {
+        animation: tr-rise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        animation-delay: calc(var(--spc-i, 0) * 70ms);
+    }
+}
+
+/* =====================================================================
+   TERROIR v2 — layer-panel property families. Staged preview, DO NOT COMMIT.
+   Rasters of the same soil property and year fold into one collapsible
+   entry; depth/statistic variants become compact indented children.
+   ===================================================================== */
+.layer-family { margin: 2px 0; }
+.layer-family-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    user-select: none;
+    font-size: 13px;
+    color: var(--color-text);
+}
+.layer-family-header:hover { background: var(--color-surface-hover); }
+.family-chevron {
+    flex: 0 0 auto;
+    color: var(--color-text-subtle);
+    transform: rotate(90deg);
+    transition: transform 0.2s ease;
+}
+.layer-family.collapsed .family-chevron { transform: none; }
+.family-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.family-count {
+    flex: 0 0 auto;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.6;
+    color: var(--color-text-muted);
+    background: var(--color-surface-alt);
+    border: 1px solid var(--color-border);
+    border-radius: 99px;
+    padding: 0 7px;
+}
+.layer-family.has-active > .layer-family-header .family-name {
+    color: var(--color-primary);
+    font-weight: 600;
+}
+.layer-family.has-active > .layer-family-header .family-count {
+    color: var(--color-primary);
+    border-color: color-mix(in srgb, var(--color-primary) 50%, transparent);
+}
+.layer-family-children {
+    margin-left: 13px;
+    padding-left: 7px;
+    border-left: 2px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+}
+.layer-family.collapsed .layer-family-children { display: none; }
+.layer-family-children .layer-item label { font-family: var(--font-mono); font-size: 12px; }
+
+/* =====================================================================
+   TERROIR v2 — combined texture popup. Staged preview, DO NOT COMMIT.
+   Sand/silt/clay are shown together: per depth a composition bar and the
+   three values (MEAN prominent, SDEV muted).
+   ===================================================================== */
+.texture-card { min-width: 300px; max-width: 370px; }
+.tex-row { padding: 9px 12px 9px 0; min-height: 0; }
+.tex-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+.tex-top { display: flex; align-items: center; gap: 10px; }
+.tex-bar {
+    flex: 1;
+    display: flex;
+    height: 18px;
+    border-radius: 5px;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+.tex-seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.93);
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+}
+.tex-vals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    font-size: 11.5px;
+    color: var(--color-text-muted);
+}
+.tex-val { display: inline-flex; align-items: baseline; gap: 5px; white-space: nowrap; }
+.tex-val i {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    align-self: center;
+    flex: 0 0 auto;
+}
+.tex-val b {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--color-text);
+}
+.tex-val em {
+    font-style: normal;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--color-text-subtle);
+}
+
+/* =====================================================================
+   TERROIR v2 — multi-year trend in the raster popups. Staged preview,
+   DO NOT COMMIT. Vintages sit side by side (clicked year prominent) with
+   a trend chip; texture fractions get a small arrow vs the previous year.
+   ===================================================================== */
+.spc-yearcol {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+}
+.spc-valline { display: inline-flex; align-items: baseline; gap: 5px; }
+.spc-yearcol:not(.active) .spc-mean {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+}
+.spc-year {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.05em;
+    color: var(--color-text-subtle);
+}
+.spc-arrow {
+    color: var(--color-text-subtle);
+    font-size: 11px;
+    margin: 0 3px;
+    align-self: center;
+}
+.spc-trend {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    line-height: 1.7;
+    padding: 0 7px;
+    margin-left: 6px;
+    border-radius: 99px;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    background: var(--color-surface-alt);
+    align-self: center;
+    white-space: nowrap;
+}
+.spc-trend.up   { color: var(--color-success); border-color: color-mix(in srgb, var(--color-success) 45%, transparent); }
+.spc-trend.down { color: var(--color-danger);  border-color: color-mix(in srgb, var(--color-danger) 45%, transparent); }
+.tex-trend {
+    font-size: 9px;
+    margin-left: 3px;
+    color: var(--color-text-muted);
+    cursor: default;
+}
+.tex-trend.up   { color: var(--color-success); }
+.tex-trend.down { color: var(--color-danger); }
+/* Multi-year rows are wider: give the card room. (No flex-wrap here — the
+   OL overlay wrapper is zero-width, so the popup sizes to min-content and
+   any wrappable row would fold.) */
+.soil-profile-card { max-width: min(520px, 90vw); }
+
+/* =====================================================================
+   TERROIR v2 — combined nutrient popup (NPK together for fertiliser
+   decisions). Staged preview, DO NOT COMMIT. Reuses the texture row
+   chrome; values stack one nutrient per line, each with its own unit.
+   ===================================================================== */
+.nutrient-card { min-width: 280px; max-width: 420px; }
+.nut-vals { flex-direction: column; gap: 6px; }
+.nut-unit { font-size: 10px; color: var(--color-text-muted); }
+
+/* Year tabs inside a property family (Terroir preview, DO NOT COMMIT). */
+.family-years { display: flex; gap: 4px; margin: 4px 0 6px; flex-wrap: wrap; }
+.family-year-tab {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    line-height: 1.8;
+    padding: 0 10px;
+    border-radius: 99px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    user-select: none;
+}
+.family-year-tab:hover { border-color: var(--color-border-strong); }
+.family-year-tab.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+}
+.family-year-pane { display: none; }
+.family-year-pane.active { display: block; }
+
+/* Dialogue toggle pills (Terroir preview, DO NOT COMMIT). */
+.spc-toggles { display: flex; gap: 5px; margin: 2px 0 10px; }
+.spc-pill {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.03em;
+    line-height: 1.9;
+    padding: 0 10px;
+    border-radius: 99px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    user-select: none;
+}
+.spc-pill:hover { border-color: var(--color-border-strong); }
+.spc-pill.on {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+}
+.soil-profile-card .spc-sub { margin-bottom: 6px; }
+
+/* Year columns: caption centred under the mean, fixed minimum widths so the
+   values line up across depth rows (Terroir preview, DO NOT COMMIT). */
+.spc-yearcol { align-items: center; min-width: 6.5ch; }
+.spc-yearcol .spc-valline { justify-content: center; }
+.spc-unc { min-width: 9ch; }
+.spc-trend { min-width: 8ch; text-align: center; }
+
+/* Year-column header layout: year on top, mean, then ± below
+   (Terroir preview, DO NOT COMMIT). */
+.spc-yearcol { gap: 2px; }
+.spc-yearcol .spc-year { order: -1; }
+.spc-yearcol .spc-unc { min-width: 0; font-size: 10px; }
+.spc-arrow { align-self: center; }
+
+/* True header row: columns top-align so the year captions sit on one line;
+   the arrow drops to the level of the means (Terroir preview, DO NOT COMMIT). */
+.spc-val { align-items: flex-start; }
+.spc-yearcol:not(.active) { min-width: 6.5ch; }
+.spc-arrow { align-self: flex-start; margin-top: 19px; }
+.spc-trend { align-self: flex-start; margin-top: 17px; }
+.spc-row .spc-nodata { align-self: center; }
+
+/* =====================================================================
+   TERROIR v2 — profile card as a true table. Staged preview, DO NOT
+   COMMIT. One header row with the years (always shown), depth rows with
+   MEAN over (± SDEV) per year column, trend chip in the last column.
+   ===================================================================== */
+.spc-table { display: grid; align-items: stretch; }
+.spc-th {
+    padding: 6px 10px 4px;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--color-text-subtle);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+    background: color-mix(in srgb, var(--color-surface-alt) 70%, transparent);
+}
+.spc-th-unit { color: var(--color-text-subtle); }
+.spc-td {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+}
+.spc-td.last { border-bottom: none; }
+.spc-td.active { background: color-mix(in srgb, var(--color-primary) 8%, transparent); }
+.spc-dcell {
+    justify-content: flex-start;
+    gap: 12px;
+    padding-left: 0;
+    min-height: var(--spc-h, 48px);
+}
+.spc-dcell .spc-band { align-self: stretch; }
+.spc-dcell.active .spc-band { box-shadow: inset -3px 0 0 var(--color-accent); }
+.spc-vcell { flex-direction: column; gap: 1px; }
+.spc-vcell .spc-mean { font-size: 13px; font-weight: 500; color: var(--color-text-muted); }
+.spc-vcell.colactive .spc-mean { font-size: 18px; font-weight: 600; color: var(--color-text); }
+.spc-vcell .spc-unc { min-width: 0; font-size: 10px; }
+.spc-table .spc-trend { margin: 0; align-self: auto; }
+@media (prefers-reduced-motion: no-preference) {
+    .spc-td, .spc-th {
+        animation: tr-rise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        animation-delay: calc(var(--spc-i, 0) * 70ms);
+    }
+}
+.spc-th, .spc-vcell .spc-unc { white-space: nowrap; }
+
+/* Property-column headers in the group card (Terroir preview, DO NOT COMMIT). */
+.nutrient-card { max-width: min(760px, 95vw); }
+.spc-propth {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    padding-bottom: 5px;
+}
+.spc-prop-sym {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--color-text);
+}
+.spc-prop-sym i { width: 8px; height: 8px; border-radius: 2px; }
+.spc-prop-sub { font-size: 9.5px; color: var(--color-text-subtle); }
+.spc-th.colactive, .spc-vcell.colactive { background: color-mix(in srgb, var(--color-primary) 6%, transparent); }
+.spc-vcell .spc-mean .tex-trend { margin-left: 4px; font-size: 10px; }
+/* Equal-relevance mode (class-wide card): every MEAN at the same weight. */
+.spc-table.spc-equal .spc-vcell .spc-mean {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+.spc-pill { white-space: nowrap; }
+.spc-toggles { flex-wrap: wrap; row-gap: 5px; }

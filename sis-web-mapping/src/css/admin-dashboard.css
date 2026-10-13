@@ -1126,3 +1126,189 @@ input:checked + .toggle-slider:before {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+/* =====================================================================
+   TERROIR RESTYLE (admin) — staged preview, DO NOT COMMIT.
+   ===================================================================== */
+.dashboard-header {
+    background: linear-gradient(120deg, #2A1D12 0%, #3E2E1F 35%, #63452C 78%, #8A6844 110%);
+    color: #F4F1EA;
+}
+.dashboard-header h2 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.01em; }
+
+.dashboard-tabs { background: transparent; }
+.dashboard-tabs button {
+    font-family: var(--font-display);
+    font-weight: 600;
+    color: var(--color-text-muted);
+    border-bottom: 3px solid transparent;
+    background: transparent;
+    transition: color var(--transition), border-color var(--transition);
+}
+.dashboard-tabs button:hover { color: var(--color-text); background: transparent; }
+.dashboard-tabs button.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+    background: transparent;
+}
+
+.btn {
+    border-radius: 999px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition: transform var(--transition), box-shadow var(--transition),
+                background var(--transition), color var(--transition),
+                border-color var(--transition);
+}
+.btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.btn:active:not(:disabled) { transform: translateY(0); }
+
+.admin-section-title, .layers-section-title, .login-content h2 { font-family: var(--font-display); }
+
+.admin-table th {
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--color-text-muted);
+}
+.admin-table tbody tr { transition: background var(--transition); }
+.admin-table tbody tr:hover { background: var(--color-primary-light); }
+
+.stat-card-a { background: linear-gradient(135deg, #3E2E1F, #63452C); }
+.stat-card-b { background: linear-gradient(135deg, #1D5F73, #2E86A0); }
+.stat-card-c { background: linear-gradient(135deg, #8A6844, #B79A77); }
+.stat-card-d { background: linear-gradient(135deg, #4E5B3C, #71855A); }
+.stat-card-e { background: linear-gradient(135deg, #6B6157, #8C8176); }
+.stat-card-value { font-family: var(--font-display); }
+
+.login-modal { background: rgba(26, 20, 12, 0.55); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.login-content { border-radius: var(--radius-lg); }
+
+.etl-source-card { border-radius: var(--radius-md); }
+.etl-source-title { font-family: var(--font-sans); }
+.badge { letter-spacing: 0.05em; }
+
+/* =====================================================================
+   TERROIR v2 — IMMERSIVE PASS (admin). Staged preview, DO NOT COMMIT.
+   Aurora backdrop, floating glass sections, pill tabs, living cards.
+   ===================================================================== */
+.admin-dashboard {
+    background:
+        radial-gradient(1100px 700px at 88% -8%, rgba(29, 95, 115, 0.20), transparent 60%),
+        radial-gradient(900px 650px at -8% 112%, rgba(138, 104, 68, 0.22), transparent 60%),
+        var(--color-bg);
+}
+.dashboard-body { background: transparent; }
+.dashboard-content { position: relative; z-index: 1; }
+
+@media (prefers-reduced-motion: no-preference) {
+    .admin-dashboard.active::before {
+        content: "";
+        position: fixed; inset: -25%;
+        background: conic-gradient(from 0deg,
+            rgba(29, 95, 115, 0.10), rgba(138, 104, 68, 0.13),
+            rgba(62, 125, 78, 0.09), rgba(29, 95, 115, 0.10));
+        filter: blur(90px);
+        animation: tr-aurora 26s linear infinite;
+        pointer-events: none;
+        z-index: 0;
+    }
+    @keyframes tr-aurora { to { transform: rotate(360deg); } }
+    @keyframes tr-rise-a { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+    .tab-pane.active { animation: tr-rise-a .38s cubic-bezier(.2,.8,.2,1) both; }
+}
+
+/* Header: deeper soil gradient with a slow sheen */
+.dashboard-header {
+    background: linear-gradient(120deg, #241810 0%, #3E2E1F 38%, #63452C 80%, #8A6844 110%);
+    background-size: 160% 160%;
+}
+@media (prefers-reduced-motion: no-preference) {
+    .dashboard-header { animation: tr-sheen 14s ease-in-out infinite alternate; }
+    @keyframes tr-sheen { from { background-position: 0% 0%; } to { background-position: 100% 100%; } }
+}
+.dashboard-header h2 { font-size: 24px; }
+
+/* Pill tab bar */
+.dashboard-tabs {
+    border-bottom: none;
+    background: transparent;
+    gap: 6px;
+    padding: 12px var(--sp-8) 4px;
+    position: relative; z-index: 1;
+}
+.dashboard-tabs button {
+    border-radius: 999px;
+    padding: 9px 18px;
+    border-bottom: none;
+    transition: background var(--transition), color var(--transition),
+                box-shadow var(--transition), transform var(--transition);
+}
+.dashboard-tabs button:hover {
+    background: color-mix(in srgb, var(--color-surface) 75%, transparent);
+    transform: translateY(-1px);
+}
+.dashboard-tabs button.active {
+    background: linear-gradient(135deg, var(--color-primary), #2E86A0);
+    color: #fff;
+    border-bottom: none;
+    box-shadow: 0 8px 22px rgba(29, 95, 115, 0.35);
+}
+
+/* Content sections float as frosted cards */
+.admin-section, .layers-section {
+    background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    border: 1px solid color-mix(in srgb, var(--color-surface) 35%, var(--color-border));
+    border-radius: 20px;
+    padding: var(--sp-6);
+    margin-bottom: var(--sp-6);
+    box-shadow: 0 12px 40px rgba(26, 20, 12, 0.10),
+                inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+[data-theme="dark"] .admin-section, [data-theme="dark"] .layers-section {
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.admin-section-title, .layers-section-title { font-size: 19px; }
+
+/* Primary buttons: gradient + glow */
+.btn-primary {
+    background: linear-gradient(135deg, var(--color-primary), #2E86A0);
+    border: none;
+    box-shadow: 0 4px 14px rgba(29, 95, 115, 0.30);
+}
+.btn-primary:hover:not(:disabled) { box-shadow: 0 10px 26px rgba(29, 95, 115, 0.45); }
+
+/* Stat cards: lift + light sweep */
+.stat-card {
+    position: relative; overflow: hidden;
+    border-radius: 18px;
+    transition: transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .22s;
+}
+.stat-card:hover { transform: translateY(-5px) scale(1.012); box-shadow: 0 18px 40px rgba(26, 20, 12, 0.28); }
+.stat-card::after {
+    content: ""; position: absolute; top: 0; bottom: 0; left: -80%; width: 55%;
+    background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    transform: skewX(-20deg);
+    transition: left .6s ease;
+}
+.stat-card:hover::after { left: 135%; }
+
+/* Login: glass overlay + slowly rotating aurora ring around the card */
+.login-modal { background: rgba(20, 15, 9, 0.55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.login-content { position: relative; }
+@media (prefers-reduced-motion: no-preference) {
+    .login-content::before {
+        content: ""; position: absolute; inset: -3px; z-index: -1;
+        border-radius: calc(var(--radius-lg) + 4px);
+        background: conic-gradient(from 0deg, #1D5F73, #8A6844, #3E7D4E, #1D5F73);
+        filter: blur(8px); opacity: 0.75;
+        animation: tr-ring 7s linear infinite;
+    }
+    @keyframes tr-ring { to { transform: rotate(360deg); } }
+}
+
+/* Tables breathe */
+.admin-table tbody tr:hover { box-shadow: inset 3px 0 0 var(--color-primary); }

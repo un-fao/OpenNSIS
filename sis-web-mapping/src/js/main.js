@@ -18,6 +18,7 @@ import { initThemeButton } from './theme.js';
 let map;
 let appConfig = {};
 let currentLayers = {};
+let allRasterConfigs = [];   // every published raster layer config, for sibling-depth lookups
 let profileLayers = {};
 let profileColors = {};
 let profileMapsetIds = {};
@@ -180,10 +181,19 @@ function initializeMap() {
 async function loadLayers() {
   try {
     const layers = await api.getLayers();
-    
-    // Group layers by project_name
+    allRasterConfigs = layers;
+
+    // Main raster groups come from the catalogue classification keywords:
+    // chemical and physical properties first, and anything unclassified
+    // falls back to its project group as before.
+    const CHEM_GROUP = 'Chemical';
+    const PHYS_GROUP = 'Physical';
     const groupedLayers = layers.reduce((acc, layer) => {
-      const group = layer.project_name || 'Rasters';
+      const kws = (layer.keywords || []).map(k => String(k).toLowerCase());
+      let group;
+      if (kws.includes('chemical')) group = CHEM_GROUP;
+      else if (kws.includes('physical')) group = PHYS_GROUP;
+      else group = layer.project_name || 'Rasters';
       if (!acc[group]) {
         acc[group] = [];
       }
@@ -195,9 +205,13 @@ async function loadLayers() {
     const layerGroupsContainer = document.getElementById('layer-groups');
     layerGroupsContainer.innerHTML = '';
 
-    // Add data layer groups
-    for (const [groupName, groupLayers] of Object.entries(groupedLayers)) {
-      addLayerGroup(layerGroupsContainer, groupName, groupLayers);
+    // Add data layer groups — chemical, then physical, then the rest
+    const groupNames = [
+      ...[CHEM_GROUP, PHYS_GROUP].filter(g => groupedLayers[g]),
+      ...Object.keys(groupedLayers).filter(g => g !== CHEM_GROUP && g !== PHYS_GROUP)
+    ];
+    for (const groupName of groupNames) {
+      addLayerGroup(layerGroupsContainer, groupName, groupedLayers[groupName]);
     }
 
     // Add base maps group last
@@ -210,6 +224,7 @@ async function loadLayers() {
       if (radio) {
         radio.checked = true;
         switchLayer(defaultLayer);
+        updateFamilyActiveStates();
       }
     }
 
@@ -417,19 +432,18 @@ function addLayerGroup(container, groupName, layers) {
   const contentDiv = document.createElement('div');
   contentDiv.className = 'layer-group-content';
 
-  // Tag filter (driven by layer.keywords) — shown for any group that has keywords
+  // Tag filter (driven by layer.keywords) — shown for any group that has
+  // keywords. Catalogue-wide keywords that would match everything stay in
+  // the DB for metadata but are not offered as UI filter chips.
   let activeTags = new Set();
   {
     const allTags = new Set();
-    layers.forEach(l => (l.keywords || []).forEach(k => k && allTags.add(k)));
+    layers.forEach(l => (l.keywords || []).forEach(k => {
+      if (k && !SPC_HIDDEN_KEYWORDS.has(String(k).toLowerCase())) allTags.add(k);
+    }));
     if (allTags.size > 0) {
       const filterWrapper = document.createElement('div');
       filterWrapper.className = 'layer-tag-filter-wrapper';
-
-      const filterToggle = document.createElement('div');
-      filterToggle.className = 'layer-tag-filter-toggle';
-      filterToggle.textContent = t('layers.filterByKeywords');
-      filterWrapper.appendChild(filterToggle);
 
       const filterDiv = document.createElement('div');
       filterDiv.className = 'layer-tag-filter';
@@ -452,20 +466,32 @@ function addLayerGroup(container, groupName, layers) {
       });
       filterWrapper.appendChild(filterDiv);
 
-      filterToggle.addEventListener('click', (e) => {
-        e.stopPropagation();
-        filterWrapper.classList.toggle('collapsed');
-      });
-
       contentDiv.appendChild(filterWrapper);
     }
   }
 
-  const itemByLayerId = {};
-  layers.forEach(layer => {
-    const layerItem = createLayerItem(layer);
-    itemByLayerId[layer.layer_id] = { el: layerItem, keywords: layer.keywords || [] };
-    contentDiv.appendChild(layerItem);
+  // Group rasters of the same soil property and year into one collapsible
+  // family entry (the depth/statistic variants become compact children);
+  // single-layer properties render as a plain item, exactly as before.
+  const itemByLayerId = {};   // family key (or layer_id) -> rendered element + keywords
+  const famIndex = {};
+  const families = [];
+  layers.forEach(l => {
+    const key = rasterBaseAndYear(l).base;   // one family per property, all years
+    if (!famIndex[key]) {
+      famIndex[key] = { key, layers: [] };
+      families.push(famIndex[key]);
+    }
+    famIndex[key].layers.push(l);
+  });
+  families.forEach(f => {
+    const keywords = [];
+    f.layers.forEach(l => (l.keywords || []).forEach(k => k && keywords.push(k)));
+    // Single-layer properties render as a family too, so every entry in the
+    // panel reads the same way.
+    const el = createLayerFamily(f.layers);
+    itemByLayerId[f.key] = { el, keywords };
+    contentDiv.appendChild(el);
   });
 
   function applyTagFilter() {
@@ -485,15 +511,116 @@ function addLayerGroup(container, groupName, layers) {
   });
 }
 
-function createLayerItem(layer) {
+// One collapsible panel entry for a whole property family (every year,
+// depth interval and statistical dimension of the same raster). The header
+// carries the shared name and unit; expanding shows one tab per year
+// (newest first) with that year's depth/statistic layers beneath it.
+function createLayerFamily(famLayers) {
+  const { base } = rasterBaseAndYear(famLayers[0]);
+  const unit = famLayers[0].unit_of_measure_id || '';
+  const famDiv = document.createElement('div');
+  famDiv.className = 'layer-family collapsed';
+
+  const head = document.createElement('div');
+  head.className = 'layer-family-header';
+  const famName = unit ? `${base} (${unit})` : base;
+  head.innerHTML = `
+    <svg class="family-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    <span class="family-name" title="${famName}">${famName}</span>
+    <span class="family-count">${famLayers.length}</span>`;
+  famDiv.appendChild(head);
+
+  const kids = document.createElement('div');
+  kids.className = 'layer-family-children';
+
+  const byYear = Object.create(null);
+  famLayers.forEach(l => {
+    const y = String(rasterBaseAndYear(l).year || '—');
+    (byYear[y] = byYear[y] || []).push(l);
+  });
+  const years = Object.keys(byYear).sort((a, b) => (Number(b) || 0) - (Number(a) || 0));
+
+  // Year tabs (only when there is more than one vintage).
+  const panes = Object.create(null);
+  let tabs = null;
+  if (years.length > 1) {
+    tabs = document.createElement('div');
+    tabs.className = 'family-years';
+    kids.appendChild(tabs);
+  }
+  let defaultYear = null;
+  const activateYear = (year) => {
+    years.forEach(y => {
+      panes[y].classList.toggle('active', y === year);
+      if (tabs) tabs.querySelector(`[data-year="${y}"]`).classList.toggle('active', y === year);
+    });
+  };
+
+  years.forEach((y, idx) => {
+    if (tabs) {
+      const tab = document.createElement('span');
+      tab.className = 'family-year-tab' + (idx === 0 ? ' active' : '');
+      tab.dataset.year = y;
+      tab.textContent = y;
+      tab.addEventListener('click', () => activateYear(y));
+      tabs.appendChild(tab);
+    }
+    const pane = document.createElement('div');
+    pane.className = 'family-year-pane' + (idx === 0 ? ' active' : '');
+    panes[y] = pane;
+
+    const sorted = [...byYear[y]].sort((a, b) => {
+      const da = parseDepthDim(a.dimension);
+      const db = parseDepthDim(b.dimension);
+      if (da && db && (da.top !== db.top || da.bottom !== db.bottom)) {
+        return (da.top - db.top) || (da.bottom - db.bottom);
+      }
+      if (!!da !== !!db) return da ? -1 : 1;
+      const sa = (a.dimension_stats || 'X').toUpperCase();
+      const sb = (b.dimension_stats || 'X').toUpperCase();
+      if (sa === sb) return 0;
+      if (sa === 'MEAN') return -1;
+      if (sb === 'MEAN') return 1;
+      return sa.localeCompare(sb);
+    });
+    sorted.forEach(l => {
+      const d = parseDepthDim(l.dimension);
+      const depthLabel = d ? `${d.top}–${d.bottom} cm` : (l.dimension || '');
+      const stats = (!l.dimension_stats || l.dimension_stats === 'X') ? '' : l.dimension_stats;
+      const short = [depthLabel, stats].filter(Boolean).join(' · ') || l.property_name;
+      pane.appendChild(createLayerItem(l, short));
+      if (l.is_default) {
+        famDiv.classList.remove('collapsed');
+        defaultYear = y;
+      }
+    });
+    kids.appendChild(pane);
+  });
+  if (defaultYear) activateYear(defaultYear);
+
+  famDiv.appendChild(kids);
+  head.addEventListener('click', () => famDiv.classList.toggle('collapsed'));
+  return famDiv;
+}
+
+// Tint the header of the family whose child layer is the active one.
+function updateFamilyActiveStates() {
+  document.querySelectorAll('.layer-family').forEach(f => {
+    f.classList.toggle('has-active', !!f.querySelector('input[name="data-layer"]:checked'));
+  });
+}
+
+function createLayerItem(layer, shortLabel) {
   const itemDiv = document.createElement('div');
   itemDiv.className = 'layer-item';
-  
+
   // e.g. "Bulk Density of the fine earth fraction (2024, 0-30, MEAN, kg/dm³)"
   // — year (from mapset.creation_date), depth, statistical dimension and
   // unit in one parenthesis. A trailing "(YYYY)" in the title is stripped so
   // the year isn't shown twice (and serves as fallback when creation_date is
   // not set). "X" means "no statistical dimension" and is not shown.
+  // Inside a family entry the shared parts live on the header, so the item
+  // shows only the passed-in short label (depth · statistic).
   const ym = /^(.*)\s+\((\d{4})\)\s*$/.exec(layer.property_name || '');
   const baseName = ym ? ym[1] : layer.property_name;
   const year = layer.year || (ym && ym[2]);
@@ -504,7 +631,7 @@ function createLayerItem(layer) {
 
   itemDiv.innerHTML = `
     <input type="radio" name="data-layer" id="layer-${layer.layer_id}" value="${layer.layer_id}">
-    <label for="layer-${layer.layer_id}" title="${layerName}">${layerName}</label>
+    <label for="layer-${layer.layer_id}" title="${layerName}">${shortLabel || layerName}</label>
     <div class="layer-icons">
       ${layer.metadata_url ? `<a href="#" class="metadata-link" data-url="${layer.metadata_url}" title="${t('icons.metadata')}"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23666'%3E%3Cpath d='M13 9h-2V7h2m0 10h-2v-6h2m-1-9A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2z'/%3E%3C/svg%3E" alt="${t('icons.info')}"></a>` : ''}
       ${layer.download_url ? `<a href="${layer.download_url}" download title="${t('icons.downloadGeotiff')}"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23666'%3E%3Cpath d='M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7 7-7z'/%3E%3C/svg%3E" alt="${t('icons.download')}"></a>` : ''}
@@ -526,11 +653,13 @@ function createLayerItem(layer) {
         const legend = document.getElementById('legend');
         if (legend) legend.style.display = 'none';
       }
+      updateFamilyActiveStates();
     }
   });
   radio.addEventListener('change', (e) => {
     if (e.target.checked) {
       switchLayer(layer);
+      updateFamilyActiveStates();
     }
   });
 
@@ -1393,58 +1522,516 @@ async function showRasterInfo(evt, popup) {
     return;
   }
 
-  const viewResolution = map.getView().getResolution();
-  const source = activeLayer.getSource();
-  const url = source.getFeatureInfoUrl(
-    evt.coordinate,
-    viewResolution,
-    'EPSG:3857',
-    { 'INFO_FORMAT': 'text/html' }
-  );
+  if (!activeConfig) { popup.setPosition(undefined); return; }
+  await showDepthProfileInfo(evt, popup, activeConfig);
+}
 
-  if (url) {
-    try {
-      const response = await fetch(url);
-      const htmlText = await response.text();
-      
-      if (htmlText && htmlText.trim() && !htmlText.includes('no features')) {
-        // Transform coordinates to WGS84
-        const lonLat = toLonLat(evt.coordinate);
-        const longitude = lonLat[0].toFixed(6);
-        const latitude = lonLat[1].toFixed(6);
-        
-        // Extract value from HTML (adjust regex based on your MapServer output)
-        const valueMatch = htmlText.match(/Value:\s*([0-9.-]+)/);
-        const value = valueMatch ? valueMatch[1] : 'N/A';
-        
-        // Get current layer info
-        const layerId = activeLayer.get('layerId');
-        const layerConfig = currentLayers[layerId];
-        const layerName = layerConfig ? layerConfig.property_name : 'Unknown';
-        const unit = layerConfig ? layerConfig.unit_of_measure_id || '' : '';
-        
-        // Format like profile popup
-        const html = `
-          <div class="feature-info-layer">
-            <h3>${layerName}</h3>
-            <div class="feature-info-item">
-              <div class="feature-info-property"><strong>Value:</strong> ${value} ${unit}</div>
-              <div class="feature-info-property"><strong>Latitude:</strong> ${latitude}°</div>
-              <div class="feature-info-property"><strong>Longitude:</strong> ${longitude}°</div>
-            </div>
-          </div>
-        `;
-        
-        document.getElementById('popup-content').innerHTML = html;
-        popup.setPosition(evt.coordinate);
-      } else {
-        popup.setPosition(undefined);
-      }
-    } catch (error) {
-      console.error('Failed to get feature info:', error);
-      popup.setPosition(undefined);
-    }
+
+// ---- Depth-profile raster popup --------------------------------------------
+// One click tells the whole story of that spot: every depth interval the
+// clicked property was mapped at, stacked like a soil profile, with the MEAN
+// prominent and the uncertainty statistic (STDV/UNC/…) muted in parentheses.
+// DST (raster-calculator) outputs never reach this — they keep their own
+// recipe-breakdown popup above.
+
+const UNC_STAT_RE = /^(SD|SDEV|STD|STDV|STDEV|UNC|UNCERTAINTY|SIGMA|ERR|ERROR|CI|RMSE)$/i;
+const SPC_BAND_COLORS = ['#3F2E1F', '#5A4330', '#73573C', '#8C6D4B', '#A5845D', '#BD9C72'];
+
+function rasterBaseAndYear(cfg) {
+  const ym = /^(.*)\s+\((\d{4})\)\s*$/.exec(cfg.property_name || '');
+  return {
+    base: ym ? ym[1] : (cfg.property_name || ''),
+    year: cfg.year || (ym && ym[2]) || null
+  };
+}
+
+function parseDepthDim(dim) {
+  const m = /^\s*(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*(?:cm)?\s*$/i.exec(dim || '');
+  return m ? { top: Number(m[1]), bottom: Number(m[2]) } : null;
+}
+
+// GetFeatureInfo against any published layer (active or not) via a detached
+// WMS source — same request the old popup made, just not limited to the
+// layer currently on the map.
+async function fetchRasterValue(cfg, coordinate, viewResolution) {
+  try {
+    const src = createWMSLayer(cfg).getSource();
+    const url = src.getFeatureInfoUrl(coordinate, viewResolution, 'EPSG:3857',
+                                      { 'INFO_FORMAT': 'text/html' });
+    if (!url) return null;
+    const response = await fetch(url);
+    const htmlText = await response.text();
+    if (!htmlText || !htmlText.trim() || htmlText.includes('no features')) return null;
+    const m = htmlText.match(/Value:\s*(-?[0-9.]+)/);
+    return m ? Number(m[1]) : null;
+  } catch (e) {
+    return null;
   }
+}
+
+function fmtRasterValue(v) {
+  if (v == null || !Number.isFinite(v)) return null;
+  const a = Math.abs(v);
+  const fixed = a >= 100 ? v.toFixed(1) : a >= 1 ? v.toFixed(2) : v.toFixed(3);
+  return String(parseFloat(fixed));
+}
+
+function layerKeywordsLc(cfg) {
+  return (cfg.keywords || []).map(k => String(k).toLowerCase());
+}
+function classKeywordOf(cfg) {
+  const kws = layerKeywordsLc(cfg);
+  if (kws.includes('chemical')) return 'chemical';
+  if (kws.includes('physical')) return 'physical';
+  return null;
+}
+// Chemical symbol from titles like "Nitrogen (N) - total" or
+// "Calcium (Ca++) - exchangeable"; first word as fallback.
+function nutrientSymbol(base) {
+  const m = /\(([A-Za-z]{1,2})[+\-\d]*\)/.exec(base || '');
+  return m ? m[1] : ((base || '').split(/\s+/)[0] || '?');
+}
+const NUTRIENT_COLORS = ['#3E7D4E', '#C98A2B', '#1D5F73', '#A6513B', '#63452C', '#4FA3BD'];
+
+// Dialogue-level toggles. The pills row offers the keywords available under
+// the clicked layer's class (chemical/physical) — tapping one renders a
+// generic group table of every property carrying that keyword, tapping it
+// again returns to the property card — plus one pill per available YEAR:
+// in the property card they toggle vintage columns on/off, in a group card
+// they pick the displayed vintage. Remembered for the session; a pill
+// re-renders the popup in place.
+const SPC_HIDDEN_KEYWORDS = new Set(['soil', 'digital soil mapping', 'chemical', 'physical']);
+const pixelInfoPrefs = { groupKws: new Set(), hiddenYears: new Set() };
+let lastInfoEvt = null;
+let lastPillLayerId = null;   // pills reset to the clicked property's own keywords
+
+function ownKeywordsOf(cfg) {
+  return layerKeywordsLc(cfg).filter(k => !SPC_HIDDEN_KEYWORDS.has(k)).sort();
+}
+
+// Keywords present on the clicked layer's class siblings (same project),
+// minus the catalogue-wide ones that would match everything.
+function classKeywordsAvailable(cfg) {
+  const cls = classKeywordOf(cfg);
+  if (!cls) return [];
+  const found = new Set();
+  allRasterConfigs.forEach(l => {
+    if (l.is_dst || l.project_name !== cfg.project_name) return;
+    const kws = layerKeywordsLc(l);
+    if (!kws.includes(cls)) return;
+    kws.forEach(k => { if (!SPC_HIDDEN_KEYWORDS.has(k)) found.add(k); });
+  });
+  return [...found].sort();
+}
+
+// The property bases a keyword matches (class-sibling scope). Keyword
+// hierarchy needs no extra DB structure: silt layers carry both "silt" and
+// "texture", so "silt is part of texture" is simply props(silt) being a
+// subset of props(texture).
+function propsForKeyword(cfg, kw) {
+  const out = new Set();
+  allRasterConfigs.forEach(l => {
+    if (l.is_dst || l.project_name !== cfg.project_name) return;
+    if (layerKeywordsLc(l).includes(kw)) out.add(rasterBaseAndYear(l).base);
+  });
+  return out;
+}
+
+function unionPropsOfSelection(cfg, selKws) {
+  const out = new Set();
+  selKws.forEach(kw => propsForKeyword(cfg, kw).forEach(b => out.add(b)));
+  return out;
+}
+
+function isSubset(a, b) {
+  for (const x of a) if (!b.has(x)) return false;
+  return true;
+}
+
+function spcTogglesHtml(activeConfig, years, mode, currentYears) {
+  const pills = [];
+  const avail = classKeywordsAvailable(activeConfig);
+  const sel = avail.filter(k => pixelInfoPrefs.groupKws.has(k));
+  const covered = unionPropsOfSelection(activeConfig, sel);
+  avail.forEach(kw => {
+    // Lit when explicitly selected OR fully covered by the selection
+    // (e.g. "silt" lights up when "texture" is selected).
+    const lit = pixelInfoPrefs.groupKws.has(kw) ||
+      (covered.size && isSubset(propsForKeyword(activeConfig, kw), covered));
+    pills.push(`<span class="spc-pill${lit ? ' on' : ''}" data-spc-kw="${escapeHtml(kw)}">${escapeHtml(kw)}</span>`);
+  });
+  (years || []).forEach(y => {
+    const on = (currentYears || []).includes(y);
+    pills.push(`<span class="spc-pill spc-year-pill${on ? ' on' : ''}" data-spc-year="${escapeHtml(y)}" data-spc-mode="${mode}">${escapeHtml(y)}</span>`);
+  });
+  return pills.length ? `<div class="spc-toggles">${pills.join('')}</div>` : '';
+}
+
+function wireSpcToggles(popup) {
+  document.querySelectorAll('#popup-content [data-spc-kw]').forEach(el => {
+    el.addEventListener('click', async () => {
+      const kw = el.dataset.spcKw;
+      const cfg = activeLayer && currentLayers[activeLayer.get('layerId')];
+      if (!cfg) return;
+      if (el.classList.contains('on')) {
+        // Deselect: drop the keyword itself and any broader selected keyword
+        // that covers it (removing "silt" also removes "texture").
+        const kwProps = propsForKeyword(cfg, kw);
+        pixelInfoPrefs.groupKws.delete(kw);
+        [...pixelInfoPrefs.groupKws].forEach(k2 => {
+          if (isSubset(kwProps, propsForKeyword(cfg, k2))) pixelInfoPrefs.groupKws.delete(k2);
+        });
+      } else {
+        pixelInfoPrefs.groupKws.add(kw);
+      }
+      if (lastInfoEvt) await showRasterInfo(lastInfoEvt, popup);
+    });
+  });
+  document.querySelectorAll('#popup-content [data-spc-year]').forEach(el => {
+    el.addEventListener('click', async () => {
+      const y = el.dataset.spcYear;
+      if (pixelInfoPrefs.hiddenYears.has(y)) {
+        pixelInfoPrefs.hiddenYears.delete(y);
+      } else if (document.querySelectorAll('#popup-content .spc-year-pill.on').length > 1) {
+        pixelInfoPrefs.hiddenYears.add(y);   // never hide the last visible year
+      } else {
+        return;
+      }
+      if (lastInfoEvt) await showRasterInfo(lastInfoEvt, popup);
+    });
+  });
+}
+
+async function showDepthProfileInfo(evt, popup, activeConfig) {
+  lastInfoEvt = evt;
+  // The pills describe what the dialogue shows: a fresh click pre-selects
+  // the clicked property's SPECIFIC keywords (those matching only this
+  // property) and renders its property card. A selection covering more
+  // properties switches to the group table (no trend, equal-weight means);
+  // trimming it back to this property alone returns to the card.
+  const { base: clickedBase } = rasterBaseAndYear(activeConfig);
+  if (activeConfig.layer_id !== lastPillLayerId) {
+    lastPillLayerId = activeConfig.layer_id;
+    pixelInfoPrefs.groupKws = new Set(ownKeywordsOf(activeConfig).filter(kw => {
+      const p = propsForKeyword(activeConfig, kw);
+      return p.size === 1 && p.has(clickedBase);
+    }));
+  }
+  const selKws = classKeywordsAvailable(activeConfig)
+    .filter(k => pixelInfoPrefs.groupKws.has(k));
+  const covered = unionPropsOfSelection(activeConfig, selKws);
+  if (selKws.length && !(covered.size === 1 && covered.has(clickedBase))) {
+    const title = selKws.map(k => k.charAt(0).toUpperCase() + k.slice(1)).join(' \u00b7 ');
+    await showPropsGroupInfo(evt, popup, activeConfig, title,
+      l => { const kws = layerKeywordsLc(l); return selKws.some(k => kws.includes(k)); },
+      { trend: false, equal: true });
+    return;
+  }
+
+  const viewResolution = map.getView().getResolution();
+  const lonLat = toLonLat(evt.coordinate);
+  const longitude = lonLat[0].toFixed(5);
+  const latitude = lonLat[1].toFixed(5);
+
+  // The clicked property's whole family: same project and property, EVERY
+  // published year. One row per depth interval; within a row each year
+  // contributes its primary layer (MEAN, or the only statistic there is),
+  // and the clicked year also its uncertainty sibling. When more than one
+  // year holds data at a depth, the vintages sit side by side (clicked year
+  // prominent) with a trend chip for the oldest→newest change.
+  const { base, year } = rasterBaseAndYear(activeConfig);
+  const activeYearS = String(year || '');
+  const familyAll = allRasterConfigs.filter(l => {
+    if (l.is_dst) return false;
+    if (l.project_name !== activeConfig.project_name) return false;
+    return rasterBaseAndYear(l).base === base;
+  });
+  const availYears = [...new Set(familyAll.map(l => String(rasterBaseAndYear(l).year || '')))]
+    .filter(Boolean).sort((a, b) => (Number(a) || 0) - (Number(b) || 0));
+  const visYears = availYears.filter(y => !pixelInfoPrefs.hiddenYears.has(y));
+  const shownYears = visYears.length ? visYears : availYears;
+  const family = familyAll.filter(l => shownYears.includes(String(rasterBaseAndYear(l).year || '')));
+
+  // NB: plain object, not `new Map()` — `Map` here is OpenLayers' Map.
+  const byDepth = Object.create(null);
+  (family.length ? family : [activeConfig]).forEach(l => {
+    const d = parseDepthDim(l.dimension);
+    const key = d ? `${d.top}-${d.bottom}` : (l.dimension || '·');
+    if (!byDepth[key]) byDepth[key] = { key, depth: d, rawDim: l.dimension, years: Object.create(null) };
+    const yr = String(rasterBaseAndYear(l).year || '');
+    const years = byDepth[key].years;
+    if (!years[yr]) years[yr] = { mean: null, unc: null };
+    const slot = years[yr];
+    const stat = (l.dimension_stats || 'X').toUpperCase();
+    if (stat !== 'MEAN' && UNC_STAT_RE.test(stat)) {
+      if (!slot.unc) slot.unc = l;
+    } else if (stat === 'MEAN' || !slot.mean) {
+      slot.mean = l;
+    }
+  });
+
+  const rows = Object.values(byDepth).sort((a, b) => {
+    if (!a.depth) return 1;
+    if (!b.depth) return -1;
+    return (a.depth.top - b.depth.top) || (a.depth.bottom - b.depth.bottom);
+  });
+
+  // Means and uncertainty for every year shown.
+  await Promise.all(rows.map(r => Promise.all(Object.values(r.years).map(async (slot) => {
+    const [mv, uv] = await Promise.all([
+      slot.mean ? fetchRasterValue(slot.mean, evt.coordinate, viewResolution) : null,
+      slot.unc ? fetchRasterValue(slot.unc, evt.coordinate, viewResolution) : null
+    ]);
+    slot.meanVal = mv;
+    slot.uncVal = uv;
+  }))));
+
+  if (!rows.some(r => Object.values(r.years).some(s => s.meanVal != null || s.uncVal != null))) {
+    popup.setPosition(undefined);
+    return;
+  }
+
+  const unit = activeConfig.unit_of_measure_id || '';
+  const ad = parseDepthDim(activeConfig.dimension);
+  const activeKey = ad ? `${ad.top}-${ad.bottom}` : (activeConfig.dimension || '·');
+  const uncStat = rows.map(r => (r.years[activeYearS] || {}).unc).find(Boolean);
+  const maxBottom = Math.max(1, ...rows.map(r => (r.depth ? r.depth.bottom : 0)));
+
+  // A real table: ONE header row with the years (always shown, even for a
+  // single year), then one row per depth with MEAN above (± SDEV) in each
+  // year column.
+  const yearList = [...new Set(rows.flatMap(r =>
+    Object.keys(r.years).filter(y => r.years[y].meanVal != null)))]
+    .sort((a, b) => (Number(a) || 0) - (Number(b) || 0));
+  const gridCols = `max-content${' max-content'.repeat(yearList.length)}`;
+
+  const headHtml = `
+    <div class="spc-th spc-th-first"></div>
+    ${yearList.map(y => `<div class="spc-th">${escapeHtml(y)}${unit ? ` <span class="spc-th-unit">${escapeHtml(unit)}</span>` : ''}</div>`).join('')}`;
+
+  const bodyHtml = rows.map((r, i) => {
+    const thick = r.depth ? (r.depth.bottom - r.depth.top) : 0;
+    const h = r.depth ? Math.round(42 + 50 * Math.min(1, thick / maxBottom)) : 44;
+    const depthLabel = r.depth ? `${r.depth.top}–${r.depth.bottom} cm` : (r.rawDim || '');
+    const color = SPC_BAND_COLORS[Math.min(i, SPC_BAND_COLORS.length - 1)];
+    const rowCls = `${r.key === activeKey ? ' active' : ''}${i === rows.length - 1 ? ' last' : ''}`;
+    const style = `--spc-h:${h}px; --spc-i:${i}; --spc-c:${color};`;
+
+    const cells = yearList.map(y => {
+      const s = r.years[y];
+      const mv = s ? fmtRasterValue(s.meanVal) : null;
+      const uv = s ? fmtRasterValue(s.uncVal) : null;
+      if (mv == null) {
+        return `<div class="spc-td spc-vcell${rowCls}" style="${style}"><span class="spc-mean spc-nodata">—</span></div>`;
+      }
+      const isActive = y === activeYearS || yearList.length === 1;
+      return `
+        <div class="spc-td spc-vcell${isActive ? ' colactive' : ''}${rowCls}" style="${style}">
+          <span class="spc-mean">${mv}</span>
+          ${uv != null ? `<span class="spc-unc" title="${escapeHtml((s.unc && s.unc.dimension_stats) || '')}">(± ${uv})</span>` : ''}
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="spc-td spc-dcell${rowCls}" style="${style}">
+        <div class="spc-band" aria-hidden="true"></div>
+        ${depthLabel ? `<div class="spc-depth">${escapeHtml(depthLabel)}</div>` : ''}
+      </div>
+      ${cells}`;
+  }).join('');
+
+  const yearLabel = yearList.length > 1
+    ? `${yearList[0]} → ${yearList[yearList.length - 1]}` : (yearList[0] || year || '');
+  const sub = [yearLabel, uncStat ? `± ${uncStat.dimension_stats}` : null]
+    .filter(Boolean).map(escapeHtml).join(' · ');
+  const html = `
+    <div class="soil-profile-card">
+      <div class="spc-head">
+        <h3>${escapeHtml(base)}</h3>
+        ${sub ? `<div class="spc-sub">${sub}</div>` : ''}
+        ${spcTogglesHtml(activeConfig, availYears, 'multi', shownYears)}
+      </div>
+      <div class="spc-rows spc-table" style="grid-template-columns: ${gridCols};">${headHtml}${bodyHtml}</div>
+      <div class="spc-foot">${latitude}°, ${longitude}°</div>
+    </div>`;
+
+  document.getElementById('popup-content').innerHTML = html;
+  wireSpcToggles(popup);
+  popup.setPosition(evt.coordinate);
+}
+
+
+// Combined property-group popup, driven by the accumulated keyword pills:
+// every member property is a column — and every selected YEAR adds its own
+// column under each property (property-major, year-minor) — one row per
+// depth, MEAN over (± SDEV) in each cell, all means at the same relevance.
+async function showPropsGroupInfo(evt, popup, activeConfig, groupTitle, memberFn, opts) {
+  const viewResolution = map.getView().getResolution();
+  const lonLat = toLonLat(evt.coordinate);
+  const longitude = lonLat[0].toFixed(5);
+  const latitude = lonLat[1].toFixed(5);
+
+  // Available vintages across the group; year pills accumulate like the
+  // keyword pills (the last visible year can never be hidden).
+  const grpYearSet = new Set();
+  allRasterConfigs.forEach(l => {
+    if (l.is_dst || l.project_name !== activeConfig.project_name) return;
+    if (!memberFn(l)) return;
+    const y = String(rasterBaseAndYear(l).year || '');
+    if (y) grpYearSet.add(y);
+  });
+  const availYears = [...grpYearSet].sort((a, b) => (Number(a) || 0) - (Number(b) || 0));
+  const visYears = availYears.filter(y => !pixelInfoPrefs.hiddenYears.has(y));
+  const shownYears = visYears.length ? visYears : availYears;
+
+  // Macronutrients first (N P K Ca Mg S), then micronutrients (Fe Mn Zn Cu B Mo).
+  const NPK_ORDER = { N: 0, P: 1, K: 2, Ca: 3, Mg: 4, S: 5,
+                      Fe: 6, Mn: 7, Zn: 8, Cu: 9, B: 10, Mo: 11 };
+  const propOrder = Object.create(null);   // base -> stable colour/order index
+  const byDepth = Object.create(null);     // key -> { key, depth, rawDim, props: {base: {byYear}} }
+  allRasterConfigs.forEach(l => {
+    if (l.is_dst || l.project_name !== activeConfig.project_name) return;
+    if (!memberFn(l)) return;
+    const { base } = rasterBaseAndYear(l);
+    const yr = String(rasterBaseAndYear(l).year || '');
+    if (!shownYears.includes(yr)) return;
+    const d = parseDepthDim(l.dimension);
+    const key = d ? `${d.top}-${d.bottom}` : (l.dimension || '\u00b7');
+    if (!byDepth[key]) byDepth[key] = { key, depth: d, rawDim: l.dimension, props: Object.create(null) };
+    const props = byDepth[key].props;
+    if (!props[base]) {
+      if (!(base in propOrder)) propOrder[base] = Object.keys(propOrder).length;
+      props[base] = Object.create(null);
+    }
+    if (!props[base][yr]) props[base][yr] = { mean: null, unc: null };
+    const cell = props[base][yr];
+    const stat = (l.dimension_stats || 'X').toUpperCase();
+    if (stat !== 'MEAN' && UNC_STAT_RE.test(stat)) {
+      if (!cell.unc) cell.unc = l;
+    } else if (stat === 'MEAN') {
+      cell.mean = l;
+    } else if (!cell.mean) {
+      cell.mean = l;
+    }
+  });
+
+  // N -> P -> K first (the fertiliser trio), everything else in upload order.
+  const bases = Object.keys(propOrder).sort((a, b) => {
+    const na = NPK_ORDER[nutrientSymbol(a)], nb = NPK_ORDER[nutrientSymbol(b)];
+    if (na != null || nb != null) {
+      if (na == null) return 1;
+      if (nb == null) return -1;
+      if (na !== nb) return na - nb;
+    }
+    return propOrder[a] - propOrder[b];
+  });
+
+  let rows = Object.values(byDepth).sort((a, b) => {
+    if (!a.depth) return 1;
+    if (!b.depth) return -1;
+    return (a.depth.top - b.depth.top) || (a.depth.bottom - b.depth.bottom);
+  });
+
+  await Promise.all(rows.map(r => Promise.all(bases.flatMap(base =>
+    shownYears.map(async y => {
+      const cell = r.props[base] && r.props[base][y];
+      if (!cell) return;
+      const [mv, uv] = await Promise.all([
+        cell.mean ? fetchRasterValue(cell.mean, evt.coordinate, viewResolution) : null,
+        cell.unc ? fetchRasterValue(cell.unc, evt.coordinate, viewResolution) : null
+      ]);
+      cell.meanVal = mv;
+      cell.uncVal = uv;
+    })))));
+
+  rows = rows.filter(r => bases.some(b => shownYears.some(y => {
+    const c = r.props[b] && r.props[b][y];
+    return c && (c.meanVal != null || c.uncVal != null);
+  })));
+  if (!rows.length) {
+    popup.setPosition(undefined);
+    return;
+  }
+
+  const ad = parseDepthDim(activeConfig.dimension);
+  const activeKey = ad ? `${ad.top}-${ad.bottom}` : (activeConfig.dimension || '\u00b7');
+  const hasUnc = rows.some(r => bases.some(b => shownYears.some(y => {
+    const c = r.props[b] && r.props[b][y];
+    return c && c.uncVal != null;
+  })));
+
+  // One column per property-and-year combination that holds any data.
+  const cols = [];
+  bases.forEach(b => shownYears.forEach(y => {
+    if (rows.some(r => r.props[b] && r.props[b][y] && r.props[b][y].mean)) {
+      cols.push({ b, y });
+    }
+  }));
+  const unitOf = Object.create(null);
+  rows.forEach(r => cols.forEach(({ b, y }) => {
+    const c = r.props[b] && r.props[b][y];
+    if (c && c.mean && c.mean.unit_of_measure_id && !unitOf[b]) {
+      unitOf[b] = c.mean.unit_of_measure_id;
+    }
+  }));
+  const gridCols = `max-content${' max-content'.repeat(cols.length)}`;
+
+  const headHtml = `
+    <div class="spc-th spc-th-first"></div>
+    ${cols.map(({ b, y }) => {
+      const color = NUTRIENT_COLORS[propOrder[b] % NUTRIENT_COLORS.length];
+      return `
+        <div class="spc-th spc-propth" title="${escapeHtml(b)}">
+          <span class="spc-prop-sym"><i style="background:${color}"></i>${escapeHtml(nutrientSymbol(b))}</span>
+          <span class="spc-prop-sub">${escapeHtml(unitOf[b] || '')}</span>
+          <span class="spc-prop-sub">${escapeHtml(y)}</span>
+        </div>`;
+    }).join('')}`;
+
+  const bodyHtml = rows.map((r, i) => {
+    const depthLabel = r.depth ? `${r.depth.top}\u2013${r.depth.bottom} cm` : (r.rawDim || '');
+    const color = SPC_BAND_COLORS[Math.min(i, SPC_BAND_COLORS.length - 1)];
+    const rowCls = `${r.key === activeKey ? ' active' : ''}${i === rows.length - 1 ? ' last' : ''}`;
+    const style = `--spc-i:${i}; --spc-c:${color};`;
+    const cells = cols.map(({ b, y }) => {
+      const c = r.props[b] && r.props[b][y];
+      const mv = c ? fmtRasterValue(c.meanVal) : null;
+      const uv = c ? fmtRasterValue(c.uncVal) : null;
+      if (mv == null) {
+        return `<div class="spc-td spc-vcell${rowCls}" style="${style}"><span class="spc-mean spc-nodata">\u2014</span></div>`;
+      }
+      return `
+        <div class="spc-td spc-vcell${rowCls}" style="${style}" title="${escapeHtml(b)} (${escapeHtml(y)})">
+          <span class="spc-mean">${mv}</span>
+          ${uv != null ? `<span class="spc-unc" title="${escapeHtml((c.unc && c.unc.dimension_stats) || '')}">(\u00b1 ${uv})</span>` : ''}
+        </div>`;
+    }).join('');
+    return `
+      <div class="spc-td spc-dcell${rowCls}" style="--spc-h:44px; ${style}">
+        <div class="spc-band" aria-hidden="true"></div>
+        ${depthLabel ? `<div class="spc-depth">${escapeHtml(depthLabel)}</div>` : ''}
+      </div>
+      ${cells}`;
+  }).join('');
+
+  const shownWithData = [...new Set(cols.map(c => c.y))].sort((a, b) => (Number(a) || 0) - (Number(b) || 0));
+  const yearLabel = shownWithData.length > 1
+    ? `${shownWithData[0]} \u2192 ${shownWithData[shownWithData.length - 1]}` : (shownWithData[0] || '');
+  const sub = [yearLabel, hasUnc ? '\u00b1 SDEV' : null].filter(Boolean).join(' \u00b7 ');
+  const html = `
+    <div class="soil-profile-card nutrient-card">
+      <div class="spc-head">
+        <h3>${escapeHtml(groupTitle)}</h3>
+        ${sub ? `<div class="spc-sub">${escapeHtml(sub)}</div>` : ''}
+        ${spcTogglesHtml(activeConfig, availYears, 'multi', shownYears)}
+      </div>
+      <div class="spc-rows spc-table spc-equal" style="grid-template-columns: ${gridCols};">${headHtml}${bodyHtml}</div>
+      <div class="spc-foot">${latitude}\u00b0, ${longitude}\u00b0</div>
+    </div>`;
+
+  document.getElementById('popup-content').innerHTML = html;
+  wireSpcToggles(popup);
+  popup.setPosition(evt.coordinate);
 }
 
 

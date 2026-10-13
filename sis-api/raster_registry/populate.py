@@ -105,6 +105,22 @@ def populate_spatial_metadata(
             ON CONFLICT (mapped_property_id) DO NOTHING
         """, (meta.property_id, meta.property_id))
 
+        # The visible group: classified properties land under their class
+        # ("Chemical"/"Physical", from the catalogue keywords — matching how
+        # the map panel groups them); everything else keeps the project code.
+        cur.execute(
+            "SELECT keyword_theme FROM soil_data.mapped_property WHERE mapped_property_id = %s",
+            (meta.property_id,))
+        _row = cur.fetchone()
+        _kws = {str(k).lower() for k in ((_row[0] if _row else None) or [])}
+        _kws |= {str(k).lower() for k in (extra_keywords_theme or [])}
+        if "chemical" in _kws:
+            costum_group = "Chemical"
+        elif "physical" in _kws:
+            costum_group = "Physical"
+        else:
+            costum_group = meta.project_id
+
         # 2. mapset — created on demand. mapset.mapped_property_id is the FK
         #    column referencing soil_data.mapped_property(mapped_property_id).
         # "Created on" date (publication_date arg) goes into creation_date
@@ -147,7 +163,7 @@ def populate_spatial_metadata(
               title, abstract, other_constraints,
               publication_date, publication_date,
               unit_of_measure_id, time_period_begin, time_period_end,
-              meta.project_id, meta.property_id,
+              costum_group, meta.property_id,
               list(extra_keywords_theme or [])))
 
         # 3. layer — identity row first (upsert)
