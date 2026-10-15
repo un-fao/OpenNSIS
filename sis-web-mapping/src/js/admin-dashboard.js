@@ -1433,6 +1433,10 @@ class AdminDashboard {
       }
       overlay.remove();
       await this.loadProjects(); this.renderProjects();
+      // Keep the Soil-profile (ETL) project dropdown in sync — a project
+      // created after a CSV upload must be assignable without a page
+      // reload (issue #10).
+      await this.loadEtlCodelists(); this.populateEtlDropdowns();
     } catch (e) { status.textContent = t('a.err.prefix') + e.message; status.style.color = '#dc3545'; }
   }
 
@@ -1498,6 +1502,7 @@ class AdminDashboard {
       const res = await api.deleteProject(projectId, actions);
       overlay.remove();
       await this.loadProjects(); this.renderProjects();
+      await this.loadEtlCodelists(); this.populateEtlDropdowns();
       const warns = (res && res.warnings) || [];
       if (!res.project_deleted || warns.length) {
         alert((res.message || t('a.done')) + (warns.length ? '\n\n- ' + warns.join('\n- ') : ''));
@@ -4530,8 +4535,10 @@ class AdminDashboard {
     // Project dropdown (single)
     const projEl = document.getElementById('etl-project');
     if (projEl) {
+      const prev = projEl.value;
       projEl.innerHTML = `<option value="">${t('a.select')}</option>` +
         (cl.projects || []).map(i => `<option value="${this.escapeHtml(i.project_id)}">${this.escapeHtml(i.project_id + ' — ' + (i.name || ''))}</option>`).join('');
+      if (prev && [...projEl.options].some(o => o.value === prev)) projEl.value = prev;
       projEl.onchange = () => {
         this.loadProjectDetails(projEl.value);
       };
