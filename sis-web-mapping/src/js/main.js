@@ -683,16 +683,33 @@ function updateControlTheme(basemapId) {
   document.body.classList.toggle('light-basemap', LIGHT_BASEMAPS.has(basemapId));
 }
 
-// Keep the legend and scale bar visible when the attribute table covers the
-// bottom of the map: lift them above the panel by its current height.
+// Keep the map chrome visible around the attribute panel: when it is docked
+// to the bottom, lift the legend and scale bar above it; when docked to the
+// right, shift the legend and the zoom/north controls left of it; floating
+// (or closed), everything stays put.
 function updateBottomOverlays() {
   const panel = document.getElementById('profiles-data-modal');
   const open = panel && panel.style.display !== 'none';
-  const offset = open ? panel.getBoundingClientRect().height : 0;
+  const mode = (open && panel._mode) || 'float';
   const legend = document.getElementById('legend');
-  if (legend) legend.style.bottom = offset ? `${offset + 40}px` : '';
   const scale = document.querySelector('.scale-line');
-  if (scale) scale.style.bottom = offset ? `${offset + 8}px` : '';
+  const controls = document.querySelector('.map-controls');
+  const bottomOffset = (mode === 'bottom') ? panel.getBoundingClientRect().height : 0;
+  const rightOffset = (mode === 'right') ? panel.getBoundingClientRect().width : 0;
+  if (legend) {
+    legend.style.bottom = bottomOffset ? `${bottomOffset + 40}px` : '';
+    legend.style.right = rightOffset ? `${rightOffset + 20}px` : '';
+  }
+  if (scale) scale.style.bottom = bottomOffset ? `${bottomOffset + 8}px` : '';
+  if (controls) controls.style.right = rightOffset ? `${rightOffset + 14}px` : '';
+  ['theme-btn', 'login-btn', 'lang-btn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    // The entrance animation's fill:both would override an inline transform
+    // forever, so drop it once we need to shift the button.
+    if (rightOffset) el.style.animation = 'none';
+    el.style.transform = rightOffset ? `translateX(-${rightOffset}px)` : '';
+  });
 }
 
 function switchBasemap(basemapId) {
@@ -829,14 +846,14 @@ function formatMetadata(m) {
             style="font-size:13px;font-weight:normal;padding:4px 10px;background:var(--color-primary,#2c5f2d);color:#fff;border-radius:4px;text-decoration:none;margin-left:12px;white-space:nowrap;"
             title="${t('meta.downloadXml')}">⬇ XML</a>`
       : '';
-    html += `<h3 style="margin-top:0;color:var(--color-text);border-bottom:2px solid #3498db;padding-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+    html += `<h3 style="margin-top:0;color:var(--color-text);border-bottom:2px solid var(--color-primary);padding-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
       <span style="flex:1;">${e(title)}</span>${xmlBtn}
     </h3>`;
   }
 
   if (m.abstract || m.project_description) {
     const text = m.abstract || m.project_description;
-    html += `<div style="margin:15px 0;padding:10px;background:#f8f9fa;border-left:3px solid #3498db;border-radius:3px;">
+    html += `<div style="margin:15px 0;padding:10px;background:var(--color-surface-alt);border-left:3px solid var(--color-primary);border-radius:3px;">
       <strong>${t('meta.abstract')}</strong>
       <p style="margin:8px 0 0 0;line-height:1.6;white-space:pre-line;">${e(text)}</p>
     </div>`;
@@ -919,7 +936,7 @@ function formatMetadata(m) {
     html += `<div style="margin:18px 0;"><h4 style="color:var(--color-text);margin-bottom:8px;">Keywords</h4>
       <div style="display:flex;flex-wrap:wrap;gap:6px;">`
       + allKw.map(([type, k]) =>
-          `<span style="background:#e8f4f8;color:#2980b9;padding:4px 10px;border-radius:14px;font-size:12px;" title="${e(type)}">${e(k)}</span>`
+          `<span style="background:var(--color-primary-light);color:var(--color-primary);padding:4px 10px;border-radius:14px;font-size:12px;" title="${e(type)}">${e(k)}</span>`
         ).join('')
       + `</div></div>`;
   }
@@ -935,19 +952,19 @@ function formatMetadata(m) {
   // ---------- Lineage ----------
   if (m.lineage_statement) {
     html += `<div style="margin:18px 0;"><h4 style="color:var(--color-text);margin-bottom:8px;">Lineage</h4>
-      <div style="padding:10px;background:#f8f9fa;border-radius:3px;line-height:1.5;">${e(m.lineage_statement)}</div></div>`;
+      <div style="padding:10px;background:var(--color-surface-alt);border-radius:3px;line-height:1.5;">${e(m.lineage_statement)}</div></div>`;
   }
 
   // ---------- Contacts ----------
   if (Array.isArray(m.contacts) && m.contacts.length) {
     html += `<div style="margin:18px 0;"><h4 style="color:var(--color-text);margin-bottom:8px;">Contacts</h4>`;
     m.contacts.forEach(c => {
-      html += `<div style="margin-bottom:10px;padding:10px;background:#f8f9fa;border-radius:5px;border-left:3px solid #27ae60;">
+      html += `<div style="margin-bottom:10px;padding:10px;background:var(--color-surface-alt);border-radius:5px;border-left:3px solid var(--color-success);">
         <div style="font-weight:bold;color:var(--color-text);">${e(c.individual_id || '')} · ${e(c.organisation_id || '')}</div>
         ${c.position ? `<div><strong>Position:</strong> ${e(c.position)}</div>` : ''}
         ${c.role ? `<div><strong>Role:</strong> ${e(c.role)}${c.tag ? ' / ' + e(c.tag) : ''}</div>` : ''}
         ${c.organisation_country || c.organisation_city ? `<div style="color:var(--color-text-muted);font-size:13px;">${e([c.organisation_city, c.organisation_country].filter(Boolean).join(', '))}</div>` : ''}
-        ${c.individual_email ? `<div><strong>Email:</strong> <a href="${e(safeMailto(c.individual_email))}" style="color:#3498db;">${e(c.individual_email)}</a></div>` : ''}
+        ${c.individual_email ? `<div><strong>Email:</strong> <a href="${e(safeMailto(c.individual_email))}" style="color:var(--color-primary);">${e(c.individual_email)}</a></div>` : ''}
       </div>`;
     });
     html += `</div>`;
@@ -963,8 +980,8 @@ function formatMetadata(m) {
             <span style="font-size:18px;">${icon}</span>
             <div style="flex:1;">
               <div style="font-weight:600;">${e(u.url_name || u.protocol)}</div>
-              <div style="font-size:12px;color:#666;">${e(u.protocol)}</div>
-              ${u.url_description ? `<div style="font-size:12px;color:#666;">${e(u.url_description)}</div>` : ''}
+              <div style="font-size:12px;color:var(--color-text-muted);">${e(u.protocol)}</div>
+              ${u.url_description ? `<div style="font-size:12px;color:var(--color-text-muted);">${e(u.url_description)}</div>` : ''}
             </div>
           </a>`;
         }).join('')
@@ -986,7 +1003,7 @@ function sectionTable(title, rows, e, raw = false) {
     <table style="width:100%;border-collapse:collapse;">`;
   rows.forEach(([k, v]) => {
     const valueCell = raw ? v : e(String(v));
-    html += `<tr style="border-bottom:1px solid #eee;">
+    html += `<tr style="border-bottom:1px solid var(--color-border);">
       <td style="padding:6px 8px;font-weight:bold;color:var(--color-text-muted);width:32%;vertical-align:top;">${e(k)}</td>
       <td style="padding:6px 8px;">${valueCell}</td>
     </tr>`;
@@ -1029,7 +1046,7 @@ async function showMetadataPopup(metadataUrl) {
   } catch (error) {
     console.error('Failed to load metadata:', error);
     document.getElementById('metadata-content').innerHTML =
-      `<p style="color: red;">Failed to load metadata: ${escapeHtml(error.message)}</p>`;
+      `<p style="color: var(--color-danger);">Failed to load metadata: ${escapeHtml(error.message)}</p>`;
   }
 }
 
@@ -1159,10 +1176,14 @@ async function loadProfiles() {
       (featuresByProject[name] = featuresByProject[name] || []).push(f);
     });
 
-    // Build one clustered layer per project
+    // Build one clustered layer per project. Clustering is looser than it
+    // was (45px) and switches off entirely once zoomed past
+    // PROFILE_UNCLUSTER_RES, so individual profiles appear early.
+    const clusterSources = [];
     projectNames.forEach(name => {
       const vectorSource = new VectorSource({ features: featuresByProject[name] });
-      const clusterSource = new Cluster({ distance: 100, source: vectorSource });
+      const clusterSource = new Cluster({ distance: 45, source: vectorSource });
+      clusterSources.push(clusterSource);
       // Admin can publish a layer without activating it by default — it then
       // starts unticked and the visitor opts in.
       const startVisible = projectSymbology(name).active !== false;
@@ -1176,6 +1197,14 @@ async function loadProfiles() {
       profileLayers[name] = { visible: startVisible, layer };
       map.addLayer(layer);
     });
+
+    const applyClusterDistance = () => {
+      const res = map.getView().getResolution() || 0;
+      const d = res < PROFILE_UNCLUSTER_RES ? 0 : 45;
+      clusterSources.forEach(s => { if (s.getDistance() !== d) s.setDistance(d); });
+    };
+    map.getView().on('change:resolution', applyClusterDistance);
+    applyClusterDistance();
 
     // Keep a combined reference used by the data panel and highlight layer
     profileLayers['all'] = { get: (key) => key === 'allFeatures' ? allFeatures : undefined };
@@ -1191,7 +1220,13 @@ async function loadProfiles() {
 
 
 
-function getUnifiedClusterStyle(feature) {
+// Below this view resolution (m/px) profiles stop clustering altogether…
+const PROFILE_UNCLUSTER_RES = 100;
+// …and below this one (the scale bar reads about 2 km) each point carries
+// its profile code as a label.
+const PROFILE_LABEL_RES = 30;
+
+function getUnifiedClusterStyle(feature, resolution) {
   const features = feature.get('features');
   const size = features.length;
   
@@ -1254,7 +1289,17 @@ function getUnifiedClusterStyle(feature) {
     };
     
     const sym = projectSymbology(projectName);
+    const label = (resolution != null && resolution <= PROFILE_LABEL_RES)
+      ? new Text({
+          text: String(features[0].get('profile_code') || ''),
+          offsetY: -14,
+          font: '11px "IBM Plex Mono", monospace',
+          fill: new Fill({ color: '#2b2b2b' }),
+          stroke: new Stroke({ color: 'rgba(255,255,255,0.85)', width: 3 })
+        })
+      : undefined;
     return new Style({
+      text: label,
       image: markerImage(
         sym.shape || 'profile',
         sym.size == null ? 8 : Number(sym.size),
@@ -2669,10 +2714,106 @@ function panMapToSelectedProfiles() {
   map.getView().animate({ center: [(minX + maxX) / 2, (minY + maxY) / 2], duration: 400 });
 }
 
-function scrollProfileRowIntoView() {
+// Set while the form's own navigation moves the map, so the moveend
+// refresh doesn't rewrite the very list being navigated.
+let _suppressPanelRefresh = false;
+
+// Draw, per property column of the profile report, a smooth curve through
+// the values down the depth rows (x = value within the column's own range,
+// y = depth row centre) — the classic soil-profile depth plot.
+function drawProfileSplines() {
+  document.querySelectorAll('#profiles-data-forms .pd-prof-grid').forEach(grid => {
+    grid.querySelectorAll('svg.pd-spline').forEach(s => s.remove());
+    const gr = grid.getBoundingClientRect();
+    if (!gr.width || !gr.height) return;
+    const byCol = Object.create(null);
+    grid.querySelectorAll('.pd-g-val[data-col]').forEach(cell => {
+      (byCol[cell.dataset.col] = byCol[cell.dataset.col] || []).push(cell);
+    });
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('class', 'pd-spline');
+    svg.setAttribute('viewBox', `0 0 ${gr.width} ${gr.height}`);
+    Object.values(byCol).forEach(cells => {
+      let min = Infinity, max = -Infinity;
+      cells.forEach(cell => {
+        const v = parseFloat(cell.dataset.v);
+        if (Number.isFinite(v)) { min = Math.min(min, v); max = Math.max(max, v); }
+      });
+      const pts = [];
+      cells.forEach(cell => {
+        const v = parseFloat(cell.dataset.v);
+        if (!Number.isFinite(v)) return;
+        const r = cell.getBoundingClientRect();
+        const pad = Math.min(20, r.width * 0.18);
+        const fx = (max > min) ? (v - min) / (max - min) : 0.5;
+        pts.push({
+          x: (r.left - gr.left + pad) + fx * (r.width - 2 * pad),
+          y: r.top - gr.top + r.height / 2
+        });
+      });
+      if (!pts.length) return;
+      if (pts.length > 1) {
+        let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+        for (let i = 0; i < pts.length - 1; i++) {
+          const p0 = pts[Math.max(0, i - 1)], p1 = pts[i],
+                p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+          d += ` C ${(p1.x + (p2.x - p0.x) / 6).toFixed(1)} ${(p1.y + (p2.y - p0.y) / 6).toFixed(1)},` +
+               ` ${(p2.x - (p3.x - p1.x) / 6).toFixed(1)} ${(p2.y - (p3.y - p1.y) / 6).toFixed(1)},` +
+               ` ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+        }
+        const path = document.createElementNS(svgNS, 'path');
+        path.setAttribute('d', d);
+        path.setAttribute('class', 'pd-spline-path');
+        svg.appendChild(path);
+      }
+      pts.forEach(pt => {
+        const c = document.createElementNS(svgNS, 'circle');
+        c.setAttribute('cx', pt.x.toFixed(1));
+        c.setAttribute('cy', pt.y.toFixed(1));
+        c.setAttribute('r', 3);
+        c.setAttribute('class', 'pd-spline-dot');
+        svg.appendChild(c);
+      });
+    });
+    grid.appendChild(svg);
+  });
+}
+
+// Form view: select the shown profile on the map and bring it into view.
+function syncFormProfile() {
+  const modal = document.getElementById('profiles-data-modal');
+  if (!modal || !modal._state || modal._mode !== 'right') return;
+  const order = modal._state.profOrder || [];
+  const code = order[modal._state.page];
+  if (!code) return;
+  modal._state.currentProfile = code;
+  if (!(selectedProfileCodes.size === 1 && selectedProfileCodes.has(code))) {
+    selectedProfileCodes.clear();
+    selectedProfileCodes.add(code);
+    refreshHighlight();
+  }
+  const allFeatures = (profileLayers['all'] && profileLayers['all'].get('allFeatures')) || [];
+  const f = allFeatures.find(ft => ft.get('profile_code') === code);
+  if (f && f.getGeometry()) {
+    const g = f.getGeometry();
+    const c = g.getType() === 'Point' ? g.getCoordinates() : getCenter(g.getExtent());
+    const v = map.getView();
+    _suppressPanelRefresh = true;
+    v.animate({ center: c, zoom: Math.max(v.getZoom() || 0, 12), duration: 450 });
+  }
+}
+
+function scrollProfileRowIntoView(profileCode) {
   const modal = document.getElementById('profiles-data-modal');
   if (!modal || !modal._state || modal.style.display === 'none') return;
-  if (modal._state.page !== 0) {
+  if (modal._mode === 'right' && profileCode) {
+    // Jump the profile report to the clicked profile.
+    modal._state.currentProfile = profileCode;
+    const i = (modal._state.profOrder || []).indexOf(profileCode);
+    if (i >= 0) modal._state.page = i;
+    renderProfilesDataTable();
+  } else if (modal._state.page !== 0) {
     modal._state.page = 0;
     renderProfilesDataTable();
   }
@@ -2692,6 +2833,7 @@ async function showVisibleProfilesData() {
 
   if (!_profilesPanelMoveHooked) {
     map.on('moveend', () => {
+      if (_suppressPanelRefresh) { _suppressPanelRefresh = false; return; }
       const panel = document.getElementById('profiles-data-modal');
       if (panel && panel.style.display !== 'none') {
         refreshVisibleProfilesData();
@@ -2834,10 +2976,26 @@ function ensureProfilesDataModal() {
   if (document.getElementById('profiles-data-modal')) return;
   const modal = document.createElement('div');
   modal.id = 'profiles-data-modal';
-  modal.style.cssText = 'position:fixed;left:0;right:0;bottom:0;height:33vh;z-index:10000;display:flex;box-shadow:0 -4px 12px rgba(0,0,0,0.2);';
+  // Floating card by default, with two dock zones: drag to the bottom edge
+  // to dock it as the classic bottom panel (table view), drag to the right
+  // edge to dock it as a sidebar showing the records as forms. Mode and
+  // geometry are remembered per browser.
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem('sis-attr-panel') || 'null'); } catch (e) { saved = null; }
+  saved = saved || {};
+  modal._saved = saved;
+  modal.style.cssText = 'position:fixed;z-index:10000;display:flex;';
   modal.innerHTML = `
-    <div style="background:var(--color-surface);color:var(--color-text);width:100%;height:100%;display:flex;flex-direction:column;border-top:1px solid var(--color-border-strong);position:relative;">
-      <div id="profiles-data-resizer" title="${t('profiles.dragResize')}" style="position:absolute;top:0;left:0;right:0;height:6px;cursor:ns-resize;background:var(--color-surface-alt);"></div>
+    <div style="color:var(--color-text);width:100%;height:100%;display:flex;flex-direction:column;position:relative;min-width:0;">
+      <div id="pd-resize-top" aria-hidden="true"></div>
+      <div id="pd-resize-left" aria-hidden="true"></div>
+      <div id="profiles-data-drag" title="${t('profiles.dragMove')}" style="display:flex;align-items:center;gap:10px;padding:6px 14px;cursor:move;user-select:none;border-bottom:1px solid var(--color-border);background:var(--color-surface-alt);">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="opacity:.55;" aria-hidden="true"><path d="M5 9h14M5 15h14"/></svg>
+        <span style="flex:1;font-weight:600;font-size:.85em;">${t('profiles.data')}</span>
+        <button type="button" id="profiles-data-close" title="${t('profiles.hide')}" style="background:none;border:none;cursor:pointer;color:var(--color-text-muted);padding:2px;line-height:0;">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
       <style>
         #profiles-data-table { border-collapse: separate; border-spacing: 0; }
         #profiles-data-table th, #profiles-data-table td {
@@ -2866,18 +3024,19 @@ function ensureProfilesDataModal() {
           <thead><tr></tr></thead>
           <tbody id="profiles-data-tbody"></tbody>
         </table>
+        <div id="profiles-data-forms" style="display:none;"></div>
       </div>
-      <div style="padding:4px 16px;border-top:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:0.85em;">
+      <div id="profiles-data-footer" style="padding:4px 16px;border-top:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:0.85em;">
         <div style="display:flex;align-items:center;gap:8px;position:relative;">
           <span id="profiles-data-count" style="color:var(--color-text-muted);"></span>
           <button type="button" id="profiles-data-columns-btn" class="btn btn-primary" style="padding:2px 8px;font-size:0.9em;">${t('profiles.columns')}</button>
           <div id="profiles-data-columns-popover" style="display:none;position:absolute;bottom:100%;left:0;margin-bottom:4px;background:var(--color-surface);border:1px solid var(--color-border-strong);box-shadow:0 2px 8px rgba(0,0,0,0.15);padding:6px 8px;max-height:300px;overflow:auto;z-index:10;min-width:220px;"></div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;">
-          Rows:
+          <span id="profiles-data-rows-wrap" style="display:inline-flex;align-items:center;gap:6px;">Rows:
           <select id="profiles-data-pagesize" style="padding:1px 2px;">
             <option>25</option><option selected>50</option><option>100</option><option>250</option>
-          </select>
+          </select></span>
           <button type="button" id="profiles-data-prev" style="padding:2px 6px;">◀</button>
           <span id="profiles-data-pageinfo"></span>
           <button type="button" id="profiles-data-next" style="padding:2px 6px;">▶</button>
@@ -2886,26 +3045,155 @@ function ensureProfilesDataModal() {
     </div>
   `;
   document.body.appendChild(modal);
-  updateBottomOverlays();
 
-  const resizer = document.getElementById('profiles-data-resizer');
-  let resizing = false;
-  resizer.addEventListener('mousedown', (e) => {
-    resizing = true;
-    e.preventDefault();
+  // Dock-zone hint shown while dragging near an edge.
+  const hint = document.createElement('div');
+  hint.id = 'pd-dock-hint';
+  document.body.appendChild(hint);
+
+  const DOCK_ZONE = 42;   // px from the window edge that triggers docking
+  const savePanelState = () => {
+    try { localStorage.setItem('sis-attr-panel', JSON.stringify(modal._saved)); }
+    catch (e) { /* private mode etc. — state just won't persist */ }
+  };
+
+  const applyPanelMode = (mode) => {
+    const s = modal._saved;
+    modal._mode = mode;
+    s.mode = mode;
+    modal.classList.remove('dock-bottom', 'dock-right');
+    if (mode === 'bottom') {
+      modal.classList.add('dock-bottom');
+      const h = Math.min(Math.max(s.bh || Math.round(window.innerHeight * 0.33), 140), window.innerHeight - 80);
+      modal.style.cssText = `position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;height:${h}px;z-index:10000;display:flex;`;
+    } else if (mode === 'right') {
+      modal.classList.add('dock-right');
+      const w = Math.min(Math.max(s.rw || 420, 300), window.innerWidth - 220);
+      modal.style.cssText = `position:fixed;right:0;left:auto;top:0;bottom:0;width:${w}px;height:auto;z-index:10000;display:flex;`;
+    } else {
+      const w = Math.min(s.w || Math.min(920, window.innerWidth - 48), window.innerWidth - 24);
+      const h = Math.min(s.h || Math.round(window.innerHeight * 0.38), window.innerHeight - 24);
+      const x = Math.min(Math.max(s.x != null ? s.x : (window.innerWidth - w) / 2, 80 - w), Math.max(window.innerWidth - 80, 0));
+      const y = Math.min(Math.max(s.y != null ? s.y : window.innerHeight - h - 24, 0), Math.max(window.innerHeight - 48, 0));
+      modal.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:${w}px;height:${h}px;z-index:10000;display:flex;`;
+    }
+    savePanelState();
+    updateBottomOverlays();
+    // Rebuild the rows for the new mode: the report browses all profiles,
+    // the table only those in view.
+    if (modal._state) refreshVisibleProfilesData();
+  };
+  modal._applyMode = applyPanelMode;
+  applyPanelMode(saved.mode || 'float');
+
+  // Drag by the header bar. Dragging a docked panel undocks it first; a
+  // release inside a dock zone docks it there.
+  const dragBar = document.getElementById('profiles-data-drag');
+  let drag = null;
+  dragBar.addEventListener('mousedown', (e) => {
+    if (e.target.closest('button')) return;
+    if (modal._mode !== 'float') {
+      // Undock under the cursor and continue the drag seamlessly.
+      modal._saved.x = e.clientX - 150;
+      modal._saved.y = e.clientY - 14;
+      applyPanelMode('float');
+    }
+    drag = { dx: e.clientX - modal.offsetLeft, dy: e.clientY - modal.offsetTop };
     document.body.style.userSelect = 'none';
+    e.preventDefault();
   });
   window.addEventListener('mousemove', (e) => {
-    if (!resizing) return;
-    const newHeight = Math.max(80, Math.min(window.innerHeight - 60, window.innerHeight - e.clientY));
-    modal.style.height = newHeight + 'px';
-    updateBottomOverlays();
-  });
-  window.addEventListener('mouseup', () => {
-    if (resizing) {
-      resizing = false;
-      document.body.style.userSelect = '';
+    if (!drag) return;
+    const nx = Math.min(Math.max(e.clientX - drag.dx, 80 - modal.offsetWidth), window.innerWidth - 80);
+    const ny = Math.min(Math.max(e.clientY - drag.dy, 0), window.innerHeight - 40);
+    modal.style.left = nx + 'px';
+    modal.style.top = ny + 'px';
+    // Dock-zone preview
+    if (e.clientY >= window.innerHeight - DOCK_ZONE) {
+      hint.style.cssText = `display:block;left:8px;right:8px;bottom:8px;height:${Math.min(240, Math.round(window.innerHeight * 0.3))}px;`;
+    } else if (e.clientX >= window.innerWidth - DOCK_ZONE) {
+      hint.style.cssText = 'display:block;top:8px;bottom:8px;right:8px;width:360px;';
+    } else {
+      hint.style.display = 'none';
     }
+  });
+  window.addEventListener('mouseup', (e) => {
+    if (!drag) return;
+    drag = null;
+    document.body.style.userSelect = '';
+    hint.style.display = 'none';
+    if (e.clientY >= window.innerHeight - DOCK_ZONE) {
+      applyPanelMode('bottom');
+    } else if (e.clientX >= window.innerWidth - DOCK_ZONE) {
+      applyPanelMode('right');
+    } else {
+      modal._saved.x = modal.offsetLeft;
+      modal._saved.y = modal.offsetTop;
+      savePanelState();
+    }
+  });
+
+  // Edge resizers for the docked modes; the native corner handle (CSS
+  // resize:both) covers the floating card.
+  const edgeResize = (el, apply) => {
+    let on = false;
+    el.addEventListener('mousedown', (e) => { on = true; e.preventDefault(); document.body.style.userSelect = 'none'; });
+    window.addEventListener('mousemove', (e) => { if (on) { apply(e); updateBottomOverlays(); } });
+    window.addEventListener('mouseup', () => {
+      if (on) { on = false; document.body.style.userSelect = ''; savePanelState(); }
+    });
+  };
+  edgeResize(document.getElementById('pd-resize-top'), (e) => {
+    const h = Math.max(140, Math.min(window.innerHeight - 80, window.innerHeight - e.clientY));
+    modal.style.height = h + 'px';
+    modal._saved.bh = h;
+  });
+  edgeResize(document.getElementById('pd-resize-left'), (e) => {
+    const w = Math.max(300, Math.min(window.innerWidth - 220, window.innerWidth - e.clientX));
+    modal.style.width = w + 'px';
+    modal._saved.rw = w;
+  });
+  if (window.ResizeObserver) {
+    new ResizeObserver(() => {
+      if (modal.style.display === 'none') return;
+      if (modal._mode === 'right') requestAnimationFrame(drawProfileSplines);
+      if (modal._mode !== 'float') return;
+      modal._saved.w = modal.offsetWidth;
+      modal._saved.h = modal.offsetHeight;
+      savePanelState();
+    }).observe(modal);
+  }
+  document.getElementById('profiles-data-close').addEventListener('click', () => {
+    // Same path as the panel's Hide button (clears selection, resets label).
+    const btn = document.getElementById('profiles-data-btn');
+    if (btn) btn.click();
+    else modal.style.display = 'none';
+  });
+  // Row selection from the form view (right dock) — same behaviour as tbody.
+  document.getElementById('profiles-data-forms').addEventListener('click', (e) => {
+    const pill = e.target.closest('[data-pd-prop]');
+    if (pill) {
+      const c = pill.dataset.pdProp;
+      let sel = modal._state ? (modal._state.formProps || []) : [];
+      if (sel.includes(c)) {
+        if (sel.length > 1) sel = sel.filter(x => x !== c);   // keep at least one
+      } else {
+        sel = sel.concat(c);
+      }
+      if (modal._state) { modal._state.formProps = sel; renderProfilesDataTable(); }
+      return;
+    }
+    const nav = e.target.closest('.pd-nav-btn');
+    if (nav) {
+      document.getElementById(nav.dataset.nav === '-1' ? 'profiles-data-prev' : 'profiles-data-next').click();
+      return;
+    }
+    const card = e.target.closest('[data-profile-code]');
+    if (!card) return;
+    const code = card.getAttribute('data-profile-code');
+    const wasSelected = selectedProfileCodes.has(code);
+    toggleProfileSelection(code);
+    if (!wasSelected) panMapToSelectedProfiles();
   });
 
   document.getElementById('profiles-data-tbody').addEventListener('click', (e) => {
@@ -2922,13 +3210,22 @@ function ensureProfilesDataModal() {
     renderProfilesDataTable();
   });
   document.getElementById('profiles-data-prev').addEventListener('click', () => {
-    if (modal._state && modal._state.page > 0) { modal._state.page--; renderProfilesDataTable(); }
+    if (!modal._state || modal._state.page === 0) return;
+    modal._state.currentProfile = null;
+    modal._state.page--;
+    renderProfilesDataTable();
+    syncFormProfile();
   });
   document.getElementById('profiles-data-next').addEventListener('click', () => {
     if (!modal._state) return;
-    const pageSize = parseInt(document.getElementById('profiles-data-pagesize').value, 10);
-    const max = Math.ceil(modal._state.filtered.length / pageSize) - 1;
-    if (modal._state.page < max) { modal._state.page++; renderProfilesDataTable(); }
+    // pagesTotal is set by the renderer for the current view (table pages,
+    // or one profile per page in the form view).
+    if (modal._state.page < (modal._state.pagesTotal || 1) - 1) {
+      modal._state.currentProfile = null;
+      modal._state.page++;
+      renderProfilesDataTable();
+      syncFormProfile();
+    }
   });
 
   const columnsBtn = document.getElementById('profiles-data-columns-btn');
@@ -2963,7 +3260,7 @@ function renderProfilesColumnsPopover() {
     </label>`;
   }).join('');
   pop.innerHTML = `
-    <div style="display:flex;gap:6px;margin-bottom:4px;border-bottom:1px solid #eee;padding-bottom:4px;">
+    <div style="display:flex;gap:6px;margin-bottom:4px;border-bottom:1px solid var(--color-border);padding-bottom:4px;">
       <button type="button" id="profiles-cols-all" style="padding:1px 6px;font-size:0.9em;">${t('profiles.all')}</button>
       <button type="button" id="profiles-cols-none" style="padding:1px 6px;font-size:0.9em;">${t('profiles.none')}</button>
     </div>
@@ -3161,6 +3458,7 @@ function renderProfilesDataTable() {
   const sortList = modal._state.sort || [];
   const pageSize = parseInt(document.getElementById('profiles-data-pagesize').value, 10);
 
+  const formView = modal._mode === 'right';
   let filtered = rows.slice();
   const asNum = v => {
     if (v === null || v === undefined || v === '') return null;
@@ -3168,9 +3466,11 @@ function renderProfilesDataTable() {
     return Number.isFinite(n) ? n : null;
   };
   filtered.sort((a, b) => {
-    const aSel = selectedProfileCodes.has(a.profile_code) ? 0 : 1;
-    const bSel = selectedProfileCodes.has(b.profile_code) ? 0 : 1;
-    if (aSel !== bSel) return aSel - bSel;
+    if (!formView) {
+      const aSel = selectedProfileCodes.has(a.profile_code) ? 0 : 1;
+      const bSel = selectedProfileCodes.has(b.profile_code) ? 0 : 1;
+      if (aSel !== bSel) return aSel - bSel;
+    }
     for (const { col, dir } of sortList) {
       const va = a[col], vb = b[col];
       const aEmpty = va === null || va === undefined || va === '';
@@ -3190,7 +3490,9 @@ function renderProfilesDataTable() {
 
   const total = filtered.length;
   const maxPage = Math.max(0, Math.ceil(total / pageSize) - 1);
-  if (modal._state.page > maxPage) modal._state.page = maxPage;
+  // Observation-based paging belongs to the table; the form view pages one
+  // PROFILE at a time and clamps itself in its own branch below.
+  if (!formView && modal._state.page > maxPage) modal._state.page = maxPage;
   const start = modal._state.page * pageSize;
   const pageRows = filtered.slice(start, start + pageSize);
 
@@ -3252,8 +3554,120 @@ function renderProfilesDataTable() {
     </span>`;
   }
 
+  // Right dock renders the records as forms (one card per observation,
+  // label/value pairs); every other mode keeps the table.
+  const table = document.getElementById('profiles-data-table');
+  const forms = document.getElementById('profiles-data-forms');
+  table.style.display = formView ? 'none' : '';
+  forms.style.display = formView ? '' : 'none';
+
+  let formPageInfo = null;
+  if (formView) {
+    // One card per PROFILE: its depth layers stacked like the raster
+    // depth-profile popup (horizon bands, interval labels) with the soil
+    // property values beside each depth. Pagination counts profiles here.
+    const profs = [];
+    const profIdx = Object.create(null);
+    filtered.forEach(r => {
+      const code = r.profile_code || '';
+      if (!(code in profIdx)) {
+        profIdx[code] = profs.length;
+        profs.push({ code, rows: [] });
+      }
+      profs[profIdx[code]].rows.push(r);
+    });
+    // One profile per page: prev/next step through the profiles. The shown
+    // profile is pinned by code so map moves (which refresh the visible
+    // rows) don't shuffle it away.
+    modal._state.profOrder = profs.map(p => p.code);
+    if (modal._state.currentProfile) {
+      const ci = modal._state.profOrder.indexOf(modal._state.currentProfile);
+      if (ci >= 0) modal._state.page = ci;
+    }
+    const maxProfPage = Math.max(0, profs.length - 1);
+    if (modal._state.page > maxProfPage) modal._state.page = maxProfPage;
+    const pageProfs = profs.length ? [profs[modal._state.page]] : [];
+    formPageInfo = { pages: Math.max(profs.length, 1) };
+    const navBar = profs.length ? `
+      <div class="pd-prof-nav">
+        <button type="button" class="pd-nav-btn" data-nav="-1" ${modal._state.page === 0 ? 'disabled' : ''} aria-label="previous">\u25c0</button>
+        <span class="pd-nav-info">${modal._state.page + 1} / ${profs.length}</span>
+        <button type="button" class="pd-nav-btn" data-nav="1" ${modal._state.page >= profs.length - 1 ? 'disabled' : ''} aria-label="next">\u25b6</button>
+      </div>` : '';
+
+    // Soil properties offered as pills — only those with data for the shown
+    // profile; the first is on by default and each extra pill adds a column.
+    const allProps = columns.filter(c => !(((columnMeta && columnMeta[c]) || {}).isBase));
+    const num = v => { const n = Number(v); return Number.isFinite(n) ? n : null; };
+
+    forms.innerHTML = navBar + (pageProfs.length
+      ? pageProfs.map(p => {
+          const selected = selectedProfileCodes.has(p.code);
+          const depths = p.rows.slice().sort((a, b) =>
+            (num(a.upper_depth) ?? 1e9) - (num(b.upper_depth) ?? 1e9));
+          const info = depths[0] || {};
+
+          const propsWithData = allProps.filter(c =>
+            depths.some(r => r[c] != null && r[c] !== ''));
+          let selProps = propsWithData.filter(c => (modal._state.formProps || []).includes(c));
+          if (!selProps.length && propsWithData.length) selProps = [propsWithData[0]];
+          modal._state.formProps = (modal._state.formProps || []).length
+            ? modal._state.formProps : selProps.slice();
+          const pillsBar = propsWithData.length ? `<div class="pd-prop-pills">${propsWithData.map(c => {
+            const meta = (columnMeta && columnMeta[c]) || { line1: c, line2: '' };
+            return `<span class="spc-pill${selProps.includes(c) ? ' on' : ''}" data-pd-prop="${escapeHtml(c)}" title="${escapeHtml(meta.line2 || '')}">${escapeHtml(meta.line1 || c)}</span>`;
+          }).join('')}</div>` : '';
+
+          const fmtCoord = v => { const n = Number(v); return Number.isFinite(n) ? n.toFixed(5) : (v == null ? '' : String(v)); };
+          const metaFields = [
+            [t('pr.project'), info.project_name || ''],
+            [t('pr.sampled'), info.sampling_date ? String(info.sampling_date) : ''],
+            [t('pr.lat'), (info.latitude != null && info.latitude !== '') ? `${fmtCoord(info.latitude)}\u00b0` : ''],
+            [t('pr.lon'), (info.longitude != null && info.longitude !== '') ? `${fmtCoord(info.longitude)}\u00b0` : ''],
+            [t('pr.alt'), (info.altitude != null && info.altitude !== '') ? `${info.altitude} m` : '']
+          ].filter(([, v]) => v !== '');
+          const metaHtml = metaFields.length ? `<div class="pd-report-meta">${metaFields.map(([l, v]) =>
+            `<div><span class="pd-m-l">${escapeHtml(l)}</span><span class="pd-m-v">${escapeHtml(v)}</span></div>`).join('')}</div>` : '';
+
+          const gHead = '<div class="pd-g-h"></div>' + selProps.map(c => {
+            const meta = (columnMeta && columnMeta[c]) || { line1: c, line2: '' };
+            return `<div class="pd-g-h" title="${escapeHtml(meta.line2 || '')}">${escapeHtml(meta.line1 || c)}</div>`;
+          }).join('');
+          const gRows = depths.map((r, i) => {
+            const hasD = r.upper_depth != null && r.upper_depth !== '' &&
+                         r.lower_depth != null && r.lower_depth !== '';
+            const depthLabel = hasD ? `${r.upper_depth}\u2013${r.lower_depth} cm` : '\u2014';
+            const color = SPC_BAND_COLORS[Math.min(i, SPC_BAND_COLORS.length - 1)];
+            const last = i === depths.length - 1 ? ' last' : '';
+            const band = `<div class="pd-g-cell pd-g-band${last}" style="background:linear-gradient(180deg, color-mix(in srgb, ${color} 88%, #fff), ${color});">${escapeHtml(depthLabel)}</div>`;
+            const cells = selProps.map((c, ci) => {
+              const raw = r[c];
+              const meta = (columnMeta && columnMeta[c]) || { line1: c, line2: '' };
+              if (raw == null || raw === '') {
+                return `<div class="pd-g-cell pd-g-val${last}" data-col="${ci}" data-v=""><span class="pd-g-none">\u2014</span></div>`;
+              }
+              return `<div class="pd-g-cell pd-g-val${last}" data-col="${ci}" data-v="${num(raw) ?? ''}" title="${escapeHtml(meta.line1 || c)}"><span>${escapeHtml(String(raw))}</span></div>`;
+            }).join('');
+            return band + cells;
+          }).join('');
+          const grid = selProps.length
+            ? `<div class="pd-prof-grid" style="grid-template-columns:68px repeat(${selProps.length}, minmax(90px, 1fr));">${gHead}${gRows}</div>` : '';
+
+          return `<div class="pd-form-card${selected ? ' sel' : ''}" data-profile-code="${escapeHtml(p.code)}">
+            <div class="pd-report-head">
+              <div class="pd-report-code">${escapeHtml(p.code)}</div>
+              ${metaHtml}
+            </div>
+            ${pillsBar}
+            ${grid}
+          </div>`;
+        }).join('')
+      : `<div class="empty-state" style="padding:14px;">${t('profiles.noObservations')}</div>`);
+    requestAnimationFrame(drawProfileSplines);
+  }
+
   const tbody = document.getElementById('profiles-data-tbody');
-  tbody.innerHTML = pageRows.length
+  tbody.innerHTML = formView ? '' : (pageRows.length
     ? pageRows.map(r => {
         const code = r.profile_code || '';
         const selected = selectedProfileCodes.has(code);
@@ -3269,12 +3683,19 @@ function renderProfilesDataTable() {
           }).join('') +
           '</tr>';
       }).join('')
-    : `<tr><td colspan="${visibleColumns.length || 1}" class="empty-state">${t('profiles.noObservations')}</td></tr>`;
+    : `<tr><td colspan="${visibleColumns.length || 1}" class="empty-state">${t('profiles.noObservations')}</td></tr>`);
 
   document.getElementById('profiles-data-count').textContent = `${total} observation${total === 1 ? '' : 's'}`;
+  // The report's big navigation replaces the whole footer bar.
+  const footer = document.getElementById('profiles-data-footer');
+  if (footer) footer.style.display = formView ? 'none' : 'flex';
+  const rowsWrap = document.getElementById('profiles-data-rows-wrap');
+  if (rowsWrap) rowsWrap.style.display = formView ? 'none' : 'inline-flex';
+  const pages = formPageInfo ? formPageInfo.pages : maxPage + 1;
+  modal._state.pagesTotal = pages;
   document.getElementById('profiles-data-pageinfo').textContent =
-    total ? `Page ${modal._state.page + 1} / ${maxPage + 1}` : '—';
+    total ? `Page ${modal._state.page + 1} / ${pages}` : '—';
   document.getElementById('profiles-data-prev').disabled = modal._state.page === 0;
-  document.getElementById('profiles-data-next').disabled = modal._state.page >= maxPage;
+  document.getElementById('profiles-data-next').disabled = modal._state.page >= pages - 1;
 }
 

@@ -625,11 +625,8 @@ class AdminDashboard {
                     <select id="raster-property-num" style="width:320px;"><option value="">${t('a.loading')}</option></select>
                     <div id="raster-property-new" style="display:none;margin-top:6px;">
                       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-                        <input type="text" id="raster-new-property-id"
-                               placeholder="${t('a.etl.procIdPh')}"
-                               pattern="[A-Z0-9_]+"
-                               title="${t('a.etl.procIdTip')}"
-                               style="width:160px;text-transform:uppercase;">
+                        <input type="text" id="raster-new-property-id" readonly
+                               style="width:160px;text-transform:uppercase;background:var(--color-surface-alt);color:var(--color-text-muted);cursor:default;">
                         <input type="text" id="raster-new-property-name"
                                placeholder="${t('a.raster.displayNamePh')}"
                                style="width:200px;">
@@ -1542,10 +1539,11 @@ class AdminDashboard {
       const isNew = propSel.value === '__new__';
       document.getElementById('raster-property-new').style.display = isNew ? '' : 'none';
       if (isNew) {
-        // Suggest the next free MAP#### id so the user doesn't have to
-        // think one up; they can still type their own.
+        // The MAP#### code is assigned automatically and is not editable —
+        // the user only names the property.
         const idInput = document.getElementById('raster-new-property-id');
         if (!idInput.value) idInput.value = this._nextRasterMapPropertyId();
+        document.getElementById('raster-new-property-name').focus();
         return;  // no units/limits to load yet
       }
       await this._loadRasterUnitsForCurrentProperty();
@@ -4352,7 +4350,7 @@ class AdminDashboard {
     const tr = document.createElement('tr');
     tr.className = 'etl-proc-add-row';
     tr.innerHTML = `
-      <td colspan="6" style="background:#fafafa;border-top:2px solid var(--color-primary);padding:8px;">
+      <td colspan="6" style="background:var(--color-surface-alt);border-top:2px solid var(--color-primary);padding:8px;">
         <strong style="font-size:var(--fs-sm);">${t('a.etl.newProcedure')}</strong>
         <div style="display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap;margin-top:6px;">
           <input type="text" class="etl-new-proc-id"
@@ -4451,14 +4449,11 @@ class AdminDashboard {
     const tr = document.createElement('tr');
     tr.className = 'etl-prop-add-row';
     tr.innerHTML = `
-      <td colspan="6" style="background:#fafafa;border-top:2px solid var(--color-primary);padding:8px;">
+      <td colspan="6" style="background:var(--color-surface-alt);border-top:2px solid var(--color-primary);padding:8px;">
         <strong style="font-size:var(--fs-sm);">${t('a.etl.newProperty')}</strong>
         <div style="display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap;margin-top:6px;">
-          <input type="text" class="etl-new-prop-id"
-                 placeholder="${t('a.etl.procIdPh')}"
-                 pattern="[A-Z0-9_]+"
-                 title="${t('a.etl.procIdTip')}"
-                 style="width:170px;text-transform:uppercase;">
+          <input type="text" class="etl-new-prop-id" readonly
+                 style="width:170px;text-transform:uppercase;background:var(--color-surface-alt);color:var(--color-text-muted);cursor:default;">
           <input type="text" class="etl-new-prop-name"
                  placeholder="${t('a.raster.displayNamePh')}" style="width:220px;">
           <textarea class="etl-new-prop-def" rows="2"
@@ -4476,8 +4471,7 @@ class AdminDashboard {
     const status = tr.querySelector('.etl-new-prop-status');
     // Suggest the next free PROPERTY#### id from the cached catalogue.
     idIn.value = this._nextEtlPropertyId();
-    idIn.focus();
-    idIn.select();
+    nameIn.focus();
 
     return await new Promise((resolve) => {
       tr.querySelector('.etl-new-prop-cancel').addEventListener('click', () => {
