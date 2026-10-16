@@ -605,6 +605,15 @@ class SISApiClient {
     return this.authenticatedRequest('/api/glosis/status');
   }
 
+  async getGlosisHubStatus() {
+    return this.authenticatedRequest('/api/glosis/hub/status');
+  }
+
+  async connectGlosisHub(baseUrl) {
+    return this.authenticatedRequest('/api/glosis/hub/connect',
+      { method: 'POST', body: JSON.stringify({ base_url: baseUrl }) });
+  }
+
   async enableGlosis() {
     return this.authenticatedRequest('/api/glosis/enable', { method: 'POST' });
   }

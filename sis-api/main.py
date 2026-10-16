@@ -5962,6 +5962,117 @@ async def glosis_disable_and_delete(current_user: dict = Depends(get_current_adm
     return {"message": "GloSIS federation disabled and token deleted"}
 
 
+# ---- Connect to the GloSIS Discovery Hub -----------------------------------
+# Server-to-server: the browser talks to sis-api, sis-api talks to the hub.
+# The federation token never travels through the browser in this flow.
+
+def _setting_value(cur, key, default=""):
+    cur.execute("SELECT value FROM api.setting WHERE key = %s", (key,))
+    row = cur.fetchone()
+    return (row["value"] if row and row["value"] is not None else default)
+
+
+def _glosis_hub_normalise_url(raw: str) -> str:
+    """Normalise and validate a node base URL; raises 400 on anything odd."""
+    url = (raw or "").strip().rstrip("/")
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc \
+            or parsed.query or parsed.fragment:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Public address must be a plain http(s)://host[:port][/path] URL")
+    return url
+
+
+@app.post("/api/glosis/hub/connect")
+async def glosis_hub_connect(
+    payload: dict = Body(...),
+    current_user: dict = Depends(get_current_admin_user)
+):
+    """Register (or refresh) this node with the GloSIS Discovery Hub."""
+    base_url = _glosis_hub_normalise_url(payload.get("base_url", ""))
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            if not _glosis_get_enabled(cur):
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                                    detail="Enable GloSIS federation first")
+            token = _glosis_get_token(cur)
+            if not token or not token.get("api_key") or not token.get("is_active"):
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                                    detail="Enable GloSIS federation first")
+            country = _setting_value(cur, "COUNTRY_CODE").strip()
+            if not country:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                                    detail="Set the country code first")
+            hub_url = _setting_value(cur, "GLOSIS_HUB_URL").strip().rstrip("/")
+            name = _setting_value(cur, "APP_TITLE").strip() or "Soil Information System"
+            logo = _setting_value(cur, "ORG_LOGO_URL").strip()
+            body = {
+                "base_url": base_url,
+                "token": token["api_key"],
+                "name": name[:120],
+                "country_code": country[:2].upper(),
+            }
+            if logo.startswith("https://"):
+                body["logo_url"] = logo
+    try:
+        resp = http_requests.post(f"{hub_url}/api/register", json=body, timeout=30)
+    except http_requests.RequestException:
+        log_audit(current_user["user_id"], None, "glosis_hub_connect",
+                  {"base_url": base_url, "result": "hub_unreachable"}, None)
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY,
+                            detail="Hub not reachable")
+    if resp.status_code == 202:
+        data = resp.json()
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO api.setting (key, value) VALUES ('GLOSIS_NODE_URL', %s)
+                    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+                """, (base_url,))
+        log_audit(current_user["user_id"], None, "glosis_hub_connect",
+                  {"base_url": base_url, "result": data.get("status")}, None)
+        return data
+    # 400 / 422 / 429 etc: pass the hub's own message through unchanged.
+    try:
+        detail = resp.json().get("detail") or f"Hub error {resp.status_code}"
+    except ValueError:
+        detail = f"Hub error {resp.status_code}"
+    log_audit(current_user["user_id"], None, "glosis_hub_connect",
+              {"base_url": base_url, "result": f"http_{resp.status_code}"}, None)
+    raise HTTPException(status_code=resp.status_code, detail=detail)
+
+
+@app.get("/api/glosis/hub/status")
+async def glosis_hub_status(
+    request: Request,
+    current_user: dict = Depends(get_current_admin_user)
+):
+    """Registration status with the Discovery Hub, plus URL suggestions."""
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            token = _glosis_get_token(cur)
+            hub_url = _setting_value(cur, "GLOSIS_HUB_URL").strip().rstrip("/")
+            node_url = _setting_value(cur, "GLOSIS_NODE_URL").strip()
+            wms = _setting_value(cur, "WMS_PUBLIC_URL").strip().rstrip("/")
+    suggested = node_url
+    if not suggested and wms:
+        suggested = re.sub(r"/mapserver$", "", wms)
+    if not suggested:
+        suggested = str(request.base_url).rstrip("/")
+    extras = {"node_url": node_url, "suggested_url": suggested}
+    if not token or not token.get("api_key") or not node_url:
+        return {"status": "not_registered", **extras}
+    try:
+        resp = http_requests.post(f"{hub_url}/api/register/status",
+                                  json={"base_url": node_url, "token": token["api_key"]},
+                                  timeout=30)
+        data = resp.json()
+    except (http_requests.RequestException, ValueError):
+        return {"status": "hub_unreachable", **extras}
+    return {**data, **extras}
+
+
 # ==================== Decision Support Tool (DST) ====================
 # See RASTER-AND-DST-PLAN.md for the full design.
 # v1 (this slice): recipe CRUD only. Validate / run / engine come next.

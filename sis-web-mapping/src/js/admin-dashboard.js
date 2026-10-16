@@ -388,6 +388,17 @@ class AdminDashboard {
                   <ul id="glosis-endpoints" style="margin:4px 0 0 18px;font-size:var(--fs-sm);"></ul>
                 </div>
 
+                <div id="glosis-hub-block" style="display:none;border-top:1px solid var(--color-border);padding-top:var(--sp-3);">
+                  <strong>${t('a.glosis.hub.title')}</strong>
+                  <p style="color:var(--color-text-muted);font-size:var(--fs-sm);margin:4px 0 var(--sp-2);">${t('a.glosis.hub.intro')}</p>
+                  <div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;">
+                    <label for="glosis-hub-url" style="font-size:var(--fs-sm);">${t('a.glosis.hub.address')}</label>
+                    <input type="text" id="glosis-hub-url" style="width:340px;" placeholder="https://">
+                    <button type="button" class="btn btn-primary btn-sm" id="glosis-hub-connect-btn">${t('a.glosis.hub.connect')}</button>
+                    <span id="glosis-hub-status" style="font-size:var(--fs-sm);color:var(--color-text-muted);"></span>
+                  </div>
+                </div>
+
               </div>
 
             </div>
@@ -2854,7 +2865,7 @@ class AdminDashboard {
     const mapKeys = ['LATITUDE', 'LONGITUDE', 'ZOOM'];
     const keyOrder = ['APP_TITLE', 'LANGUAGE', 'ORG_LOGO_URL', 'BASE_MAP_DEFAULT', 'LAYER_PANEL_COLLAPSED', 'LATITUDE', 'LONGITUDE', 'ZOOM'];
     // Infrastructure settings — kept in DB but hidden from the UI to avoid accidental edits
-    const hiddenKeys = new Set(['DOWNLOAD_BASE_URL', 'GLOSIS_FEDERATION_ENABLED']);
+    const hiddenKeys = new Set(['DOWNLOAD_BASE_URL', 'GLOSIS_FEDERATION_ENABLED', 'GLOSIS_HUB_URL', 'GLOSIS_NODE_URL']);
 
     const visible = this.settings.filter(s => !hiddenKeys.has(s.key));
 
@@ -5931,8 +5942,66 @@ class AdminDashboard {
       catch (e) { alert(t('a.err.failed') + e.message); }
     });
 
+    const hubBtn = document.getElementById('glosis-hub-connect-btn');
+    if (hubBtn) {
+      hubBtn.addEventListener('click', async () => {
+        const statusEl = document.getElementById('glosis-hub-status');
+        const url = document.getElementById('glosis-hub-url').value.trim();
+        hubBtn.disabled = true;
+        statusEl.textContent = t('a.glosis.hub.connecting');
+        statusEl.style.color = 'var(--color-text-muted)';
+        try {
+          await api.connectGlosisHub(url);
+          await this.loadGlosisHub();
+        } catch (e) {
+          statusEl.textContent = e.message;
+          statusEl.style.color = 'var(--color-danger)';
+        } finally {
+          hubBtn.disabled = false;
+        }
+      });
+    }
+
     this.renderGlosisEndpoints();
     this.loadGlosis();
+  }
+
+  // Registration status with the GloSIS Discovery Hub. Shown only while
+  // federation is enabled; everything is server-to-server via sis-api.
+  async loadGlosisHub() {
+    const statusEl = document.getElementById('glosis-hub-status');
+    const urlInput = document.getElementById('glosis-hub-url');
+    if (!statusEl || !urlInput) return;
+    try {
+      const s = await api.getGlosisHubStatus();
+      if (!urlInput.value.trim()) {
+        urlInput.value = s.node_url || s.suggested_url || '';
+      }
+      let text, color = 'var(--color-text-muted)';
+      if (s.status === 'approved') {
+        text = t('a.glosis.hub.stApproved', {
+          records: s.records == null ? '—' : s.records,
+          layers: s.layers == null ? '—' : s.layers,
+          properties: s.properties == null ? '—' : s.properties
+        });
+        color = 'var(--color-success)';
+      } else if (s.status === 'pending') {
+        text = t('a.glosis.hub.stPending');
+      } else if (s.status === 'rejected') {
+        text = t('a.glosis.hub.stRejected');
+        color = 'var(--color-danger)';
+      } else if (s.status === 'hub_unreachable') {
+        text = t('a.glosis.hub.stUnreachable');
+        color = 'var(--color-danger)';
+      } else {
+        text = t('a.glosis.hub.stNone');
+      }
+      statusEl.textContent = text;
+      statusEl.style.color = color;
+    } catch (e) {
+      statusEl.textContent = t('a.glosis.hub.stUnreachable');
+      statusEl.style.color = 'var(--color-danger)';
+    }
   }
 
   renderGlosisEndpoints(apiKey) {
@@ -5966,6 +6035,14 @@ class AdminDashboard {
       document.getElementById('glosis-disable-btn').disabled = !enabled;
       document.getElementById('glosis-disable-delete-btn').disabled = !data.token;
       this.renderGlosisEndpoints(data.token ? data.token.api_key : null);
+      const hubBlock = document.getElementById('glosis-hub-block');
+      if (hubBlock) {
+        const show = enabled && !!data.token;
+        hubBlock.style.display = show ? '' : 'none';
+        const hubStatus = document.getElementById('glosis-hub-status');
+        if (show) this.loadGlosisHub();
+        else if (hubStatus) hubStatus.textContent = '';
+      }
     } catch (e) {
       statusEl.textContent = t('a.error');
       statusEl.style.color = '#c33';
