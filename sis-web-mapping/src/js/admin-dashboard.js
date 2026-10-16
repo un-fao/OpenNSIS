@@ -384,7 +384,7 @@ class AdminDashboard {
                 </div>
                 <div style="display:flex;align-items:center;gap:var(--sp-3);">
                   <button type="button" class="btn btn-primary btn-sm" id="glosis-hub-connect-btn">${t('a.glosis.hub.connect')}</button>
-                  <button type="button" class="btn btn-sm" id="glosis-hub-disconnect-btn" style="background:var(--color-danger);color:#fff;">${t('a.glosis.hub.disconnect')}</button>
+                  <button type="button" class="btn btn-sm" id="glosis-hub-disconnect-btn" style="background:var(--color-danger);color:#fff;border:none;">${t('a.glosis.hub.disconnect')}</button>
                   <span id="glosis-hub-status" style="font-size:var(--fs-sm);color:var(--color-text-muted);"></span>
                 </div>
               </div>
