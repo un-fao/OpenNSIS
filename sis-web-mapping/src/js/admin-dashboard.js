@@ -374,29 +374,20 @@ class AdminDashboard {
               <div class="admin-section" id="glosis-section">
                 <h3 class="admin-section-title">${t('a.glosis.title')}</h3>
                 <p style="color:var(--color-text-muted);font-size:var(--fs-sm);margin:0 0 var(--sp-3);">
-                  ${t('a.glosis.p1')}<br>${t('a.glosis.p2')}<br>${t('a.glosis.p3')}
+                  ${t('a.glosis.hub.intro')}
                 </p>
-                <div style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3);">
-                  <span><strong>${t('a.glosis.status')}</strong> <span id="glosis-status">…</span></span>
-                  <button type="button" class="btn btn-success btn-sm" id="glosis-enable-btn">${t('a.glosis.enable')}</button>
-                  <button type="button" class="btn btn-sm" id="glosis-disable-btn" style="background:#ffc107;color:#212529;">${t('a.glosis.disable')}</button>
-                  <button type="button" class="btn btn-sm" id="glosis-disable-delete-btn" style="background:#dc3545;color:#fff;">${t('a.glosis.disableDelete')}</button>
+                <div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;margin-bottom:var(--sp-2);font-size:var(--fs-sm);">
+                  <span>${t('a.glosis.hub.address')}:</span>
+                  <code id="glosis-hub-url-text"></code>
+                  <a href="#" id="glosis-hub-url-edit" style="font-size:var(--fs-sm);">${t('a.glosis.hub.change')}</a>
+                  <input type="text" id="glosis-hub-url" style="width:340px;display:none;" placeholder="https://">
                 </div>
-
-                <div style="margin-bottom:var(--sp-3);">
-                  <strong>${t('a.glosis.endpoints')}</strong>
-                  <ul id="glosis-endpoints" style="margin:4px 0 0 18px;font-size:var(--fs-sm);"></ul>
+                <div style="display:flex;align-items:center;gap:var(--sp-3);">
+                  <button type="button" class="btn btn-primary btn-sm" id="glosis-hub-connect-btn">${t('a.glosis.hub.connect')}</button>
+                  <button type="button" class="btn btn-sm" id="glosis-hub-disconnect-btn" style="background:var(--color-surface-alt);color:var(--color-text);border:1px solid var(--color-border);">${t('a.glosis.hub.disconnect')}</button>
+                  <span id="glosis-hub-status" style="font-size:var(--fs-sm);color:var(--color-text-muted);"></span>
                 </div>
-
-                <div id="glosis-hub-block" style="display:none;border-top:1px solid var(--color-border);padding-top:var(--sp-3);">
-                  <strong>${t('a.glosis.hub.title')}</strong>
-                  <p style="color:var(--color-text-muted);font-size:var(--fs-sm);margin:4px 0 var(--sp-2);">${t('a.glosis.hub.intro')}</p>
-                  <div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;">
-                    <label for="glosis-hub-url" style="font-size:var(--fs-sm);">${t('a.glosis.hub.address')}</label>
-                    <input type="text" id="glosis-hub-url" style="width:340px;" placeholder="https://">
-                    <button type="button" class="btn btn-primary btn-sm" id="glosis-hub-connect-btn">${t('a.glosis.hub.connect')}</button>
-                    <span id="glosis-hub-status" style="font-size:var(--fs-sm);color:var(--color-text-muted);"></span>
-                  </div>
+              </div>
                 </div>
 
               </div>
@@ -5919,70 +5910,81 @@ class AdminDashboard {
   // ==================== GloSIS Federation ====================
 
   initGlosis() {
-    const enableBtn = document.getElementById('glosis-enable-btn');
-    const disableBtn = document.getElementById('glosis-disable-btn');
-    const disableDeleteBtn = document.getElementById('glosis-disable-delete-btn');
-    if (!enableBtn || !disableBtn || !disableDeleteBtn) return;
+    const connectBtn = document.getElementById('glosis-hub-connect-btn');
+    const discBtn = document.getElementById('glosis-hub-disconnect-btn');
+    if (!connectBtn || !discBtn) return;
 
-    enableBtn.addEventListener('click', async () => {
+    // The public address shows as text; "change" swaps in the input.
+    const urlText = document.getElementById('glosis-hub-url-text');
+    const urlInput = document.getElementById('glosis-hub-url');
+    document.getElementById('glosis-hub-url-edit').addEventListener('click', (e) => {
+      e.preventDefault();
+      urlInput.style.display = '';
+      urlText.style.display = 'none';
+      urlInput.focus();
+    });
+    urlInput.addEventListener('blur', () => {
+      urlText.textContent = urlInput.value.trim();
+      urlInput.style.display = 'none';
+      urlText.style.display = '';
+    });
+
+    // Connect = enable federation (minting the token if needed) + register
+    // with the hub, in one click.
+    connectBtn.addEventListener('click', async () => {
+      const statusEl = document.getElementById('glosis-hub-status');
+      connectBtn.disabled = true;
+      statusEl.textContent = t('a.glosis.hub.connecting');
+      statusEl.style.color = 'var(--color-text-muted)';
       try {
-        await api.enableGlosis();
+        const fed = await api.getGlosisStatus();
+        if (!fed.enabled || !fed.token) await api.enableGlosis();
+        await api.connectGlosisHub(urlInput.value.trim());
         await this.loadGlosis();
       } catch (e) {
-        alert(t('a.err.enableFailed') + e.message);
+        statusEl.textContent = e.message;
+        statusEl.style.color = 'var(--color-danger)';
+      } finally {
+        connectBtn.disabled = false;
       }
     });
-    disableBtn.addEventListener('click', async () => {
-      try { await api.disableGlosis(); await this.loadGlosis(); }
-      catch (e) { alert(t('a.err.disableFailed') + e.message); }
-    });
-    disableDeleteBtn.addEventListener('click', async () => {
-      if (!confirm(t('a.glosis.disableConfirm'))) return;
-      try { await api.disableAndDeleteGlosis(); await this.loadGlosis(); }
-      catch (e) { alert(t('a.err.failed') + e.message); }
+
+    // Disconnect = switch federation off; the token is kept so reconnecting
+    // is instant, and the hub shows "sharing switched off" on its next pass.
+    discBtn.addEventListener('click', async () => {
+      try {
+        await api.disableGlosis();
+        await this.loadGlosis();
+      } catch (e) {
+        alert(t('a.err.disableFailed') + e.message);
+      }
     });
 
-    const hubBtn = document.getElementById('glosis-hub-connect-btn');
-    if (hubBtn) {
-      hubBtn.addEventListener('click', async () => {
-        const statusEl = document.getElementById('glosis-hub-status');
-        const url = document.getElementById('glosis-hub-url').value.trim();
-        hubBtn.disabled = true;
-        statusEl.textContent = t('a.glosis.hub.connecting');
-        statusEl.style.color = 'var(--color-text-muted)';
-        try {
-          await api.connectGlosisHub(url);
-          await this.loadGlosisHub();
-        } catch (e) {
-          statusEl.textContent = e.message;
-          statusEl.style.color = 'var(--color-danger)';
-        } finally {
-          hubBtn.disabled = false;
-        }
-      });
-    }
-
-    this.renderGlosisEndpoints();
     this.loadGlosis();
   }
 
-  // Registration status with the GloSIS Discovery Hub. Shown only while
-  // federation is enabled; everything is server-to-server via sis-api.
-  async loadGlosisHub() {
+  async loadGlosis() {
     const statusEl = document.getElementById('glosis-hub-status');
+    const urlText = document.getElementById('glosis-hub-url-text');
     const urlInput = document.getElementById('glosis-hub-url');
-    if (!statusEl || !urlInput) return;
+    const discBtn = document.getElementById('glosis-hub-disconnect-btn');
+    if (!statusEl) return;
     try {
+      const fed = await api.getGlosisStatus();
       const s = await api.getGlosisHubStatus();
       if (!urlInput.value.trim()) {
         urlInput.value = s.node_url || s.suggested_url || '';
+        urlText.textContent = urlInput.value;
       }
+      discBtn.disabled = !fed.enabled;
       let text, color = 'var(--color-text-muted)';
-      if (s.status === 'approved') {
+      if (!fed.enabled) {
+        text = t('a.glosis.hub.stOff');
+      } else if (s.status === 'approved') {
         text = t('a.glosis.hub.stApproved', {
-          records: s.records == null ? '—' : s.records,
-          layers: s.layers == null ? '—' : s.layers,
-          properties: s.properties == null ? '—' : s.properties
+          records: s.records == null ? '\u2014' : s.records,
+          layers: s.layers == null ? '\u2014' : s.layers,
+          properties: s.properties == null ? '\u2014' : s.properties
         });
         color = 'var(--color-success)';
       } else if (s.status === 'pending') {
@@ -5999,53 +6001,8 @@ class AdminDashboard {
       statusEl.textContent = text;
       statusEl.style.color = color;
     } catch (e) {
-      statusEl.textContent = t('a.glosis.hub.stUnreachable');
-      statusEl.style.color = 'var(--color-danger)';
-    }
-  }
-
-  renderGlosisEndpoints(apiKey) {
-    const ul = document.getElementById('glosis-endpoints');
-    if (!ul) return;
-    const origin = window.location.origin;
-    const tokenDisplay = apiKey
-      ? `<code>${this.escapeHtml(apiKey)}</code>`
-      : '<em>&lt;federation token — Enable to generate&gt;</em>';
-    // sis-api-glosis is exposed on host port 8006 in dev. In prod (nginx-only),
-    // the operator should front it under e.g. /glosis/ — show both.
-    const items = [
-      `<li>Manifest: <code>${origin}:8006/manifest</code> (or via nginx, <code>/glosis/manifest</code>)</li>`,
-      `<li>Profiles: <code>${origin}:8006/profile</code></li>`,
-      `<li>Observations: <code>${origin}:8006/observation</code></li>`,
-      `<li>Header to send: <code>X-API-Key:</code> ${tokenDisplay}</li>`,
-      `<li>Metadata catalogue (rasters, public): <code>${origin}:8003/collections/metadata:main/items</code></li>`,
-    ];
-    ul.innerHTML = items.join('');
-  }
-
-  async loadGlosis() {
-    const statusEl = document.getElementById('glosis-status');
-    if (!statusEl) return;
-    try {
-      const data = await api.getGlosisStatus();
-      const enabled = !!data.enabled;
-      statusEl.textContent = enabled ? t('a.enabled') : t('a.disabled');
-      statusEl.style.color = enabled ? '#28a745' : '#777';
-      document.getElementById('glosis-enable-btn').disabled = enabled;
-      document.getElementById('glosis-disable-btn').disabled = !enabled;
-      document.getElementById('glosis-disable-delete-btn').disabled = !data.token;
-      this.renderGlosisEndpoints(data.token ? data.token.api_key : null);
-      const hubBlock = document.getElementById('glosis-hub-block');
-      if (hubBlock) {
-        const show = enabled && !!data.token;
-        hubBlock.style.display = show ? '' : 'none';
-        const hubStatus = document.getElementById('glosis-hub-status');
-        if (show) this.loadGlosisHub();
-        else if (hubStatus) hubStatus.textContent = '';
-      }
-    } catch (e) {
       statusEl.textContent = t('a.error');
-      statusEl.style.color = '#c33';
+      statusEl.style.color = 'var(--color-danger)';
     }
   }
 
