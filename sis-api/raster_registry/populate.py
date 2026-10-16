@@ -126,8 +126,10 @@ def populate_spatial_metadata(
         # "Created on" date (publication_date arg) goes into creation_date
         # and revision_date. The mapset.publication_date column tracks when
         # the file was uploaded into the SIS — that's CURRENT_DATE here.
-        # keyword_theme is taken from soil_data.mapped_property.keyword_theme
-        # via a subquery so the catalogue inherits the property's keywords.
+        # keyword_theme merges the property's catalogue keywords, the
+        # caller-supplied upload keywords (keywords_theme — previously
+        # accepted but silently dropped, so records for new properties were
+        # born without subject keywords) and any internal extras.
         cur.execute("""
             INSERT INTO soil_data.mapset
                 (country_id, project_id, mapped_property_id, mapset_id, title, abstract,
@@ -135,12 +137,12 @@ def populate_spatial_metadata(
                  unit_of_measure_id, time_period_begin, time_period_end,
                  costum_group, keyword_theme, keyword_place)
             VALUES (%s, %s, %s, %s, %s, %s, %s, CURRENT_DATE, %s, %s, %s, %s, %s, %s,
-                    -- keyword_theme: the property's own keywords merged with
-                    -- any caller-supplied extras (e.g. DST adds 'soil' +
-                    -- 'digital support tool'), de-duplicated.
+                    -- keyword_theme: property catalogue keywords ∪ caller
+                    -- upload keywords ∪ internal extras, de-duplicated.
                     ARRAY(SELECT DISTINCT k FROM unnest(
                       COALESCE((SELECT keyword_theme FROM soil_data.mapped_property
                                 WHERE mapped_property_id = %s), '{}'::text[])
+                      || %s::text[]
                       || %s::text[]
                     ) AS k),
                     (SELECT ARRAY_REMOVE(ARRAY[un_reg, en], NULL)
@@ -164,6 +166,7 @@ def populate_spatial_metadata(
               publication_date, publication_date,
               unit_of_measure_id, time_period_begin, time_period_end,
               costum_group, meta.property_id,
+              list(keywords_theme or []),
               list(extra_keywords_theme or [])))
 
         # 3. layer — identity row first (upsert)
