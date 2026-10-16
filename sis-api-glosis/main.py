@@ -96,6 +96,33 @@ async def verify_federation_token(
             return dict(client)
 
 
+def parse_bbox(bbox: Optional[str]):
+    """`bbox=minLon,minLat,maxLon,maxLat` (WGS84) → tuple of floats, or None.
+
+    Raises 400 on anything malformed, so harvesters get a clear error
+    instead of a silent full-country download.
+    """
+    if not bbox:
+        return None
+    parts = bbox.split(",")
+    try:
+        vals = [float(p) for p in parts]
+    except ValueError:
+        vals = []
+    if len(vals) != 4:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="bbox must be 'minLon,minLat,maxLon,maxLat' (WGS84 decimal degrees)")
+    min_lon, min_lat, max_lon, max_lat = vals
+    if not (-180 <= min_lon <= 180 and -180 <= max_lon <= 180 and
+            -90 <= min_lat <= 90 and -90 <= max_lat <= 90 and
+            min_lon < max_lon and min_lat < max_lat):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="bbox out of range or min not smaller than max")
+    return (min_lon, min_lat, max_lon, max_lat)
+
+
 # ==================== GloSIS Federation Endpoints ====================
 
 @app.get("/manifest")
@@ -116,15 +143,29 @@ async def get_manifest(
 @app.get("/profile")
 async def get_profiles(
     request: Request,
+    bbox: Optional[str] = None,
     api_client: dict = Depends(verify_federation_token)
 ):
-    """Soil profiles for this node."""
+    """Soil profiles for this node.
+
+    Optional `bbox=minLon,minLat,maxLon,maxLat` (WGS84) returns only the
+    profiles inside that rectangle, so federated clients don't have to pull
+    the whole country for a map-window search.
+    """
+    env = parse_bbox(bbox)
     with get_db() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT * FROM api.vw_api_profile")
+            if env:
+                cur.execute(
+                    "SELECT * FROM api.vw_api_profile "
+                    "WHERE ST_Intersects(geom, ST_MakeEnvelope(%s, %s, %s, %s, 4326))",
+                    env)
+            else:
+                cur.execute("SELECT * FROM api.vw_api_profile")
             data = cur.fetchall()
             log_audit(None, api_client["api_client_id"], "glosis_profiles_accessed",
-                      {"record_count": len(data)}, get_client_ip(request))
+                      {"record_count": len(data), "bbox": bbox},
+                      get_client_ip(request))
             return [dict(row) for row in data]
 
 
@@ -132,21 +173,42 @@ async def get_profiles(
 async def get_observations(
     request: Request,
     profile_code: Optional[str] = None,
+    property: Optional[str] = None,
+    bbox: Optional[str] = None,
     api_client: dict = Depends(verify_federation_token)
 ):
-    """Observational data, optionally filtered by profile_code."""
+    """Observational data.
+
+    Optional filters, combinable:
+    - `profile_code=` one profile;
+    - `property=` a soil-property code as listed by /manifest
+      (matches `property_num_id`);
+    - `bbox=minLon,minLat,maxLon,maxLat` (WGS84) only observations whose
+      profile lies inside the rectangle.
+    """
+    env = parse_bbox(bbox)
+    where, params = [], []
+    if profile_code:
+        where.append("profile_code = %s")
+        params.append(profile_code)
+    if property:
+        where.append("property_num_id = %s")
+        params.append(property)
+    if env:
+        where.append(
+            "profile_code IN (SELECT profile_code FROM api.vw_api_profile "
+            "WHERE ST_Intersects(geom, ST_MakeEnvelope(%s, %s, %s, %s, 4326)))")
+        params.extend(env)
+    sql = "SELECT * FROM api.vw_api_observation"
+    if where:
+        sql += " WHERE " + " AND ".join(where)
     with get_db() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            if profile_code:
-                cur.execute(
-                    "SELECT * FROM api.vw_api_observation WHERE profile_code = %s",
-                    (profile_code,)
-                )
-            else:
-                cur.execute("SELECT * FROM api.vw_api_observation")
+            cur.execute(sql, params)
             data = cur.fetchall()
             log_audit(None, api_client["api_client_id"], "glosis_observations_accessed",
-                      {"profile_code": profile_code, "record_count": len(data)},
+                      {"profile_code": profile_code, "property": property,
+                       "bbox": bbox, "record_count": len(data)},
                       get_client_ip(request))
             return [dict(row) for row in data]
 

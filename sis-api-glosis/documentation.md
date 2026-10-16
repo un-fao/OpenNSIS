@@ -75,8 +75,15 @@ endpoints don't accept cookies or credentials.
 | GET    | `/health`      | Public                | Liveness probe (returns `{status: healthy}` only)   |
 | GET    | `/manifest`    | Federation token + flag | Aggregated soil-property manifest for this node    |
 | GET    | `/profile`     | Federation token + flag | Published soil profiles                             |
+| GET    | `/profile?bbox=minLon,minLat,maxLon,maxLat` | Federation token + flag | Profiles inside a WGS84 rectangle |
 | GET    | `/observation` | Federation token + flag | Observational data                                  |
 | GET    | `/observation?profile_code=XYZ` | Federation token + flag | Observations filtered to one profile     |
+| GET    | `/observation?property=CODE` | Federation token + flag | Observations of one soil property (code as in `/manifest`) |
+| GET    | `/observation?bbox=…` | Federation token + flag | Observations whose profile lies inside the rectangle (filters combine) |
+
+A malformed `bbox` returns `400` with an explanatory message. Filters exist so
+federated clients can request only what a search needs instead of a node's
+entire holdings.
 
 The two public endpoints (`/`, `/health`) reveal nothing sensitive — health
 errors are flattened to `{status: unhealthy}` without exception text.
