@@ -388,10 +388,6 @@ class AdminDashboard {
                   <span id="glosis-hub-status" style="font-size:var(--fs-sm);color:var(--color-text-muted);"></span>
                 </div>
               </div>
-                </div>
-
-              </div>
-
             </div>
 
             <!-- Dashboard Tab -->
