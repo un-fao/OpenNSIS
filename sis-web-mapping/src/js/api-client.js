@@ -303,13 +303,6 @@ class SISApiClient {
     });
   }
 
-  async setSoilProfileHideDownload(projectId, hideDownload) {
-    return this.authenticatedRequest(`/api/layer/soil_profiles/${encodeURIComponent(projectId)}/hide-download`, {
-      method: 'PATCH',
-      body: JSON.stringify({ hide_download: hideDownload })
-    });
-  }
-
   async deleteSoilProfileData(projectId) {
     return this.authenticatedRequest(`/api/layer/soil_profiles/${encodeURIComponent(projectId)}/profiles`, {
       method: 'DELETE'

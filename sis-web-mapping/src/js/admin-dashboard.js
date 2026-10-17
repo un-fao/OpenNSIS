@@ -584,7 +584,6 @@ class AdminDashboard {
                         <th>${t('a.sp.publicLimit')}</th>
                         <th title="${t('a.sp.blurTip')}">${t('a.sp.blur')}</th>
                         <th title="${t('a.sp.shareAttrsTip')}">${t('a.sp.shareAttrs')}</th>
-                        <th title="${t('a.sp.showDlTip')}">${t('a.sp.showDl')}</th>
                         <th>${t('a.published')}</th>
                         <th title="${t('a.sp.activeTip')}">${t('a.active')}</th>
                         <th title="${t('a.sp.pruneTip')}">${t('a.sp.prune')}</th>
@@ -3711,11 +3710,6 @@ class AdminDashboard {
       const shareAttrBadge = r.locations_only
         ? `<span class="badge badge-danger sp-loc-only-toggle" data-project-id="${pid}" data-value="0" style="cursor:pointer;" title="${t('a.sp.locOnlyTip')}">${t('a.no')}</span>`
         : `<span class="badge badge-success sp-loc-only-toggle" data-project-id="${pid}" data-value="1" style="cursor:pointer;" title="${t('a.sp.fullAttrsTip')}">${t('a.yes')}</span>`;
-      // "Show download button" is the inverse of the underlying hide_download flag;
-      // data-value is still the hide_download value written on click.
-      const showDlBadge = r.hide_download
-        ? `<span class="badge badge-danger sp-hide-dl-toggle" data-project-id="${pid}" data-value="0" style="cursor:pointer;" title="${t('a.sp.dlHiddenTip')}">${t('a.no')}</span>`
-        : `<span class="badge badge-success sp-hide-dl-toggle" data-project-id="${pid}" data-value="1" style="cursor:pointer;" title="${t('a.sp.dlShownTip')}">${t('a.yes')}</span>`;
       // Active-by-default: published either way; No = starts unticked.
       const activeBadge = (r.active_default === false)
         ? `<span class="badge badge-danger sp-active-toggle" data-project-id="${pid}" data-value="1" style="cursor:pointer;" title="${t('a.sp.activeOffTip')}">${t('a.no')}</span>`
@@ -3762,7 +3756,6 @@ class AdminDashboard {
           <span class="sp-blur-status" data-project-id="${pid}"></span>
         </td>
         <td>${shareAttrBadge}</td>
-        <td>${showDlBadge}</td>
         <td>${r.is_published
           ? `<span class="badge badge-success sp-publish-btn" data-project-id="${pid}" data-publish="0" style="cursor:pointer;" title="${t('a.admdiv.pubTip')}">${t('a.yes')}</span>`
           : `<span class="badge badge-danger sp-publish-btn" data-project-id="${pid}" data-publish="1" style="cursor:pointer;" title="${t('a.admdiv.unpubTip')}">${t('a.no')}</span>`}</td>
@@ -3792,15 +3785,6 @@ class AdminDashboard {
         const value = e.currentTarget.dataset.value === '1';
         await this.flushPendingSoilProfileEdits();
         this.toggleSoilProfileLocationsOnly(projectId, value);
-      });
-    });
-
-    tbody.querySelectorAll('.sp-hide-dl-toggle').forEach(el => {
-      el.addEventListener('click', async (e) => {
-        const projectId = e.currentTarget.dataset.projectId;
-        const value = e.currentTarget.dataset.value === '1';
-        await this.flushPendingSoilProfileEdits();
-        this.toggleSoilProfileHideDownload(projectId, value);
       });
     });
 
@@ -3993,16 +3977,6 @@ class AdminDashboard {
   async toggleSoilProfileLocationsOnly(projectId, locationsOnly) {
     try {
       await api.setSoilProfileLocationsOnly(projectId, locationsOnly);
-      await this.loadSoilProfileLayers();
-      this.renderSoilProfileLayers();
-    } catch (error) {
-      alert(t('a.err.updateFailed') + error.message);
-    }
-  }
-
-  async toggleSoilProfileHideDownload(projectId, hideDownload) {
-    try {
-      await api.setSoilProfileHideDownload(projectId, hideDownload);
       await this.loadSoilProfileLayers();
       this.renderSoilProfileLayers();
     } catch (error) {
