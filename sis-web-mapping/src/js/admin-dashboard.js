@@ -522,15 +522,15 @@ class AdminDashboard {
                           <div>
                             <span style="display:flex;align-items:center;gap:4px;"><select id="etl-license" style="width:100%;">
                               <option value="">${t('a.select')}</option>
-                              <option value="CC BY">CC BY</option>
-                              <option value="CC BY-SA">CC BY-SA</option>
-                              <option value="CC BY-NC">CC BY-NC</option>
-                              <option value="CC BY-NC-SA">CC BY-NC-SA</option>
-                              <option value="CC BY-ND">CC BY-ND</option>
-                              <option value="CC BY-NC-ND">CC BY-NC-ND</option>
-                              <option value="CC0">CC0</option>
-                              <option value="Public Domain Mark">Public Domain Mark</option>
-                            </select><a href="https://creativecommons.org/chooser/" target="_blank" rel="noopener" title="${t('a.licenceHelp')}" style="font-size:var(--fs-sm);text-decoration:none;vertical-align:middle;">\u2197</a></span>
+                              <option value="CC BY">CC BY 4.0 - Attribution 4.0 International</option>
+                              <option value="CC BY-SA">CC BY-SA 4.0 - Attribution-ShareAlike 4.0 International</option>
+                              <option value="CC BY-NC">CC BY-NC 4.0 - Attribution-NonCommercial 4.0 International</option>
+                              <option value="CC BY-NC-SA">CC BY-NC-SA 4.0 - Attribution-NonCommercial-ShareAlike 4.0 International</option>
+                              <option value="CC BY-ND">CC BY-ND 4.0 - Attribution-NoDerivatives 4.0 International</option>
+                              <option value="CC BY-NC-ND">CC BY-NC-ND 4.0 - Attribution-NonCommercial-NoDerivatives 4.0 International</option>
+                              <option value="CC0">CC0 1.0 - Public Domain Dedication</option>
+                              <option value="Public Domain Mark">Public Domain Mark 1.0</option>
+                            </select><a href="https://creativecommons.org" target="_blank" rel="noopener" title="${t('a.licenceHelp')}" style="font-size:var(--fs-sm);text-decoration:none;vertical-align:middle;">\u2197</a></span>
                           </div>
                           <label for="etl-epsg">${t('a.etl.epsg')}</label>
                           <div><input type="text" id="etl-epsg" value="4326" style="width:80px;padding:2px 6px;font-size:var(--fs-sm);"></div>
@@ -695,15 +695,15 @@ class AdminDashboard {
                   <label>${t('a.licence')}</label>
                   <span style="white-space:nowrap;"><select id="raster-license" style="width:220px;">
                     <option value="">${t('a.select')}</option>
-                    <option value="CC BY">CC BY</option>
-                    <option value="CC BY-SA">CC BY-SA</option>
-                    <option value="CC BY-NC">CC BY-NC</option>
-                    <option value="CC BY-NC-SA">CC BY-NC-SA</option>
-                    <option value="CC BY-ND">CC BY-ND</option>
-                    <option value="CC BY-NC-ND">CC BY-NC-ND</option>
-                    <option value="CC0">CC0</option>
-                    <option value="Public Domain Mark">Public Domain Mark</option>
-                  </select><a href="https://creativecommons.org/chooser/" target="_blank" rel="noopener" title="${t('a.licenceHelp')}" style="margin-left:4px;font-size:var(--fs-sm);text-decoration:none;vertical-align:middle;">\u2197</a></span>
+                    <option value="CC BY">CC BY 4.0 - Attribution 4.0 International</option>
+                    <option value="CC BY-SA">CC BY-SA 4.0 - Attribution-ShareAlike 4.0 International</option>
+                    <option value="CC BY-NC">CC BY-NC 4.0 - Attribution-NonCommercial 4.0 International</option>
+                    <option value="CC BY-NC-SA">CC BY-NC-SA 4.0 - Attribution-NonCommercial-ShareAlike 4.0 International</option>
+                    <option value="CC BY-ND">CC BY-ND 4.0 - Attribution-NoDerivatives 4.0 International</option>
+                    <option value="CC BY-NC-ND">CC BY-NC-ND 4.0 - Attribution-NonCommercial-NoDerivatives 4.0 International</option>
+                    <option value="CC0">CC0 1.0 - Public Domain Dedication</option>
+                    <option value="Public Domain Mark">Public Domain Mark 1.0</option>
+                  </select><a href="https://creativecommons.org" target="_blank" rel="noopener" title="${t('a.licenceHelp')}" style="margin-left:4px;font-size:var(--fs-sm);text-decoration:none;vertical-align:middle;">\u2197</a></span>
 
                   <label>${t('a.raster.publish')}</label>
                   <div><input type="checkbox" id="raster-publish" checked></div>
