@@ -289,6 +289,7 @@
   "a.st.inspecting2": "A inspecionar…",
   "a.st.inspected": "Inspecionado.",
   "a.st.registering": "A registar…",
+  "a.st.registeringCat": "A registar — a derivar a legenda de classes a partir dos valores do raster; rasters grandes demoram algum tempo…",
   "a.st.queuing": "A pôr em fila...",
   "a.st.queued": "Em fila; a consultar…",
   "a.st.checkingGithub": "A consultar o GitHub…",

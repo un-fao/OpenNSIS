@@ -289,6 +289,7 @@
   "a.st.inspecting2": "Inspection…",
   "a.st.inspected": "Inspection terminée.",
   "a.st.registering": "Enregistrement…",
+  "a.st.registeringCat": "Enregistrement — dérivation de la légende des classes à partir des valeurs du raster ; les grands rasters prennent du temps…",
   "a.st.queuing": "Mise en file d'attente...",
   "a.st.queued": "En file d'attente ; interrogation…",
   "a.st.checkingGithub": "Consultation de GitHub…",

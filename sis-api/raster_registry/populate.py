@@ -267,3 +267,10 @@ def populate_spatial_metadata(
                         (mapset_id, value, code, label, color, opacity, publish)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """, (meta.mapset_id, c.value, c.code, c.label, c.color, c.opacity, c.publish))
+            # The map trigger fired at step 4, before these rows existed, so
+            # layer.map still styles a ramp. Touch a map-trigger column that
+            # the class trigger does NOT watch (extent), so map() regenerates
+            # with the class styles without class() clobbering the rows just
+            # written.
+            cur.execute("UPDATE soil_data.layer SET extent = extent WHERE mapset_id = %s",
+                        (meta.mapset_id,))

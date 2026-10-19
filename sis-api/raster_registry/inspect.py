@@ -107,6 +107,36 @@ def to_cog(src_path: str, dst_path: Optional[str] = None) -> str:
     return out
 
 
+def distinct_int_values(path: str, cap: int = 60) -> Optional[List[int]]:
+    """Distinct band-1 values of a class-like raster, NoData excluded.
+
+    Returns the sorted integer values, or None when the raster is not
+    class-like: any non-integral value, or more than `cap` distinct values
+    (the scan stops at the first value past the cap, so a continuous raster
+    mistakenly uploaded under a categorical property exits early instead of
+    reading the whole file).
+    """
+    with rasterio.open(path) as src:
+        nd = src.nodatavals[0] if src.nodatavals else None
+        nd_is_nan = isinstance(nd, float) and math.isnan(nd)
+        seen: set = set()
+        for _, window in src.block_windows(1):
+            arr = src.read(1, window=window)
+            if np.issubdtype(arr.dtype, np.floating):
+                arr = arr[~np.isnan(arr)]
+            if nd is not None and not nd_is_nan:
+                arr = arr[arr != nd]
+            if arr.size == 0:
+                continue
+            vals = np.unique(arr)
+            if np.issubdtype(vals.dtype, np.floating) and not np.all(np.mod(vals, 1) == 0):
+                return None
+            seen.update(int(v) for v in vals)
+            if len(seen) > cap:
+                return None
+        return sorted(seen)
+
+
 def _clean_float(v) -> Optional[float]:
     """Return None for NaN / infinity / None — keeps the JSON encoder happy."""
     if v is None:

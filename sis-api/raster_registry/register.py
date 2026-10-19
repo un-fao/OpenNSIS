@@ -17,7 +17,7 @@ import os
 from typing import Optional, List
 from pydantic import BaseModel
 
-from .inspect import inspect_geotiff, RasterMetadata
+from .inspect import inspect_geotiff, distinct_int_values, RasterMetadata
 from .populate import populate_spatial_metadata, ClassDef
 from .xml_render import render_xml
 from .pycsw_load import write_xml_and_load
@@ -92,6 +92,18 @@ def _resolve_download_url(cur, layer_id: str) -> str:
     return f"{base}{layer_id}.tif"
 
 
+def _class_palette(n: int) -> List[str]:
+    """n visually distinct hex colours — golden-angle hue spacing, so
+    neighbouring class codes don't get neighbouring hues."""
+    import colorsys
+    out = []
+    for i in range(n):
+        h = (i * 0.618033988749895) % 1.0
+        r, g, b = colorsys.hsv_to_rgb(h, 0.60, 0.85)
+        out.append("#%02x%02x%02x" % (int(r * 255), int(g * 255), int(b * 255)))
+    return out
+
+
 def register_raster(
     conn,
     tif_path: str,
@@ -124,6 +136,36 @@ def register_raster(
 
     # 1. Inspect
     meta = inspect_geotiff(tif_path)
+
+    # 1b. Default legend for categorical properties. Without soil_data.class
+    # rows the map/SLD generators fall back to a continuous colour ramp,
+    # which is meaningless for class codes — so seed one class per value
+    # actually present in the raster (never min..max fill: sparse codings
+    # like 11, 12, 111, 112 would invent classes that don't exist). Skipped
+    # when the caller ships classes (DST recipes) or the mapset already has
+    # a legend (re-upload after the admin edited it).
+    if classes is None:
+        with conn.cursor() as cur:
+            cur.execute("""SELECT property_type FROM soil_data.mapped_property
+                           WHERE mapped_property_id = %s""", (meta.property_id,))
+            row = cur.fetchone()
+            if row and row[0] == "categorical":
+                cur.execute("SELECT count(*) FROM soil_data.class WHERE mapset_id = %s",
+                            (meta.mapset_id,))
+                if cur.fetchone()[0] == 0:
+                    vals = distinct_int_values(tif_path)
+                    if vals:
+                        palette = _class_palette(len(vals))
+                        classes = [ClassDef(value=float(v), code=str(v), label=str(v),
+                                            color=palette[i])
+                                   for i, v in enumerate(vals)]
+                        log.info("seeded %d default classes for categorical %s",
+                                 len(vals), meta.mapset_id)
+                    else:
+                        warnings.append(
+                            "categorical property, but no default legend could be "
+                            "derived (non-integer values or more than 60 distinct "
+                            "classes) — define the classes in the legend editor")
 
     # 2. Populate soil_data.* (also fires .map / .sld triggers)
     populate_spatial_metadata(

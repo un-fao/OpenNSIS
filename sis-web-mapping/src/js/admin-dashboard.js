@@ -2067,6 +2067,16 @@ class AdminDashboard {
     document.getElementById('raster-filename-preview').textContent = `${layerId}.tif`;
 
     status.textContent = t('a.st.registering');
+    // Categorical property: the server derives the class legend from the
+    // raster's actual values, which reads every pixel — tell the admin why
+    // a large upload sits on this step.
+    {
+      const _propSel = document.getElementById('raster-property-num');
+      const _prop = (this._rasterPropertyNums || []).find(p => p.mapped_property_id === _propSel.value);
+      if (_prop && _prop.property_type === 'categorical') {
+        status.textContent = t('a.st.registeringCat');
+      }
+    }
     try {
       const projSel = document.getElementById('raster-project');
       // Look up labels for the title / abstract templates.
