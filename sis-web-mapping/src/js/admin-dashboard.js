@@ -709,7 +709,7 @@ class AdminDashboard {
                   <div><input type="checkbox" id="raster-publish" checked></div>
 
                   <label>${t('a.raster.filename')}</label>
-                  <code id="raster-filename-preview" style="font-size:var(--fs-sm);color:#444;background:#f7f7f7;padding:4px 8px;border-radius:4px;">—</code>
+                  <code id="raster-filename-preview" style="font-size:var(--fs-sm);color:var(--color-text);background:var(--color-surface-hover);padding:4px 8px;border-radius:4px;">—</code>
                 </div>
 
                 <div style="margin-top:var(--sp-4);display:flex;align-items:center;gap:var(--sp-3);">
@@ -720,7 +720,7 @@ class AdminDashboard {
 
               </section>
 
-              <pre id="raster-inspect-output" style="flex:1 1 380px;min-width:340px;max-height:80vh;overflow:auto;background:#f7f7f7;padding:8px;font-size:11px;display:none;margin:0;"></pre>
+              <pre id="raster-inspect-output" style="flex:1 1 380px;min-width:340px;max-height:80vh;overflow:auto;background:var(--color-surface-alt);color:var(--color-text);border:1px solid var(--color-border);border-radius:var(--radius-sm,4px);padding:8px;font-size:11px;display:none;margin:0;"></pre>
               </div>
 
               <!-- Rasters list (moved here from the old Layers tab) -->
@@ -2030,7 +2030,7 @@ class AdminDashboard {
     const e = this.escapeHtml.bind(this);
     const lines = JSON.stringify(meta, null, 2).split('\n');
     const flag = (line) =>
-      `<span style="color:#c0392b;font-weight:bold;">${e(line)}</span>`;
+      `<span style="color:var(--color-danger);font-weight:bold;">${e(line)}</span>`;
 
     out.style.display = 'block';
     out.innerHTML = lines.map(line => {
