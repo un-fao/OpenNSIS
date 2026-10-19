@@ -2220,7 +2220,10 @@ function showLegend(layerConfig) {
     // Fallback: the static MapServer legend image.
     // get_legend_url is emitted as http://localhost/mapserver/… — relativize it
     // so the legend image loads from the SIS host, not the visitor's machine.
-    legendContent.innerHTML = `<img src="${relMapserverUrl(layerConfig.get_legend_url)}" alt="${t('legend.alt')}">`;
+    // The PNG has a white background with uneven margins (label gutter on the
+    // right), which reads as a stray white line on the dark theme — frame it
+    // as a deliberate white card instead.
+    legendContent.innerHTML = `<img src="${relMapserverUrl(layerConfig.get_legend_url)}" alt="${t('legend.alt')}" style="background:#fff;padding:3px 4px;border-radius:4px;display:block;">`;
   } else {
     legendContainer.style.display = 'none';
     return;

@@ -602,8 +602,8 @@ class AdminDashboard {
             <div id="add-raster-tab" class="tab-pane">
 
               <div style="display:flex;gap:var(--sp-5);align-items:flex-start;flex-wrap:wrap;">
-              <section class="layers-section" style="flex:0 0 820px;max-width:820px;">
-                <h3 class="layers-section-title">${t('a.raster.upload')}</h3>
+              <details class="layers-section" style="flex:0 0 820px;max-width:820px;">
+                <summary class="layers-section-title" style="cursor:pointer;">${t('a.raster.upload')}</summary>
 
                 <div style="display:grid;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:center;">
                   <label>${t('a.raster.file')}</label>
@@ -718,7 +718,7 @@ class AdminDashboard {
                   <span id="raster-status" style="font-size:var(--fs-sm);"></span>
                 </div>
 
-              </section>
+              </details>
 
               <pre id="raster-inspect-output" style="flex:1 1 380px;min-width:340px;max-height:80vh;overflow:auto;background:var(--color-surface-alt);color:var(--color-text);border:1px solid var(--color-border);border-radius:var(--radius-sm,4px);padding:8px;font-size:11px;display:none;margin:0;"></pre>
               </div>
