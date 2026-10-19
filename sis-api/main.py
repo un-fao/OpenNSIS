@@ -4388,14 +4388,17 @@ async def validate_dataset(
                 for code, layers in by_profile.items():
                     layers.sort(key=lambda t: (t[1], t[2]))
                     for i in range(len(layers) - 1):
-                        _, _, prev_lower = layers[i]
+                        prev_rid, _, prev_lower = layers[i]
                         cur_rid, cur_upper, _ = layers[i + 1]
                         if cur_upper != prev_lower:
+                            # The rule can't tell which of the two layers holds the
+                            # wrong value, so both rows are flagged.
+                            gap_rows.add(prev_rid)
                             gap_rows.add(cur_rid)
                             if len(gap_msgs) < MAX_DISPLAY:
                                 gap_msgs.append(
-                                    f"row {cur_rid}: profile_code '{code}' upper "
-                                    f"{cur_upper} ≠ previous layer's lower {prev_lower}"
+                                    f"rows {prev_rid}+{cur_rid}: profile_code '{code}' lower "
+                                    f"{prev_lower} ≠ next layer's upper {cur_upper}"
                                 )
                             else:
                                 truncated = True

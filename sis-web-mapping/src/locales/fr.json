@@ -551,6 +551,9 @@
   "a.etl.csvFile": "Fichier CSV",
   "a.etl.chooseFile": "Choisir un fichier…",
   "a.etl.noFile": "Aucun fichier sélectionné",
+  "a.etl.errorsOnly": "Uniquement les profils avec erreurs",
+  "a.etl.errorsOnlyTip": "Affiche toutes les lignes de chaque profil comportant une erreur de validation. L'erreur réelle peut se trouver dans une couche voisine ; le profil complet est donc affiché pour expertise.",
+  "a.etl.errorsShown": "{n} sur {N} lignes — profils avec erreurs",
   "a.lims.importing": "Importation depuis le laboratoire…",
   "a.lims.checking": "Recherche de nouvelles données…",
   "a.licenceHelp": "Quelle licence ?"

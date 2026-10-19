@@ -551,6 +551,9 @@
   "a.etl.csvFile": "CSV 文件",
   "a.etl.chooseFile": "选择文件…",
   "a.etl.noFile": "未选择文件",
+  "a.etl.errorsOnly": "仅显示有错误的剖面",
+  "a.etl.errorsOnlyTip": "显示每个存在校验错误的剖面的全部行。实际错误可能在相邻层中，因此完整显示剖面以供专家判断。",
+  "a.etl.errorsShown": "共 {N} 行中的 {n} 行 — 有错误的剖面",
   "a.lims.importing": "正在从实验室导入…",
   "a.lims.checking": "正在检查新数据…",
   "a.licenceHelp": "选择哪种许可？"

@@ -497,6 +497,10 @@ class AdminDashboard {
                         <button type="button" class="btn btn-sm" id="etl-preview-prev">${t('a.etl.previous')}</button>
                         <span id="etl-preview-page-info"></span>
                         <button type="button" class="btn btn-sm" id="etl-preview-next">${t('a.etl.next')}</button>
+                        <label id="etl-preview-errors-wrap" style="display:none;align-items:center;gap:6px;cursor:pointer;margin-left:auto;" title="${t('a.etl.errorsOnlyTip')}">
+                          <input type="checkbox" id="etl-preview-errors-only" style="accent-color:var(--color-danger);">
+                          ${t('a.etl.errorsOnly')}
+                        </label>
                       </div>
                     </details>
 
@@ -1007,9 +1011,14 @@ class AdminDashboard {
       if (this.etlPreviewPage > 0) { this.etlPreviewPage--; this.renderEtlPreviewPage(); }
     });
     document.getElementById('etl-preview-next').addEventListener('click', () => {
-      const total = (this.etlPreviewRows || []).length;
-      const max = Math.max(0, Math.ceil(total / (this.etlPreviewPageSize || 100)) - 1);
-      if (this.etlPreviewPage < max) { this.etlPreviewPage++; this.renderEtlPreviewPage(); }
+      this.etlPreviewPage++; this.renderEtlPreviewPage();
+    });
+
+    // Errors-only view — only ever activated by the user, never automatically.
+    document.getElementById('etl-preview-errors-only').addEventListener('change', (e) => {
+      this.etlPreviewErrorsOnly = e.target.checked;
+      this.etlPreviewPage = 0;
+      this.renderEtlPreviewPage();
     });
 
     // Save view is now triggered automatically on map moveend
@@ -5429,6 +5438,7 @@ class AdminDashboard {
     this.etlPreviewPage = 0;
     this.etlPreviewPageSize = 100;
     this.etlErrorCells = this.etlErrorCells || {};
+    this.etlPreviewErrorsOnly = false;
     this.etlSort = [];
     this.renderEtlPreviewPage();
   }
@@ -5470,7 +5480,14 @@ class AdminDashboard {
     const columns = this.etlPreviewColumns || [];
     const rows = this.etlPreviewRows || [];
     const pageSize = this.etlPreviewPageSize || 100;
-    const total = rows.length;
+
+    const errCells = this.etlErrorCells || {};
+    const hasErrors = Object.keys(errCells).length > 0;
+    if (!hasErrors) this.etlPreviewErrorsOnly = false;
+    const errWrap = document.getElementById('etl-preview-errors-wrap');
+    const errBox = document.getElementById('etl-preview-errors-only');
+    if (errWrap) errWrap.style.display = hasErrors ? 'inline-flex' : 'none';
+    if (errBox) errBox.checked = !!this.etlPreviewErrorsOnly;
 
     // Build index array, sort if requested — preserves original indices for error highlighting
     let order = rows.map((_, i) => i);
@@ -5503,13 +5520,47 @@ class AdminDashboard {
       });
     }
 
+    // Errors-only view: an error anywhere in a profile keeps ALL of that
+    // profile's rows visible — the flagged cell is not always the one holding
+    // the mistake (e.g. a depth-continuity break), so the expert judges the
+    // whole profile.
+    if (this.etlPreviewErrorsOnly && hasErrors) {
+      const errRids = new Set();
+      Object.values(errCells).forEach(set => set.forEach(rid => errRids.add(rid)));
+      let profCol = null;
+      document.querySelectorAll('#etl-mapping-tbody tr').forEach(tr => {
+        const sel = tr.querySelector('.etl-dest');
+        if (sel && sel.value === 'plot|plot_code') profCol = tr.dataset.col;
+      });
+      if (profCol) {
+        const errProfiles = new Set();
+        rows.forEach(r => {
+          if (errRids.has(r._row_id)) {
+            const c = r[profCol];
+            if (c !== null && c !== undefined && c !== '') errProfiles.add(String(c));
+          }
+        });
+        order = order.filter(i => {
+          const r = rows[i];
+          const c = r[profCol];
+          return errRids.has(r._row_id)
+            || (c !== null && c !== undefined && c !== '' && errProfiles.has(String(c)));
+        });
+      } else {
+        order = order.filter(i => errRids.has(rows[i]._row_id));
+      }
+    }
+    const total = order.length;
+
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     if (this.etlPreviewPage >= totalPages) this.etlPreviewPage = totalPages - 1;
     if (this.etlPreviewPage < 0) this.etlPreviewPage = 0;
     const start = this.etlPreviewPage * pageSize;
     const end = Math.min(start + pageSize, total);
 
-    info.textContent = t('a.etl.rowsLoaded', {n: total});
+    info.textContent = (this.etlPreviewErrorsOnly && hasErrors)
+      ? t('a.etl.errorsShown', {n: total, N: rows.length})
+      : t('a.etl.rowsLoaded', {n: total});
     pageInfo.textContent = t('a.etl.pageInfo', {p: this.etlPreviewPage + 1, tp: totalPages, a: start + 1, b: end});
     prevBtn.disabled = this.etlPreviewPage === 0;
     nextBtn.disabled = this.etlPreviewPage >= totalPages - 1;
@@ -5529,7 +5580,6 @@ class AdminDashboard {
       th.addEventListener('click', (e) => this.etlToggleSort(th.dataset.col, e.shiftKey));
     });
 
-    const errCells = this.etlErrorCells || {};
     const getErrCols = rid => {
       const cols = [];
       columns.forEach(c => {
