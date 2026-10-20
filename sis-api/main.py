@@ -5981,15 +5981,7 @@ async def glosis_hub_connect(
             }
             if logo.startswith("https://"):
                 body["logo_url"] = logo
-            # Map point on the hub = this SIS's initial map-view centre.
-            # Sent only as a valid pair; otherwise the hub places the node itself.
-            try:
-                lon = float(_setting_value(cur, "LONGITUDE"))
-                lat = float(_setting_value(cur, "LATITUDE"))
-                if -180 <= lon <= 180 and -90 <= lat <= 90:
-                    body["lon"], body["lat"] = lon, lat
-            except (TypeError, ValueError):
-                pass
+            # No lon/lat: the hub places the node itself (from country_code).
     try:
         resp = http_requests.post(f"{hub_url}/api/register", json=body, timeout=30)
     except http_requests.RequestException:
