@@ -632,7 +632,7 @@ function createLayerItem(layer, shortLabel) {
     <input type="radio" name="data-layer" id="layer-${layer.layer_id}" value="${layer.layer_id}">
     <label for="layer-${layer.layer_id}" title="${layerName}">${shortLabel || layerName}</label>
     <div class="layer-icons">
-      ${layer.metadata_url ? `<a href="#" class="metadata-link" data-url="${layer.metadata_url}" title="${t('icons.metadata')}"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23666'%3E%3Cpath d='M13 9h-2V7h2m0 10h-2v-6h2m-1-9A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2z'/%3E%3C/svg%3E" alt="${t('icons.info')}"></a>` : ''}
+      ${layer.metadata_url ? `<a href="#" class="metadata-link" data-url="${layer.metadata_url}" title="${t('icons.metadata')}"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 3h7l5 5v13H7z'/%3E%3Cpath d='M14 3v5h5M10 13h6M10 17h6'/%3E%3C/svg%3E" alt="${t('icons.info')}"></a>` : ''}
       ${layer.download_url ? `<a href="${layer.download_url}" download title="${t('icons.downloadGeotiff')}"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23666'%3E%3Cpath d='M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7 7-7z'/%3E%3C/svg%3E" alt="${t('icons.download')}"></a>` : ''}
     </div>
   `;
@@ -1494,7 +1494,7 @@ function addProfileLayerControl() {
     if (mapsetId) {
       const infoIcons = document.createElement('div');
       infoIcons.className = 'layer-icons';
-      infoIcons.innerHTML = `<a href="#" class="metadata-link" title="${t('icons.metadata')}"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23666'%3E%3Cpath d='M13 9h-2V7h2m0 10h-2v-6h2m-1-9A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2z'/%3E%3C/svg%3E" alt="${t('icons.info')}"></a>`;
+      infoIcons.innerHTML = `<a href="#" class="metadata-link" title="${t('icons.metadata')}"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 3h7l5 5v13H7z'/%3E%3Cpath d='M14 3v5h5M10 13h6M10 17h6'/%3E%3C/svg%3E" alt="${t('icons.info')}"></a>`;
       infoIcons.querySelector('a').addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
