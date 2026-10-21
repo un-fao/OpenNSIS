@@ -102,12 +102,13 @@ services:
     restart: unless-stopped
 
   # sis-metadata (pyCSW)
-  # 3.0.0-beta1 is a pre-release. Pinned by digest below for reproducibility
-  # (so future `docker pull` doesn't silently swap implementations on us).
-  # Re-pin to a stable 3.0.x tag once geopython publishes one.
+  # Built from sis-metadata/Dockerfile: the pinned 3.0.0-beta1 digest plus a
+  # build-time patch for an upstream serialisation bug that drops the licence
+  # from OGC API Records list responses (see sis-metadata/patch_license.py).
+  # Re-pin to a stable 3.0.x tag and drop the patch once geopython fixes it.
   sis-metadata:
     container_name: sis-metadata
-    image: geopython/pycsw:3.0.0-beta1@sha256:e17ecf1fe5271ed2671ca27a49561d07b597927889f55242dfb65c24003f7bca
+    build: ./sis-metadata
     environment:
       PYCSW_SERVER_URL: http://localhost:8003
       POSTGRES_HOST: ${POSTGRES_HOST}
