@@ -64,6 +64,8 @@ services:
       - ./sis-web-services/volume:/srv/rasters
       # XML records loaded by pyCSW — registrar writes here when registering a raster.
       - ./sis-metadata/volume:/srv/pycsw-records
+      # Landing-page media uploads (issue #13); nginx serves them at /media/.
+      - ./sis-site/volume:/srv/site-media
     ports:
       - "8002:8000"
     depends_on:
@@ -85,6 +87,7 @@ services:
     volumes:
       - ./sis-nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./sis-web-services/volume:/srv/rasters:ro
+      - ./sis-site/volume:/srv/site-media:ro
       # - ./sis-nginx/ssl:/etc/nginx/ssl:ro
     # With the optional `tls` profile (see the caddy service), Caddy takes the
     # host's 80/443 and nginx retreats to loopback: set NGINX_HTTP_BIND and

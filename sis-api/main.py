@@ -3,7 +3,7 @@ SIS Admin API — JWT authentication (for humans)
 Manages users, API clients, layers, and settings.
 """
 
-from fastapi import FastAPI, Depends, HTTPException, status, Request, UploadFile, File, Form, BackgroundTasks, Body
+from fastapi import FastAPI, Depends, HTTPException, status, Request, Response, UploadFile, File, Form, BackgroundTasks, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional
@@ -13,6 +13,7 @@ import logging
 import os
 import re
 import csv
+import hashlib
 import io
 import json
 import zipfile
@@ -7468,3 +7469,186 @@ async def health_check():
     except Exception:
         # Don't leak DB error strings (may include creds/hostnames) to anonymous callers.
         return {"status": "unhealthy"}
+
+
+# ==================== Public landing page — site CMS (issue #13) ====================
+# One admin-edited draft, immutable published snapshots with one current.
+# Markdown is rendered and sanitised HERE, at publish time — the public page
+# never parses Markdown and never receives unsanitised HTML.
+
+SITE_MEDIA_DIR = os.getenv("SITE_MEDIA_DIR", "/srv/site-media")
+SITE_LANGS = ("en", "es", "fr", "pt", "ru", "zh")
+SITE_CONTENT_MAX = 200_000          # serialised draft size cap (bytes)
+SITE_MEDIA_MAX = 8 * 1024 * 1024    # upload cap
+SITE_MEDIA_MAX_DIM = 2600           # px, longest side after re-encode
+
+
+def _require_admin(current_user: dict):
+    if not current_user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin only")
+
+
+def _site_render(content: dict) -> dict:
+    """Draft → publishable snapshot: render about/footer Markdown per
+    language and sanitise the HTML. The Markdown source stays in the
+    snapshot too, so a rollback can be re-edited."""
+    from markdown_it import MarkdownIt
+    import nh3
+    md = MarkdownIt("commonmark").enable("table")
+    out = dict(content or {})
+    for field in ("about_md", "footer_md"):
+        src = out.get(field) or {}
+        html = {}
+        if isinstance(src, dict):
+            for lang, text in src.items():
+                if lang in SITE_LANGS and isinstance(text, str) and text.strip():
+                    html[lang] = nh3.clean(md.render(text))
+        out[field.replace("_md", "_html")] = html
+    return out
+
+
+@app.get("/api/site")
+async def get_site(request: Request, api_client: dict = Depends(verify_api_key)):
+    """The published landing-page content (current snapshot) + enabled flag.
+    ETag'd so the landing page is one cheap request."""
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            enabled = _setting_value(cur, "SITE_LANDING_ENABLED", "false") == "true"
+            cur.execute("""SELECT snapshot_id, content, created_at
+                           FROM api.site_snapshot WHERE is_current""")
+            row = cur.fetchone()
+    body = {"enabled": enabled,
+            "snapshot_id": row["snapshot_id"] if row else None,
+            "content": row["content"] if row else None}
+    etag = hashlib.md5(json.dumps(body, sort_keys=True, default=str).encode()).hexdigest()
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304)
+    return Response(content=json.dumps(body, default=str), media_type="application/json",
+                    headers={"ETag": etag})
+
+
+@app.get("/api/site/draft")
+async def get_site_draft(current_user: dict = Depends(get_current_user)):
+    _require_admin(current_user)
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT content, updated_at, updated_by FROM api.site_draft WHERE id = 1")
+            row = cur.fetchone()
+            enabled = _setting_value(cur, "SITE_LANDING_ENABLED", "false") == "true"
+    return {"content": (row or {}).get("content") or {},
+            "updated_at": row["updated_at"] if row else None,
+            "updated_by": row["updated_by"] if row else None,
+            "enabled": enabled}
+
+
+@app.put("/api/site/draft")
+async def put_site_draft(payload: dict, current_user: dict = Depends(get_current_user)):
+    _require_admin(current_user)
+    content = (payload or {}).get("content")
+    if not isinstance(content, dict):
+        raise HTTPException(status_code=400, detail="content must be an object")
+    if len(json.dumps(content)) > SITE_CONTENT_MAX:
+        raise HTTPException(status_code=413, detail="Site content too large")
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO api.site_draft (id, content, updated_at, updated_by)
+                VALUES (1, %s, now(), %s)
+                ON CONFLICT (id) DO UPDATE SET
+                    content = EXCLUDED.content,
+                    updated_at = now(),
+                    updated_by = EXCLUDED.updated_by
+            """, (json.dumps(content), current_user["user_id"]))
+    return {"message": "Draft saved"}
+
+
+@app.post("/api/site/publish")
+async def publish_site(request: Request, current_user: dict = Depends(get_current_user)):
+    _require_admin(current_user)
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT content FROM api.site_draft WHERE id = 1")
+            row = cur.fetchone()
+            if not row or not row["content"]:
+                raise HTTPException(status_code=400, detail="Nothing to publish — the draft is empty")
+            rendered = _site_render(row["content"])
+            cur.execute("UPDATE api.site_snapshot SET is_current = false WHERE is_current")
+            cur.execute("""
+                INSERT INTO api.site_snapshot (content, created_by, is_current)
+                VALUES (%s, %s, true) RETURNING snapshot_id
+            """, (json.dumps(rendered), current_user["user_id"]))
+            sid = cur.fetchone()["snapshot_id"]
+    log_audit(current_user["user_id"], None, "site_published",
+              {"snapshot_id": sid}, get_client_ip(request))
+    return {"message": "Published", "snapshot_id": sid}
+
+
+@app.get("/api/site/snapshots")
+async def list_site_snapshots(current_user: dict = Depends(get_current_user)):
+    _require_admin(current_user)
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""SELECT snapshot_id, created_at, created_by, is_current
+                           FROM api.site_snapshot ORDER BY snapshot_id DESC LIMIT 50""")
+            return cur.fetchall()
+
+
+@app.post("/api/site/rollback")
+async def rollback_site(payload: dict, request: Request,
+                        current_user: dict = Depends(get_current_user)):
+    _require_admin(current_user)
+    sid = (payload or {}).get("snapshot_id")
+    if not isinstance(sid, int):
+        raise HTTPException(status_code=400, detail="snapshot_id required")
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE api.site_snapshot SET is_current = false WHERE is_current")
+            cur.execute("UPDATE api.site_snapshot SET is_current = true WHERE snapshot_id = %s", (sid,))
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Snapshot not found")
+            # The rolled-back content becomes the draft again, so the admin
+            # edits what visitors now see (Markdown source is in the snapshot).
+            cur.execute("""
+                INSERT INTO api.site_draft (id, content, updated_at, updated_by)
+                SELECT 1, content, now(), %s FROM api.site_snapshot WHERE snapshot_id = %s
+                ON CONFLICT (id) DO UPDATE SET
+                    content = EXCLUDED.content, updated_at = now(), updated_by = EXCLUDED.updated_by
+            """, (current_user["user_id"], sid))
+    log_audit(current_user["user_id"], None, "site_rollback",
+              {"snapshot_id": sid}, get_client_ip(request))
+    return {"message": "Rolled back", "snapshot_id": sid}
+
+
+@app.post("/api/site/media")
+async def upload_site_media(file: UploadFile = File(...),
+                            current_user: dict = Depends(get_current_user)):
+    """Landing-page image upload. Always re-encoded with Pillow (PNG when the
+    source has transparency, JPEG otherwise), capped in size and dimensions,
+    named by content hash — nothing user-supplied reaches the filesystem."""
+    _require_admin(current_user)
+    from PIL import Image
+    data = await file.read()
+    if len(data) > SITE_MEDIA_MAX:
+        raise HTTPException(status_code=413, detail="Image too large (max 8 MB)")
+    try:
+        img = Image.open(io.BytesIO(data))
+        img.load()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Not a readable image")
+    has_alpha = img.mode in ("RGBA", "LA", "P") and "A" in img.getbands() or img.mode == "P"
+    img = img.convert("RGBA" if has_alpha else "RGB")
+    if max(img.size) > SITE_MEDIA_MAX_DIM:
+        img.thumbnail((SITE_MEDIA_MAX_DIM, SITE_MEDIA_MAX_DIM))
+    buf = io.BytesIO()
+    if has_alpha:
+        img.save(buf, format="PNG", optimize=True)
+        ext = "png"
+    else:
+        img.save(buf, format="JPEG", quality=85, optimize=True)
+        ext = "jpg"
+    out = buf.getvalue()
+    name = f"{hashlib.sha1(out).hexdigest()[:16]}.{ext}"
+    os.makedirs(SITE_MEDIA_DIR, exist_ok=True)
+    with open(os.path.join(SITE_MEDIA_DIR, name), "wb") as fh:
+        fh.write(out)
+    return {"url": f"/media/{name}"}

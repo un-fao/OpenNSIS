@@ -25,7 +25,7 @@ RUN echo "API_URL=${API_URL}" > .env && \
 # --no-source-maps keeps originals out of the production bundle.
 # --no-cache: parcel's on-disk (lmdb) cache can deadlock the process on exit
 # inside docker build — and a one-shot build has no use for it anyway.
-RUN npx parcel build src/index.html --public-url ./ --no-source-maps --no-cache
+RUN npx parcel build src/index.html src/site.html --public-url ./ --no-source-maps --no-cache
 
 # =============================================================================
 # Runtime stage — unprivileged nginx (uid 101) serves the static dist/

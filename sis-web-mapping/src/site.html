@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soil Information System</title>
+    <script>
+      // Apply the saved theme before first paint to avoid a light flash.
+      try {
+        var _t = localStorage.getItem('sis-theme');
+        if (_t !== 'dark' && _t !== 'light') {
+          _t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.dataset.theme = _t;
+      } catch (e) { document.documentElement.dataset.theme = 'light'; }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+    <link rel="stylesheet" href="./css/site.css">
+    <link rel="icon" href="data:,">
+</head>
+<body>
+    <!-- Filled by site.js from GET /api/site. While the landing is disabled
+         the script replaces the location with /map, so this shell stays
+         intentionally empty (no flash of placeholder content). -->
+    <main id="site" hidden>
+        <header class="site-header">
+            <img id="site-logo" alt="" hidden>
+            <nav>
+                <a id="site-map-link" class="btn-map" href="/map"></a>
+            </nav>
+        </header>
+        <section class="hero">
+            <div class="hero-text">
+                <h1 id="hero-title"></h1>
+                <p id="hero-subtitle"></p>
+                <a class="hero-cta" href="/map" id="hero-cta"></a>
+            </div>
+            <div class="hero-image" id="hero-image" hidden></div>
+        </section>
+        <section class="about" id="about" hidden></section>
+        <footer class="site-footer" id="site-footer" hidden></footer>
+    </main>
+    <script type="module" src="./js/site.js"></script>
+</body>
+</html>

@@ -6,6 +6,7 @@
 import api from './api-client.js';
 import { AVAILABLE as LANGUAGES, currentLang, switchLanguage, t } from './i18n.js';
 import { initThemeButton } from './theme.js';
+import { mountSiteAdmin } from './site-admin.js';
 import Map from 'ol/Map';
 import View from 'ol/View';
 import { Tile as TileLayer } from 'ol/layer';
@@ -89,9 +90,11 @@ class AdminDashboard {
     dashboard.classList.add('active');
     document.body.classList.toggle('is-admin', !!this.isAdmin);
 
-    // Gate the Administration tab by admin status
+    // Gate the Administration and Website tabs by admin status
     const adminTabBtn = document.querySelector('.tab-btn[data-tab="administration"]');
     const adminPane = document.getElementById('administration-tab');
+    const websiteTabBtn = document.querySelector('.tab-btn[data-tab="website"]');
+    if (websiteTabBtn) websiteTabBtn.style.display = this.isAdmin ? '' : 'none';
     if (this.isAdmin) {
       if (adminTabBtn) adminTabBtn.style.display = '';
       if (adminPane) adminPane.style.display = '';
@@ -224,6 +227,7 @@ class AdminDashboard {
             <li><button class="tab-btn" data-tab="layers">${t('a.tab.soilProfiles')}</button></li>
             <li><button class="tab-btn" data-tab="add-raster">${t('a.tab.rasters')}</button></li>
             <li><button class="tab-btn" data-tab="dst">${t('a.tab.dst')}</button></li>
+            <li><button class="tab-btn" data-tab="website">${t('a.tab.website')}</button></li>
             <li><button class="tab-btn" data-tab="dashboard">${t('a.tab.dashboard')}</button></li>
           </ul>
 
@@ -854,6 +858,11 @@ class AdminDashboard {
             </div>
 
             <!-- My Account Tab -->
+            <!-- Website Tab (issue #13) — content mounted lazily by site-admin.js -->
+            <div id="website-tab" class="tab-pane">
+              <div id="site-admin-root"></div>
+            </div>
+
             <div id="account-tab" class="tab-pane">
               <div class="admin-form" style="max-width:500px;">
                 <h3>${t('a.acct.title')}</h3>
@@ -1218,6 +1227,10 @@ class AdminDashboard {
     if (tab === 'dst' && !this.dstInited) {
       this.initDstTab();
       this.dstInited = true;
+    }
+
+    if (tab === 'website') {
+      mountSiteAdmin();
     }
 
     if (tab === 'administration' && this.isAdmin) {

@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "SIS Web Mapping Application",
   "scripts": {
-    "start": "parcel src/index.html --port 1234 --public-url /",
-    "build": "parcel build src/index.html --public-url ./",
+    "start": "parcel src/index.html src/site.html --port 1234 --public-url /",
+    "build": "parcel build src/index.html src/site.html --public-url ./",
     "clean": "rm -rf dist .parcel-cache",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

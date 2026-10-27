@@ -148,6 +148,38 @@ class SISApiClient {
     return this.request('/api/profile');
   }
 
+  // ---- Landing page (site CMS, issue #13) ----
+  async getSite() { return this.request('/api/site'); }
+  async getSiteDraft() { return this.authenticatedRequest('/api/site/draft'); }
+  async saveSiteDraft(content) {
+    return this.authenticatedRequest('/api/site/draft', {
+      method: 'PUT', body: JSON.stringify({ content })
+    });
+  }
+  async publishSite() { return this.authenticatedRequest('/api/site/publish', { method: 'POST' }); }
+  async listSiteSnapshots() { return this.authenticatedRequest('/api/site/snapshots'); }
+  async rollbackSite(snapshotId) {
+    return this.authenticatedRequest('/api/site/rollback', {
+      method: 'POST', body: JSON.stringify({ snapshot_id: snapshotId })
+    });
+  }
+  async uploadSiteMedia(file) {
+    const fd = new FormData();
+    fd.append('file', file);
+    // Raw fetch: authenticatedRequest would force a JSON Content-Type,
+    // which breaks multipart bodies (same pattern as registerRaster).
+    const r = await fetch(`${this.baseURL}/api/site/media`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${this.jwtToken}` },
+      body: fd
+    });
+    if (!r.ok) {
+      const error = await r.json().catch(() => ({ detail: r.statusText }));
+      throw new Error(this._detailToMessage(error.detail) || `API Error: ${r.status}`);
+    }
+    return r.json();
+  }
+
   async getProfileBlurFlags() {
     return this.request('/api/profile/blur');
   }

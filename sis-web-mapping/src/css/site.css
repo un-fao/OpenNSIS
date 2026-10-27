@@ -1,0 +1,91 @@
+/* Public landing page (issue #13, v1) — Terroir tokens, both themes.
+   Kept self-contained: the landing must not pull the map/admin bundles. */
+
+:root {
+    --color-primary:        #1d5f73;
+    --color-secondary:      #8a6844;
+    --color-bg:             #f6f3ee;
+    --color-surface:        #ffffff;
+    --color-text:           #1f2933;
+    --color-text-muted:     #5b6670;
+    --color-border:         #e3e8ec;
+    --font-display: "Bricolage Grotesque", system-ui, sans-serif;
+    --font-sans: "Source Sans 3", system-ui, sans-serif;
+}
+[data-theme="dark"] {
+    --color-bg:             #15100c;
+    --color-surface:        #201913;
+    --color-text:           #efe8dc;
+    --color-text-muted:     #b5a996;
+    --color-border:         #3a3127;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+    font-family: var(--font-sans);
+    background: var(--color-bg);
+    color: var(--color-text);
+    min-height: 100vh;
+}
+
+#site { max-width: 1060px; margin: 0 auto; padding: 0 20px 48px; }
+
+.site-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 0; gap: 16px;
+}
+#site-logo { height: 44px; max-width: 220px; object-fit: contain; }
+.btn-map {
+    display: inline-block; padding: 9px 18px; border-radius: 999px;
+    background: var(--color-primary); color: #fff; text-decoration: none;
+    font-weight: 600; font-size: 15px;
+}
+.btn-map:hover { filter: brightness(1.1); }
+
+.hero {
+    display: flex; gap: 32px; align-items: center;
+    padding: 48px 0 40px; flex-wrap: wrap;
+}
+.hero-text { flex: 1 1 380px; }
+.hero h1 {
+    font-family: var(--font-display); font-size: clamp(30px, 5vw, 52px);
+    line-height: 1.08; margin: 0 0 14px;
+}
+#hero-subtitle {
+    font-size: 19px; color: var(--color-text-muted);
+    margin: 0 0 26px; max-width: 46ch;
+}
+.hero-cta {
+    display: inline-block; padding: 13px 26px; border-radius: 999px;
+    background: var(--color-primary); color: #fff; text-decoration: none;
+    font-weight: 700; font-size: 17px;
+}
+.hero-cta:hover { filter: brightness(1.1); }
+.hero-image {
+    flex: 1 1 320px; min-height: 260px; border-radius: 14px;
+    background-size: cover; background-position: center;
+    border: 1px solid var(--color-border);
+}
+
+.about {
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: 14px; padding: 28px 32px; line-height: 1.65; font-size: 17px;
+}
+.about h1, .about h2, .about h3 { font-family: var(--font-display); }
+.about a { color: var(--color-primary); }
+.about img { max-width: 100%; border-radius: 8px; }
+.about table { border-collapse: collapse; }
+.about th, .about td { border: 1px solid var(--color-border); padding: 6px 10px; }
+
+.site-footer {
+    margin-top: 40px; padding-top: 22px;
+    border-top: 1px solid var(--color-border);
+    color: var(--color-text-muted); font-size: 14.5px; line-height: 1.6;
+}
+.site-footer a { color: var(--color-primary); }
+
+@media (max-width: 640px) {
+    .hero { padding-top: 24px; }
+    .about { padding: 20px 18px; }
+}
