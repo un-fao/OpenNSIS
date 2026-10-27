@@ -3004,6 +3004,21 @@ def _lims_number(v):
         return ""
 
 
+def _lims_qnum(v):
+    """A quality number (lod/loq/uncertainty) as float, tolerating both the
+    flat form (3.5) and the object form ({"value": 3.5, ...}); else None."""
+    if isinstance(v, bool) or v is None:
+        return None
+    if isinstance(v, (int, float)):
+        return float(v)
+    if isinstance(v, dict):
+        return _lims_qnum(v.get("value"))
+    try:
+        return float(str(v))
+    except (ValueError, TypeError):
+        return None
+
+
 @app.post("/api/lims/connections/{connection_id}/fetch")
 async def fetch_from_lims(connection_id: int, payload: Optional[dict] = None,
                           current_user: dict = Depends(get_current_user)):
@@ -3083,7 +3098,24 @@ async def fetch_from_lims(connection_id: int, payload: Optional[dict] = None,
                     "standard": (method.get("standard") or "").strip(),
                     "unit": (o.get("controlledUnit")
                              or (o.get("normalized") or {}).get("unit") or "").strip(),
+                    "lod": None, "loq": None,
+                    "unc": None, "unc_rel": None, "unc_k": None,
                 }
+            # Procedure quality (lod/loq/uncertainty are per method, so the
+            # first observation that declares them speaks for the parameter).
+            q = param_meta[code]
+            if q["lod"] is None:
+                q["lod"] = _lims_qnum(o.get("lod"))
+            if q["loq"] is None:
+                q["loq"] = _lims_qnum(o.get("loq"))
+            if q["unc"] is None:
+                u = o.get("uncertainty")
+                q["unc"] = _lims_qnum(u)
+                if isinstance(u, dict) and q["unc"] is not None:
+                    q["unc_rel"] = (bool(u.get("relative"))
+                                    or str(u.get("type") or "").lower() == "relative"
+                                    or u.get("unit") == "%")
+                    q["unc_k"] = _lims_qnum(u.get("coverageFactor"))
 
     fixed_names = [c[0] for c in LIMS_FIXED_COLUMNS]
     pcol_names, used = [], set(fixed_names)
@@ -3111,7 +3143,15 @@ async def fetch_from_lims(connection_id: int, payload: Optional[dict] = None,
         by_code = {}
         for o in (smp.get("observations") or []):
             code = (o.get("parameterCode") or o.get("parameter") or "").strip()
-            if code and code not in by_code and (o.get("censoring") in (None, "NONE")):
+            if not code:
+                continue
+            if o.get("censoring") not in (None, "NONE"):
+                # Censored result: stage the explicit token, never a
+                # substituted number. (These observations were previously
+                # dropped altogether.) An uncensored replicate still wins.
+                by_code.setdefault(code, "<LOD")
+                continue
+            if code not in by_code or by_code[code] == "<LOD":
                 val = _lims_number((o.get("normalized") or {}).get("value"))
                 if val == "":
                     val = _lims_number((o.get("asMeasured") or {}).get("value"))
@@ -3195,18 +3235,22 @@ async def fetch_from_lims(connection_id: int, payload: Optional[dict] = None,
                 if meta.get("unit"):
                     note_bits.append(f"unit: {meta['unit']}")
                 note = " \u00b7 ".join(note_bits)
+                mq = (meta.get("unc"), meta.get("unc_rel"), meta.get("unc_k"),
+                      meta.get("lod"), meta.get("loq"))
                 prev = inherited.get(h)
                 if prev and prev["destination_table"]:
                     cur.execute("""
                         INSERT INTO api.uploaded_dataset_column
                             (table_name, column_name, ignore_column, note,
                              destination_table, destination_column,
-                             property_num_id, procedure_num_id, unit_of_measure_id)
-                        VALUES (%s, %s, false, %s, %s, %s, %s, %s, %s)
+                             property_num_id, procedure_num_id, unit_of_measure_id,
+                             method_uncertainty, method_uncertainty_is_relative,
+                             method_coverage_factor, method_lod, method_loq)
+                        VALUES (%s, %s, false, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """, (table_name, h, note,
                           prev["destination_table"], prev["destination_column"],
                           prev["property_num_id"], prev["procedure_num_id"],
-                          prev["unit_of_measure_id"]))
+                          prev["unit_of_measure_id"], *mq))
                     inherited_n += 1
                 else:
                     # Laboratory results ARE soil properties — pre-select the
@@ -3214,9 +3258,11 @@ async def fetch_from_lims(connection_id: int, payload: Optional[dict] = None,
                     cur.execute("""
                         INSERT INTO api.uploaded_dataset_column
                             (table_name, column_name, ignore_column, note,
-                             destination_table, destination_column)
-                        VALUES (%s, %s, false, %s, 'result_num', 'value')
-                    """, (table_name, h, note))
+                             destination_table, destination_column,
+                             method_uncertainty, method_uncertainty_is_relative,
+                             method_coverage_factor, method_lod, method_loq)
+                        VALUES (%s, %s, false, %s, 'result_num', 'value', %s, %s, %s, %s, %s)
+                    """, (table_name, h, note, *mq))
 
             # Drain the change feed so the stored cursor marks "now".
             cursor_val, ch_params = lims["sync_cursor"], None
@@ -3455,7 +3501,9 @@ async def ingest_dataset(
             # Get column mappings (non-ignored)
             cur.execute("""
                 SELECT column_name, destination_table, destination_column,
-                       property_num_id, procedure_num_id, unit_of_measure_id
+                       property_num_id, procedure_num_id, unit_of_measure_id,
+                       method_uncertainty, method_uncertainty_is_relative,
+                       method_coverage_factor, method_lod, method_loq
                 FROM api.uploaded_dataset_column
                 WHERE table_name = %s AND (ignore_column = false OR destination_table IS NOT NULL)
             """, (table_name,))
@@ -3479,6 +3527,10 @@ async def ingest_dataset(
                     "property_num_id": m.get("property_num_id"),
                     "procedure_num_id": m.get("procedure_num_id"),
                     "unit_of_measure_id": m.get("unit_of_measure_id"),
+                    "method_quality": (m.get("method_uncertainty"),
+                                       m.get("method_uncertainty_is_relative"),
+                                       m.get("method_coverage_factor"),
+                                       m.get("method_lod"), m.get("method_loq")),
                 }
 
             # Read all rows from staging table (stable order by _row_id)
@@ -3514,6 +3566,7 @@ async def ingest_dataset(
             elements_cache = {}    # (profile_id, upper, lower) → element_id
             specimens_cache = {}   # element_id → specimen_id
             obs_num_cache = {}     # (prop, proc) → (observation_num_id, canonical_unit)
+            qual_done = set()      # (prop, proc) whose procedure quality was written this ingest
             unit_conv_cache = {}   # (source_unit, canonical_unit) → {operation, value} or None
 
             ingested = 0
@@ -3799,8 +3852,46 @@ async def ingest_dataset(
                             else:
                                 conv = None  # no conversion needed
 
+                            # Per-procedure quality from the laboratory
+                            # (staged with the dataset's column mapping):
+                            # latest characterisation wins; absolute values
+                            # go through the same unit conversion as results
+                            # (a relative uncertainty is a % and converts to
+                            # nothing).
+                            if obs_key not in qual_done:
+                                qual_done.add(obs_key)
+                                unc, unc_rel, unc_k, lod, loq = info.get("method_quality") or (None,) * 5
+                                if any(x is not None for x in (unc, lod, loq)):
+                                    def _q(x, convert=True):
+                                        if x is None or not conv or not convert:
+                                            return x
+                                        cv = float(conv["value"])
+                                        return x * cv if conv["operation"] == "*" else x / cv
+                                    cur.execute("""
+                                        UPDATE soil_data.observation_num SET
+                                            uncertainty             = COALESCE(%s, uncertainty),
+                                            uncertainty_is_relative = COALESCE(%s, uncertainty_is_relative),
+                                            coverage_factor         = COALESCE(%s, coverage_factor),
+                                            limit_of_detection      = COALESCE(%s, limit_of_detection),
+                                            limit_of_quantification = COALESCE(%s, limit_of_quantification)
+                                        WHERE observation_num_id = %s
+                                    """, (_q(unc, convert=not unc_rel), unc_rel, unc_k,
+                                          _q(lod), _q(loq), obs_num_id))
+
                             raw_val = row.get(info["csv_col"])
                             if etl_missing(raw_val):
+                                continue
+                            if isinstance(raw_val, str) and raw_val.strip().upper() == "<LOD":
+                                # Censored result: below the procedure's limit
+                                # of detection — no numeric value is stored.
+                                cur.execute("""
+                                    INSERT INTO soil_data.result_num
+                                        (observation_num_id, specimen_id, value, censored)
+                                    VALUES (%s, %s, NULL, '<LOD')
+                                    ON CONFLICT (observation_num_id, specimen_id)
+                                    DO UPDATE SET value = NULL, censored = '<LOD'
+                                """, (obs_num_id, specimen_id))
+                                result_keys.add((obs_num_id, specimen_id))
                                 continue
                             try:
                                 val = float(raw_val)
@@ -3817,7 +3908,7 @@ async def ingest_dataset(
                                 INSERT INTO soil_data.result_num (observation_num_id, specimen_id, value)
                                 VALUES (%s, %s, %s)
                                 ON CONFLICT (observation_num_id, specimen_id)
-                                DO UPDATE SET value = EXCLUDED.value
+                                DO UPDATE SET value = EXCLUDED.value, censored = NULL
                             """, (obs_num_id, specimen_id, val))
                             result_keys.add((obs_num_id, specimen_id))
 
@@ -4267,6 +4358,10 @@ async def validate_dataset(
                         if etl_missing(v):
                             if v not in (None, ""):
                                 token_cells += 1
+                            continue
+                        if isinstance(v, str) and v.strip().upper() == "<LOD":
+                            # Censored result (below detection) — ingested as a
+                            # censored row, not a number; no bounds to check.
                             continue
                         try:
                             n = float(v)
