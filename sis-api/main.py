@@ -3004,6 +3004,11 @@ def _lims_number(v):
         return ""
 
 
+# Censoring markers as the laboratory emits them (soilfer-lims#333):
+# below detection, below quantification, above the calibrated range.
+LIMS_CENSOR_TOKENS = ("<LOD", "<LOQ", ">RANGE")
+
+
 def _lims_qnum(v):
     """A quality number (lod/loq/uncertainty) as float, tolerating both the
     flat form (3.5) and the object form ({"value": 3.5, ...}); else None."""
@@ -3101,20 +3106,33 @@ async def fetch_from_lims(connection_id: int, payload: Optional[dict] = None,
                     "lod": None, "loq": None,
                     "unc": None, "unc_rel": None, "unc_k": None,
                 }
-            # Procedure quality (lod/loq/uncertainty are per method, so the
-            # first observation that declares them speaks for the parameter).
+            # Procedure quality — per method, so the first observation that
+            # declares it speaks for the parameter. From LIMS 1.12.2
+            # (soilfer-lims#333) the values live on the method object
+            # (limitOfDetection / limitOfQuantification / uncertainty, each
+            # {value, unit} in the observation's controlledUnit); the older
+            # per-observation lod/loq/uncertainty keys are read as fallback.
             q = param_meta[code]
+            _method = o.get("method") or {}
             if q["lod"] is None:
-                q["lod"] = _lims_qnum(o.get("lod"))
+                q["lod"] = _lims_qnum(_method.get("limitOfDetection"))
+                if q["lod"] is None:
+                    q["lod"] = _lims_qnum(o.get("lod"))
             if q["loq"] is None:
-                q["loq"] = _lims_qnum(o.get("loq"))
+                q["loq"] = _lims_qnum(_method.get("limitOfQuantification"))
+                if q["loq"] is None:
+                    q["loq"] = _lims_qnum(o.get("loq"))
             if q["unc"] is None:
-                u = o.get("uncertainty")
+                u = _method.get("uncertainty")
+                if u is None:
+                    u = o.get("uncertainty")
                 q["unc"] = _lims_qnum(u)
                 if isinstance(u, dict) and q["unc"] is not None:
                     q["unc_rel"] = (bool(u.get("relative"))
                                     or str(u.get("type") or "").lower() == "relative"
                                     or u.get("unit") == "%")
+                    # coverageFactor may be absent — stored as NULL, never
+                    # assumed to be 2 (the lab's own rule).
                     q["unc_k"] = _lims_qnum(u.get("coverageFactor"))
 
     fixed_names = [c[0] for c in LIMS_FIXED_COLUMNS]
@@ -3146,12 +3164,15 @@ async def fetch_from_lims(connection_id: int, payload: Optional[dict] = None,
             if not code:
                 continue
             if o.get("censoring") not in (None, "NONE"):
-                # Censored result: stage the explicit token, never a
+                # Censored result: stage the explicit marker, never a
                 # substituted number. (These observations were previously
                 # dropped altogether.) An uncensored replicate still wins.
-                by_code.setdefault(code, "<LOD")
+                tok = o.get("censored")
+                if tok not in LIMS_CENSOR_TOKENS:
+                    tok = "<LOD"
+                by_code.setdefault(code, tok)
                 continue
-            if code not in by_code or by_code[code] == "<LOD":
+            if code not in by_code or by_code[code] in LIMS_CENSOR_TOKENS:
                 val = _lims_number((o.get("normalized") or {}).get("value"))
                 if val == "":
                     val = _lims_number((o.get("asMeasured") or {}).get("value"))
@@ -3881,16 +3902,16 @@ async def ingest_dataset(
                             raw_val = row.get(info["csv_col"])
                             if etl_missing(raw_val):
                                 continue
-                            if isinstance(raw_val, str) and raw_val.strip().upper() == "<LOD":
-                                # Censored result: below the procedure's limit
-                                # of detection — no numeric value is stored.
+                            if isinstance(raw_val, str) and raw_val.strip().upper() in ("<LOD", "<LOQ", ">RANGE"):
+                                # Censored result — no numeric value is
+                                # stored, only the marker.
                                 cur.execute("""
                                     INSERT INTO soil_data.result_num
                                         (observation_num_id, specimen_id, value, censored)
-                                    VALUES (%s, %s, NULL, '<LOD')
+                                    VALUES (%s, %s, NULL, %s)
                                     ON CONFLICT (observation_num_id, specimen_id)
-                                    DO UPDATE SET value = NULL, censored = '<LOD'
-                                """, (obs_num_id, specimen_id))
+                                    DO UPDATE SET value = NULL, censored = EXCLUDED.censored
+                                """, (obs_num_id, specimen_id, raw_val.strip().upper()))
                                 result_keys.add((obs_num_id, specimen_id))
                                 continue
                             try:
@@ -4359,9 +4380,9 @@ async def validate_dataset(
                             if v not in (None, ""):
                                 token_cells += 1
                             continue
-                        if isinstance(v, str) and v.strip().upper() == "<LOD":
-                            # Censored result (below detection) — ingested as a
-                            # censored row, not a number; no bounds to check.
+                        if isinstance(v, str) and v.strip().upper() in ("<LOD", "<LOQ", ">RANGE"):
+                            # Censored result — ingested as a censored row,
+                            # not a number; no bounds to check.
                             continue
                         try:
                             n = float(v)
