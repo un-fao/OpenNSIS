@@ -560,6 +560,7 @@
   "a.lims.checking": "A procurar novos dados…",
   "a.licenceHelp": "Qual licença?",
   "site.openMap": "Abrir o mapa",
+  "site.catalogue": "Explorar o catálogo de dados",
   "a.site.title": "Sítio web público",
   "a.site.intro": "Edite a página inicial pública mostrada no endereço raiz. Guardar mantém um rascunho que só o administrador vê; Publicar coloca-a em linha; cada versão publicada pode ser restaurada.",
   "a.site.enabled": "Página inicial activada (desactivada: os visitantes vão directamente para o mapa)",

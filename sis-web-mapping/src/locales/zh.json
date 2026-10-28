@@ -560,6 +560,7 @@
   "a.lims.checking": "正在检查新数据…",
   "a.licenceHelp": "选择哪种许可？",
   "site.openMap": "打开地图",
+  "site.catalogue": "浏览数据目录",
   "a.site.title": "公共网站",
   "a.site.intro": "编辑根地址显示的公共首页。「保存」仅保留您可见的草稿；「发布」使其上线；每个已发布版本都可恢复。",
   "a.site.enabled": "启用首页（停用时访问者直接进入地图）",

@@ -51,6 +51,7 @@ async function init() {
 
   document.getElementById('site-map-link').textContent = t('site.openMap');
   document.getElementById('hero-cta').textContent = t('site.openMap');
+  document.getElementById('hero-catalogue').textContent = t('site.catalogue');
   document.getElementById('hero-title').textContent = pick((c.hero || {}).title);
   document.getElementById('hero-subtitle').textContent = pick((c.hero || {}).subtitle);
   const heroImg = (c.hero || {}).image;

@@ -223,11 +223,11 @@ class AdminDashboard {
           <ul class="dashboard-tabs">
             <li><button class="tab-btn" data-tab="account">${t('a.tab.account')}</button></li>
             <li><button class="tab-btn active" data-tab="administration">${t('a.tab.administration')}</button></li>
+            <li><button class="tab-btn" data-tab="website">${t('a.tab.website')}</button></li>
             <li><button class="tab-btn" data-tab="projects">${t('a.tab.projects')}</button></li>
             <li><button class="tab-btn" data-tab="layers">${t('a.tab.soilProfiles')}</button></li>
             <li><button class="tab-btn" data-tab="add-raster">${t('a.tab.rasters')}</button></li>
             <li><button class="tab-btn" data-tab="dst">${t('a.tab.dst')}</button></li>
-            <li><button class="tab-btn" data-tab="website">${t('a.tab.website')}</button></li>
             <li><button class="tab-btn" data-tab="dashboard">${t('a.tab.dashboard')}</button></li>
           </ul>
 

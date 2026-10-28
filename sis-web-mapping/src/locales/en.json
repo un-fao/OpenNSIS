@@ -560,6 +560,7 @@
   "a.lims.checking": "Checking for new data…",
   "a.licenceHelp": "Which licence?",
   "site.openMap": "Open the map",
+  "site.catalogue": "Browse the data catalogue",
   "a.site.title": "Public website",
   "a.site.intro": "Edit the public landing page shown at the root address. Save keeps a draft only you see; Publish makes it live; every published version can be restored.",
   "a.site.enabled": "Landing page enabled (off: visitors go straight to the map)",

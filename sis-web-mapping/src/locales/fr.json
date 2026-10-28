@@ -560,6 +560,7 @@
   "a.lims.checking": "Recherche de nouvelles données…",
   "a.licenceHelp": "Quelle licence ?",
   "site.openMap": "Ouvrir la carte",
+  "site.catalogue": "Parcourir le catalogue de données",
   "a.site.title": "Site web public",
   "a.site.intro": "Modifiez la page d'accueil publique affichée à l'adresse racine. Enregistrer conserve un brouillon visible par vous seul ; Publier la met en ligne ; chaque version publiée peut être restaurée.",
   "a.site.enabled": "Page d'accueil activée (désactivée : les visiteurs vont directement à la carte)",
