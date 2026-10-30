@@ -6,7 +6,7 @@
 3. [Endpoints](#endpoints)
 4. [Data exposed](#data-exposed)
 5. [Security boundary](#security-boundary)
-6. [Lifecycle (enable / disable / regenerate token)](#lifecycle)
+6. [Lifecycle (connect / disconnect)](#lifecycle)
 7. [Configuration](#configuration)
 8. [Error responses](#error-responses)
 9. [Example session](#example-session)
@@ -30,8 +30,8 @@ other federated client) to consume soil-profile data from this node.
   `INSERT` on `api.audit`. Even with a valid token, callers cannot read or
   write anything else — enforced at the database layer.
 
-The admin-side controls (enable/disable, view & regenerate the federation
-token) live on the main API at `/api/glosis/*`. See
+The admin-side controls (Connect / Disconnect, hub registration and
+status) live on the main API at `/api/glosis/*`. See
 `sis-api/documentation.md` → *GloSIS Federation*.
 
 **Ports**:
@@ -60,7 +60,7 @@ different status codes so the Hub operator can distinguish "I have the wrong
 token" from "this node hasn't accepted us yet."
 
 There is one singleton federation token per node — generated automatically
-when the admin first clicks **Enable**.
+the first time the admin clicks **Connect**.
 
 CORS is `*` because the Hub typically calls from the server side; the
 endpoints don't accept cookies or credentials.
@@ -189,9 +189,11 @@ anything beyond the three views.
 |                            | `sis_glosis` cannot see other API keys (web-mapping, future external clients).      |
 | **Setting gate**           | The admin can flip `GLOSIS_FEDERATION_ENABLED=false` at any time and the           |
 |                            | three data endpoints immediately return 403 without touching the DB.               |
-| **Token lifecycle**        | Singleton per node. **Disable & Delete token** in the admin panel removes the      |
-|                            | row; audit entries referring to it get their `api_client_id` nulled                 |
-|                            | (the append-only `api.audit` trigger allows that one mutation).                    |
+| **Token lifecycle**        | Singleton per node, minted at the first **Connect**, no expiry (the hub           |
+|                            | harvests unattended). **Disconnect** keeps it, so reconnecting resumes             |
+|                            | without re-approval; deleting it server-side forces a fresh key, and the           |
+|                            | audit rows referring to it get `api_client_id` nulled (the one mutation            |
+|                            | the append-only `api.audit` trigger allows).                                       |
 | **Audit log**              | Every successful and failed call is logged via `INSERT INTO api.audit` with        |
 |                            | `action ∈ {glosis_manifest_accessed, glosis_profiles_accessed,                     |
 |                            | glosis_observations_accessed, glosis_token_invalid, glosis_token_inactive,          |
@@ -209,16 +211,16 @@ infra settings), and give the SIS admin a verifiable "kill switch."
 | Step                            | What happens                                                                 |
 | ------------------------------- | ---------------------------------------------------------------------------- |
 | **1. SIS deploy**               | Container starts disabled (`GLOSIS_FEDERATION_ENABLED` unset/`false`). All federation requests return 403. |
-| **2. Admin clicks Enable**      | Setting is set to `true`; a singleton federation token is generated (random URL-safe string). The Administration UI displays the token + the endpoint URLs to share. |
-| **3. Hub requests data**        | Every request validated: setting on, token matches, token active, not expired. Audit row written. |
-| **4. Admin clicks Disable**     | Setting flipped to `false`. Token row is kept so re-enabling reuses it. |
-| **5. Admin clicks Disable & Delete token** | Setting flipped to `false`; `api.audit` rows referring to the token have `api_client_id` set to NULL (the only audit UPDATE the append-only trigger permits); token row deleted. Next Enable mints a fresh key. |
+| **2. Admin clicks Connect**     | One click on Administration → GloSIS Federation. The node enables federation, mints its singleton token (random URL-safe string, no expiry) if none exists, and registers itself with the Discovery Hub (`POST {hub}/api/register` with its base URL, token, name and country code). Nothing is copied by hand. |
+| **3. Hub approves**             | The hub verifies the node is reachable and its administrator approves the request (status shown live on the panel: pending → connected, with record/layer/property counts). Approval is keyed on the node's base URL, so a later reconnect does not need re-approval. |
+| **4. Hub requests data**        | Every request validated: setting on, token matches, token active, not expired. Audit row written. |
+| **5. Admin clicks Disconnect**  | Setting flipped to `false`; federation requests return 403. The token row is kept, and the hub keeps the approval — clicking Connect again simply resumes. The hub notices the 403 at its next harvest and marks the node as switched off. |
 
-The Hub admin must be sent two things by the SIS admin:
-- the federation token (visible inline in the Endpoints box on the
-  Administration panel — currently kept in plaintext at rest so it can be
-  re-copied),
-- the endpoint URLs (also shown on the same panel).
+The hub address comes from the `GLOSIS_HUB_URL` setting (default
+`https://glosis.eloiribeiro.eu`, changeable from the panel) and the node's
+own public address from `GLOSIS_NODE_URL` (falling back to `WMS_PUBLIC_URL`
+and finally the request origin). There is no manual token exchange: the
+registration call carries the token, and the hub stores it as a secret.
 
 ---
 

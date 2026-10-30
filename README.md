@@ -324,19 +324,21 @@ defeats the per-node JWT and key separation.
 
 ## GloSIS Federation
 
-`sis-api-glosis` is shipped but **disabled** by default. To join the GloSIS
-Federation:
+`sis-api-glosis` is shipped but **disabled** by default. Listing the node
+on the GloSIS Discovery Hub is one click:
 
 1. Log into the SPA as `admin`.
 2. Open **Administration → GloSIS Federation**.
-3. Click **Enable**. The node generates a singleton federation token (shown
-   on the same panel) and exposes
-   - `GET /manifest`
-   - `GET /profile`
-   - `GET /observation`
-   on host port 8006 (or via your nginx, behind `/glosis/`).
-4. Copy the token plus the endpoint URLs to the GloSIS Discovery Hub
-   admin.
+3. Click **Connect**. The node enables federation, mints its federation
+   token, and registers itself with the hub (the address in the
+   `GLOSIS_HUB_URL` setting; changeable from the panel). Nothing is copied
+   by hand — the registration carries the token and the node's endpoints
+   (`GET /manifest`, `GET /profile`, `GET /observation`, served behind
+   nginx at `/glosis/`).
+4. The hub administrator approves the request; the panel shows the live
+   status (pending → connected, with record, layer and property counts).
+   Approval is keyed on the node's public address, so reconnecting later
+   does not need a new approval.
 
 The data exposed is exactly the soil profiles currently visible on this
 node (controlled under **Layers → Soil profiles**). Rasters travel
@@ -347,8 +349,9 @@ which has SELECT only on three views (`vw_api_manifest`, `vw_api_profile`,
 `vw_api_observation`) plus the federation token view. Even with a valid
 token, callers cannot read or write anything else.
 
-Click **Disable** to revoke access without losing the token, or **Disable
-& Delete token** to revoke and force re-issuance on next Enable.
+Click **Disconnect** to stop sharing: federation requests return 403 and
+the hub marks the node as switched off at its next check, keeping the
+listing and the approval so a later **Connect** simply resumes.
 
 ---
 
