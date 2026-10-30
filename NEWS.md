@@ -17,7 +17,8 @@ click; Markdown is rendered and sanitised server-side, and uploaded images
 are re-encoded before being served. The map lives permanently at `/map`;
 while the landing page is disabled (the default), the root address simply
 forwards there. The page ships with a stylised soil-profile artwork so it
-looks presentable before any image is uploaded.
+looks presentable before any image is uploaded. This feature is in active
+development: news, partners and navigation editing are planned follow-ups.
 
 ### 2026-10-27 — Laboratory measurement quality
 The database and the LIMS connector now carry per-procedure measurement
