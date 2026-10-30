@@ -20,6 +20,9 @@ organisation and exposes:
 
 The data model is based on [ISO 28258](https://www.iso.org/standard/44595.html) and is derived from ISRIC's open-source implementation, [iso-28258](https://github.com/ISRICWorldSoil/iso-28258) (MIT licence). See [`sis-database/NOTICE`](./sis-database/NOTICE) for attribution and citation.
 
+OpenNSIS is in active development — [`NEWS.md`](./NEWS.md) keeps a
+chronological record of user-visible features and notable changes.
+
 ---
 
 ## Components
