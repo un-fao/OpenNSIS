@@ -148,6 +148,25 @@ class SISApiClient {
     return this.request('/api/profile');
   }
 
+  // ---- Sampling design (SoilFER three-stage CSC) ----
+  async samplingSources() { return this.authenticatedRequest('/api/sampling/sources'); }
+  async createSamplingDesign(payload) {
+    return this.authenticatedRequest('/api/sampling/designs', {
+      method: 'POST', body: JSON.stringify(payload)
+    });
+  }
+  async listSamplingDesigns() { return this.authenticatedRequest('/api/sampling/designs'); }
+  async getSamplingDesign(id) { return this.authenticatedRequest(`/api/sampling/designs/${id}`); }
+  async deleteSamplingDesign(id) {
+    return this.authenticatedRequest(`/api/sampling/designs/${id}`, { method: 'DELETE' });
+  }
+  async downloadSamplingExport(id, kind, format) {
+    const r = await fetch(`${this.baseURL}/api/sampling/designs/${id}/export?kind=${kind}&format=${format}`,
+      { headers: { 'Authorization': `Bearer ${this.jwtToken}` } });
+    if (!r.ok) throw new Error(`Export failed: ${r.status}`);
+    return r.blob();
+  }
+
   // ---- Landing page (site CMS, issue #13) ----
   async getSite() { return this.request('/api/site'); }
   async getSiteDraft() { return this.authenticatedRequest('/api/site/draft'); }

@@ -7652,3 +7652,130 @@ async def upload_site_media(file: UploadFile = File(...),
     with open(os.path.join(SITE_MEDIA_DIR, name), "wb") as fh:
         fh.write(out)
     return {"url": f"/media/{name}"}
+
+
+# ==================== Sampling design (SoilFER three-stage CSC) ====================
+# Engine in sampling_design.py; covariates are fetched ephemerally at run
+# time and discarded — only the design and its manifest persist.
+
+@app.get("/api/sampling/sources")
+async def sampling_sources(current_user: dict = Depends(get_current_user)):
+    _require_admin(current_user)
+    from sampling_design import DEFAULT_SOURCES
+    return DEFAULT_SOURCES
+
+
+@app.post("/api/sampling/designs", status_code=status.HTTP_202_ACCEPTED)
+async def create_sampling_design(payload: dict, background: BackgroundTasks,
+                                 request: Request,
+                                 current_user: dict = Depends(get_current_user)):
+    _require_admin(current_user)
+    from sampling_design import DEFAULT_SOURCES, execute_design
+    name = (payload.get("name") or "").strip() or f"Design {datetime.now():%Y-%m-%d}"
+    params = payload.get("params") or {}
+    for key, lo, hi in (("n_psu", 2, 2000), ("ssu_per_psu", 1, 20),
+                        ("pts_per_ssu", 1, 20)):
+        v = params.get(key)
+        if v is not None and not (isinstance(v, int) and lo <= v <= hi):
+            raise HTTPException(status_code=400,
+                                detail=f"{key} must be an integer in [{lo}, {hi}]")
+    ids = set(payload.get("source_ids") or [s["id"] for s in DEFAULT_SOURCES])
+    sources = [s for s in DEFAULT_SOURCES if s["id"] in ids or s["required"]]
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""INSERT INTO api.sampling_design
+                               (name, params, sources, created_by)
+                           VALUES (%s, %s, %s, %s) RETURNING design_id""",
+                        (name, json.dumps(params), json.dumps(sources),
+                         current_user["user_id"]))
+            design_id = cur.fetchone()[0]
+    background.add_task(execute_design, design_id, get_db)
+    log_audit(current_user["user_id"], None, "sampling_design_queued",
+              {"design_id": design_id, "params": params}, get_client_ip(request))
+    return {"design_id": design_id, "status": "queued"}
+
+
+@app.get("/api/sampling/designs")
+async def list_sampling_designs(current_user: dict = Depends(get_current_user)):
+    _require_admin(current_user)
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT d.design_id, d.name, d.status, d.error, d.quality,
+                       d.created_by, d.created_at, d.finished_at,
+                       count(f.feature_id) FILTER (WHERE f.kind = 'point' AND f.rank = 0)
+                           AS target_points
+                FROM api.sampling_design d
+                LEFT JOIN api.sampling_design_feature f ON f.design_id = d.design_id
+                GROUP BY d.design_id ORDER BY d.design_id DESC""")
+            return cur.fetchall()
+
+
+@app.get("/api/sampling/designs/{design_id}")
+async def get_sampling_design(design_id: int,
+                              current_user: dict = Depends(get_current_user)):
+    _require_admin(current_user)
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM api.sampling_design WHERE design_id=%s",
+                        (design_id,))
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Design not found")
+            return row
+
+
+@app.get("/api/sampling/designs/{design_id}/export")
+async def export_sampling_design(design_id: int, format: str = "geojson",
+                                 kind: str = "point",
+                                 current_user: dict = Depends(get_current_user)):
+    _require_admin(current_user)
+    if kind not in ("point", "psu", "ssu"):
+        raise HTTPException(status_code=400, detail="kind must be point|psu|ssu")
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""SELECT sample_id, rank, props,
+                                  ST_AsGeoJSON(geom) AS gj,
+                                  ST_X(ST_Centroid(geom)) AS lon,
+                                  ST_Y(ST_Centroid(geom)) AS lat
+                           FROM api.sampling_design_feature
+                           WHERE design_id=%s AND kind=%s
+                           ORDER BY feature_id""", (design_id, kind))
+            rows = cur.fetchall()
+    if not rows:
+        raise HTTPException(status_code=404, detail="No features (design still running?)")
+    stem = f"sampling_design_{design_id}_{kind}"
+    if format == "csv":
+        buf = io.StringIO()
+        wtr = csv.writer(buf)
+        wtr.writerow(["sample_id", "rank", "longitude", "latitude", "psu", "ssu"])
+        for r in rows:
+            p = r["props"] or {}
+            wtr.writerow([r["sample_id"] or "", r["rank"],
+                          f"{r['lon']:.6f}", f"{r['lat']:.6f}",
+                          p.get("psu", ""), p.get("ssu", "")])
+        return Response(content=buf.getvalue(), media_type="text/csv",
+                        headers={"Content-Disposition":
+                                 f'attachment; filename="{stem}.csv"'})
+    fc = {"type": "FeatureCollection", "features": [
+        {"type": "Feature", "geometry": json.loads(r["gj"]),
+         "properties": {"sample_id": r["sample_id"], "rank": r["rank"],
+                        **(r["props"] or {})}} for r in rows]}
+    return Response(content=json.dumps(fc), media_type="application/geo+json",
+                    headers={"Content-Disposition":
+                             f'attachment; filename="{stem}.geojson"'})
+
+
+@app.delete("/api/sampling/designs/{design_id}")
+async def delete_sampling_design(design_id: int, request: Request,
+                                 current_user: dict = Depends(get_current_user)):
+    _require_admin(current_user)
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM api.sampling_design WHERE design_id=%s",
+                        (design_id,))
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Design not found")
+    log_audit(current_user["user_id"], None, "sampling_design_deleted",
+              {"design_id": design_id}, get_client_ip(request))
+    return {"message": "Deleted"}
