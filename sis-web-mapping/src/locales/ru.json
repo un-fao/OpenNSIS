@@ -607,6 +607,14 @@
   "a.sd.designs": "Схемы",
   "a.sd.none": "Схем пока нет.",
   "a.sd.points": "Точки",
+  "a.sd.psus": "PSU",
+  "a.sd.ssus": "SSU",
+  "a.sd.symbology": "Символика",
+  "a.sd.symShape": "Форма",
+  "a.sd.symSize": "Размер",
+  "a.sd.symColour": "Цвет",
+  "a.sd.symOpacity": "Непрозрачность",
   "a.sd.log": "Журнал",
-  "a.sd.deleteConfirm": "Удалить эту схему и все её точки?"
+  "a.sd.deleteConfirm": "Удалить эту схему и все её точки?",
+  "groups.sampling": "Схемы отбора проб"
 }

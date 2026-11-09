@@ -160,6 +160,12 @@ class SISApiClient {
   async deleteSamplingDesign(id) {
     return this.authenticatedRequest(`/api/sampling/designs/${id}`, { method: 'DELETE' });
   }
+  async updateSamplingDesign(id, patch) {
+    return this.authenticatedRequest(`/api/sampling/designs/${id}`, {
+      method: 'PATCH', body: JSON.stringify(patch)
+    });
+  }
+  async getSamplingPublic() { return this.request('/api/sampling/public'); }
   async downloadSamplingExport(id, kind, format) {
     const r = await fetch(`${this.baseURL}/api/sampling/designs/${id}/export?kind=${kind}&format=${format}`,
       { headers: { 'Authorization': `Bearer ${this.jwtToken}` } });

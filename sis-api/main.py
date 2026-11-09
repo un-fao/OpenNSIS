@@ -7702,9 +7702,12 @@ async def list_sampling_designs(current_user: dict = Depends(get_current_user)):
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
                 SELECT d.design_id, d.name, d.status, d.error, d.quality,
+                       d.is_published, d.active_default, d.symbology, d.abstract,
                        d.created_by, d.created_at, d.finished_at,
                        count(f.feature_id) FILTER (WHERE f.kind = 'point' AND f.rank = 0)
-                           AS target_points
+                           AS target_points,
+                       count(f.feature_id) FILTER (WHERE f.kind = 'psu') AS psus,
+                       count(f.feature_id) FILTER (WHERE f.kind = 'ssu') AS ssus
                 FROM api.sampling_design d
                 LEFT JOIN api.sampling_design_feature f ON f.design_id = d.design_id
                 GROUP BY d.design_id ORDER BY d.design_id DESC""")
@@ -7779,3 +7782,57 @@ async def delete_sampling_design(design_id: int, request: Request,
     log_audit(current_user["user_id"], None, "sampling_design_deleted",
               {"design_id": design_id}, get_client_ip(request))
     return {"message": "Deleted"}
+
+
+@app.patch("/api/sampling/designs/{design_id}")
+async def update_sampling_design(design_id: int, payload: dict,
+                                 current_user: dict = Depends(get_current_user)):
+    """Publish/Active/Symbology for a design — same semantics as the other
+    admin layer tables (Publish = visible on the public map, Active = ticked
+    by default in the layer panel)."""
+    _require_admin(current_user)
+    sets, vals = [], []
+    if "is_published" in payload:
+        sets.append("is_published = %s"); vals.append(bool(payload["is_published"]))
+    if "active_default" in payload:
+        sets.append("active_default = %s"); vals.append(bool(payload["active_default"]))
+    if "symbology" in payload:
+        sym = payload["symbology"]
+        if sym is not None and not isinstance(sym, dict):
+            raise HTTPException(status_code=400, detail="symbology must be an object")
+        sets.append("symbology = %s"); vals.append(json.dumps(sym) if sym else None)
+    if not sets:
+        raise HTTPException(status_code=400, detail="Nothing to update")
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"UPDATE api.sampling_design SET {', '.join(sets)} "
+                        f"WHERE design_id = %s", (*vals, design_id))
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Design not found")
+    return {"message": "Updated"}
+
+
+@app.get("/api/sampling/public")
+async def public_sampling_designs(api_client: dict = Depends(verify_api_key)):
+    """Published designs for the map viewer: name, abstract, symbology and
+    all features (points with ranked replacements, PSU/SSU cells) inline."""
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""SELECT design_id, name, abstract, active_default, symbology
+                           FROM api.sampling_design
+                           WHERE is_published AND status = 'done'
+                           ORDER BY design_id""")
+            designs = cur.fetchall()
+            for d in designs:
+                cur.execute("""SELECT kind, sample_id, rank, props,
+                                      ST_AsGeoJSON(geom) AS gj
+                               FROM api.sampling_design_feature
+                               WHERE design_id = %s ORDER BY feature_id""",
+                            (d["design_id"],))
+                d["features"] = {"type": "FeatureCollection", "features": [
+                    {"type": "Feature", "geometry": json.loads(r["gj"]),
+                     "properties": {"kind": r["kind"], "rank": r["rank"],
+                                    "sample_id": r["sample_id"],
+                                    **(r["props"] or {})}}
+                    for r in cur.fetchall()]}
+    return designs

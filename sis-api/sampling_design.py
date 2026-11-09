@@ -572,6 +572,33 @@ def execute_design(design_id, get_db):
 
         # ---- persist ------------------------------------------------------
         logstep(f"Writing {total_pts} target points (plus replacements) to the design")
+        def build_abstract(m):
+            lines = [
+                f"Soil sampling design for {m['iso3']}, generated {m['generated_at']} "
+                f"with the SoilFER three-stage method (covariate space coverage).",
+                f"Stage 1: {n_psu} primary units of {int(psu_m)} m selected over the "
+                f"country by k-means in standardised covariate space "
+                f"({', '.join(m['covariates_stage1'])}); quality (MSSD) "
+                f"{m['quality']['stage1_mssd']:.4f}.",
+                f"Stage 2: up to {ssu_per_psu} secondary units of {int(ssu_m)} m per "
+                f"primary unit, CSC on terrain derivatives and land cover.",
+                f"Stage 3: {pts_per_ssu} points per secondary unit by simple random "
+                f"sampling, each with two ranked replacement locations.",
+                "Constraint: cropland only (ESA WorldCover class 40)." if cropland_only
+                else "No land-cover constraint applied.",
+                f"Random seed {seed}; working CRS {crs}.",
+                "Data sources (fetched at run time, not stored):",
+            ]
+            for src_ in m["sources"]:
+                bits = [src_.get("id", "?")]
+                if src_.get("url"): bits.append(src_["url"])
+                if src_.get("stac"): bits.append(src_["stac"])
+                if src_.get("url_base"): bits.append(src_["url_base"])
+                if src_.get("licence"): bits.append(f"licence {src_['licence']}")
+                if src_.get("checksum"): bits.append(f"checksum {src_['checksum']}")
+                lines.append("  - " + ", ".join(bits))
+            return "\n".join(lines)
+
         manifest = {
             "method": "Three-stage hierarchical CSC (SoilFER sampling design manual)",
             "iso3": iso3, "crs": crs, "seed": seed,
@@ -602,10 +629,10 @@ def execute_design(design_id, get_db):
                                 ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326), %s)
                     """, (design_id, kind, sid, rank, gj, json.dumps(props)))
                 cur.execute("""UPDATE api.sampling_design
-                               SET status='done', manifest=%s,
+                               SET status='done', manifest=%s, abstract=%s,
                                    quality=%s, finished_at=now()
                                WHERE design_id=%s""",
-                            (json.dumps(manifest),
+                            (json.dumps(manifest), build_abstract(manifest),
                              json.dumps(manifest["quality"]), design_id))
         logstep("Design complete")
 

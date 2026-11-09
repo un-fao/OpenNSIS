@@ -607,6 +607,14 @@
   "a.sd.designs": "设计列表",
   "a.sd.none": "尚无设计。",
   "a.sd.points": "点数",
+  "a.sd.psus": "初级单元",
+  "a.sd.ssus": "次级单元",
+  "a.sd.symbology": "符号",
+  "a.sd.symShape": "形状",
+  "a.sd.symSize": "大小",
+  "a.sd.symColour": "颜色",
+  "a.sd.symOpacity": "不透明度",
   "a.sd.log": "日志",
-  "a.sd.deleteConfirm": "删除此设计及其全部点位？"
+  "a.sd.deleteConfirm": "删除此设计及其全部点位？",
+  "groups.sampling": "采样设计"
 }

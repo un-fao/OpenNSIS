@@ -68,6 +68,7 @@ async function initializeApp() {
     // group (which loadLayers has already built).
     console.log('Loading administrative divisions...');
     await loadAdminDivisions();
+    await loadSamplingDesigns();
 
     // Setup UI controls
     setupControls();
@@ -1018,6 +1019,126 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+
+async function loadSamplingDesigns() {
+  // Published sampling designs (admin → Sampling design tab) rendered as
+  // vector layers: PSU/SSU cell outlines + the sample points, replacements
+  // drawn smaller and fainter. One panel group, one row per design, with
+  // the design's auto-generated abstract behind the metadata icon.
+  let designs = [];
+  try {
+    designs = await api.getSamplingPublic();
+  } catch (e) {
+    console.error('Failed to load sampling designs:', e);
+    return;
+  }
+  if (!designs.length) return;
+
+  const group = document.createElement('div');
+  group.className = 'layer-group';
+  const header = document.createElement('div');
+  header.className = 'layer-group-header';
+  header.textContent = t('groups.sampling');
+  const content = document.createElement('div');
+  content.className = 'layer-group-content';
+  group.appendChild(header);
+  group.appendChild(content);
+
+  designs.forEach((d) => {
+    const sym = d.symbology || {};
+    const color = sym.color || '#d97706';
+    const size = Number(sym.size) || 7;
+    const opacity = sym.opacity != null ? Number(sym.opacity) : 1;
+    const shape = sym.shape || 'circle';
+
+    const mkPoint = (radius, alpha) => {
+      const fill = new Fill({ color: hexWithAlpha(color, alpha) });
+      const stroke = new Stroke({ color: '#ffffff', width: 1.2 });
+      if (shape === 'square') {
+        return new RegularShape({ points: 4, radius, angle: Math.PI / 4, fill, stroke });
+      }
+      if (shape === 'triangle') {
+        return new RegularShape({ points: 3, radius, fill, stroke });
+      }
+      return new CircleStyle({ radius, fill, stroke });
+    };
+    const styleFn = (feature) => {
+      const kind = feature.get('kind');
+      if (kind === 'psu') {
+        return new Style({ stroke: new Stroke({ color: hexWithAlpha(color, 0.9), width: 2 }) });
+      }
+      if (kind === 'ssu') {
+        return new Style({ stroke: new Stroke({ color: hexWithAlpha(color, 0.7), width: 1, lineDash: [4, 3] }) });
+      }
+      const rank = feature.get('rank') || 0;
+      return new Style({ image: rank === 0
+        ? mkPoint(size, opacity)
+        : mkPoint(Math.max(3, size - 3), opacity * 0.45) });
+    };
+    const layer = new VectorLayer({
+      source: new VectorSource({
+        features: new GeoJSON().readFeatures(d.features,
+          { featureProjection: 'EPSG:3857' }),
+      }),
+      style: styleFn,
+      visible: d.active_default !== false,
+      zIndex: 900,
+    });
+    map.addLayer(layer);
+
+    const item = document.createElement('div');
+    item.className = 'layer-item';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = `sdlayer-${d.design_id}`;
+    cb.checked = d.active_default !== false;
+    cb.addEventListener('change', () => layer.setVisible(cb.checked));
+    const label = document.createElement('label');
+    label.htmlFor = cb.id;
+    label.textContent = d.name;
+    item.appendChild(cb);
+    item.appendChild(label);
+    if (d.abstract) {
+      const icons = document.createElement('div');
+      icons.className = 'layer-icons';
+      icons.innerHTML = `<a href="#" title="${t('icons.metadata')}"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 3h7l5 5v13H7z'/%3E%3Cpath d='M14 3v5h5M10 13h6M10 17h6'/%3E%3C/svg%3E" alt="${t('icons.info')}"></a>`;
+      icons.querySelector('a').addEventListener('click', (ev) => {
+        ev.preventDefault();
+        showTextPopup(d.name, d.abstract);
+      });
+      item.appendChild(icons);
+    }
+    content.appendChild(item);
+  });
+
+  const panel = document.querySelector('.layer-panel .layer-panel-content')
+    || document.getElementById('layer-panel');
+  const baseGroup = document.getElementById('base-layers-group');
+  if (baseGroup && baseGroup.parentNode) {
+    baseGroup.parentNode.insertBefore(group, baseGroup);
+  } else if (panel) {
+    panel.appendChild(group);
+  }
+}
+
+function hexWithAlpha(hex, alpha) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  return `rgba(${n >> 16}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
+function showTextPopup(title, text) {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px;';
+  modal.innerHTML = `
+    <div style="background: var(--color-surface); color: var(--color-text); border-radius: 8px; max-width: 680px; max-height: 80vh; overflow: auto; padding: 22px 26px;">
+      <h3 style="margin-top:0;">${escapeHtml(title)}</h3>
+      <pre style="white-space: pre-wrap; font-family: inherit; font-size: 14px; line-height: 1.55; margin: 0;">${escapeHtml(text)}</pre>
+    </div>`;
+  modal.addEventListener('click', (ev) => { if (ev.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
 
 async function showMetadataPopup(metadataUrl) {
   const modal = document.createElement('div');

@@ -607,6 +607,14 @@
   "a.sd.designs": "Plans",
   "a.sd.none": "Aucun plan pour l'instant.",
   "a.sd.points": "Points",
+  "a.sd.psus": "PSU",
+  "a.sd.ssus": "SSU",
+  "a.sd.symbology": "Symbologie",
+  "a.sd.symShape": "Forme",
+  "a.sd.symSize": "Taille",
+  "a.sd.symColour": "Couleur",
+  "a.sd.symOpacity": "Opacité",
   "a.sd.log": "Journal",
-  "a.sd.deleteConfirm": "Supprimer ce plan et tous ses points ?"
+  "a.sd.deleteConfirm": "Supprimer ce plan et tous ses points ?",
+  "groups.sampling": "Plans d'échantillonnage"
 }
