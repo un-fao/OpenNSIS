@@ -95,7 +95,7 @@ async function refresh() {
       return `
       <tr data-id="${r.design_id}">
         <td>${r.design_id}</td>
-        <td>${e(r.name)}</td>
+        <td style="white-space:nowrap;">${e(r.name)}</td>
         <td>${r.status === 'failed'
             ? `<span class="badge badge-danger" title="${e(r.error || '')}">${e(r.status)}</span>`
             : `<span class="badge ${r.status === 'done' ? 'badge-success' : ''}">${e(r.status)}</span>`}</td>
@@ -168,6 +168,7 @@ function openSymEditor(r) {
         </select></label>
       <label>${t('a.sd.symSize')} <input type="number" id="sdsym-size" value="${sym.size || 7}" min="3" max="20" style="width:60px;"></label>
       <label>${t('a.sd.symColour')} <input type="color" id="sdsym-color" value="${sym.color || '#d97706'}"></label>
+      <label>${t('a.sd.symOutline')} <input type="color" id="sdsym-outline" value="${sym.outline_color || sym.color || '#d97706'}"></label>
       <label>${t('a.sd.symOpacity')} <input type="range" id="sdsym-opacity" value="${sym.opacity != null ? sym.opacity : 1}" min="0.2" max="1" step="0.05"></label>
       <button type="button" class="btn btn-sm btn-primary" id="sdsym-save">${t('a.save')}</button>
     </div>`;
@@ -176,6 +177,7 @@ function openSymEditor(r) {
       shape: document.getElementById('sdsym-shape').value,
       size: Number(document.getElementById('sdsym-size').value) || 7,
       color: document.getElementById('sdsym-color').value,
+      outline_color: document.getElementById('sdsym-outline').value,
       opacity: Number(document.getElementById('sdsym-opacity').value),
     }});
     box.style.display = 'none';

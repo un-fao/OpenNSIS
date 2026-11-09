@@ -613,6 +613,7 @@
   "a.sd.symShape": "Форма",
   "a.sd.symSize": "Размер",
   "a.sd.symColour": "Цвет",
+  "a.sd.symOutline": "Контур ячеек",
   "a.sd.symOpacity": "Непрозрачность",
   "a.sd.log": "Журнал",
   "a.sd.deleteConfirm": "Удалить эту схему и все её точки?",

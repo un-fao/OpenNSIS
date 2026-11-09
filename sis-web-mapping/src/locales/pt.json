@@ -613,6 +613,7 @@
   "a.sd.symShape": "Forma",
   "a.sd.symSize": "Tamanho",
   "a.sd.symColour": "Cor",
+  "a.sd.symOutline": "Contorno das células",
   "a.sd.symOpacity": "Opacidade",
   "a.sd.log": "Registo",
   "a.sd.deleteConfirm": "Eliminar este desenho e todos os seus pontos?",

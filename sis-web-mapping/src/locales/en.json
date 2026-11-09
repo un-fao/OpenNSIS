@@ -613,6 +613,7 @@
   "a.sd.symShape": "Shape",
   "a.sd.symSize": "Size",
   "a.sd.symColour": "Colour",
+  "a.sd.symOutline": "Cell outline",
   "a.sd.symOpacity": "Opacity",
   "a.sd.log": "Log",
   "a.sd.deleteConfirm": "Delete this design and all its points?",

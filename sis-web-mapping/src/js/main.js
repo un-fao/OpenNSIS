@@ -1062,13 +1062,14 @@ async function loadSamplingDesigns() {
       }
       return new CircleStyle({ radius, fill, stroke });
     };
+    const outline = sym.outline_color || color;
     const styleFn = (feature) => {
       const kind = feature.get('kind');
       if (kind === 'psu') {
-        return new Style({ stroke: new Stroke({ color: hexWithAlpha(color, 0.9), width: 2 }) });
+        return new Style({ stroke: new Stroke({ color: hexWithAlpha(outline, 0.9), width: 2 }) });
       }
       if (kind === 'ssu') {
-        return new Style({ stroke: new Stroke({ color: hexWithAlpha(color, 0.7), width: 1, lineDash: [4, 3] }) });
+        return new Style({ stroke: new Stroke({ color: hexWithAlpha(outline, 0.7), width: 1, lineDash: [4, 3] }) });
       }
       const rank = feature.get('rank') || 0;
       return new Style({ image: rank === 0

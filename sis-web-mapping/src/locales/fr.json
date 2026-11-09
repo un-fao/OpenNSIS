@@ -613,6 +613,7 @@
   "a.sd.symShape": "Forme",
   "a.sd.symSize": "Taille",
   "a.sd.symColour": "Couleur",
+  "a.sd.symOutline": "Contour des cellules",
   "a.sd.symOpacity": "Opacité",
   "a.sd.log": "Journal",
   "a.sd.deleteConfirm": "Supprimer ce plan et tous ses points ?",
