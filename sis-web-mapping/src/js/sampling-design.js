@@ -91,7 +91,7 @@ async function refresh() {
       const swatch = `<button type="button" class="sd-sym" data-id="${r.design_id}"
           title="${t('a.sd.symbology')}" style="width:22px;height:22px;border-radius:50%;
           border:2px solid #fff;box-shadow:0 0 0 1px var(--color-border-strong);
-          background:${e(sym.color || '#d97706')};cursor:pointer;"></button>`;
+          background:${e((sym.point && sym.point.color) || sym.color || '#d97706')};cursor:pointer;"></button>`;
       return `
       <tr data-id="${r.design_id}">
         <td>${r.design_id}</td>
@@ -154,31 +154,76 @@ async function refresh() {
   if (active) pollTimer = setTimeout(refresh, 5000);
 }
 
+function symDefaults(sym) {
+  // Accepts both the legacy flat form ({shape,size,color,...}) and the
+  // structured per-layer form; always returns the structured one.
+  sym = sym || {};
+  const base = { shape: sym.shape || 'circle', size: sym.size || 7,
+                 color: sym.color || '#d97706',
+                 opacity: sym.opacity != null ? sym.opacity : 1 };
+  const cell = sym.outline_color || base.color;
+  return {
+    point: { ...base, ...(sym.point || {}) },
+    replacement: { shape: base.shape, size: Math.max(3, base.size - 3),
+                   color: base.color, opacity: base.opacity * 0.45,
+                   ...(sym.replacement || {}) },
+    psu: { color: cell, width: 2, opacity: 0.9, style: 'solid',
+           ...(sym.psu || {}) },
+    ssu: { color: cell, width: 1, opacity: 0.7, style: 'dashed',
+           ...(sym.ssu || {}) },
+  };
+}
+
 function openSymEditor(r) {
   const box = document.getElementById('sd-sym-editor');
-  const sym = r.symbology || {};
+  const sym = symDefaults(r.symbology);
   box.style.display = 'block';
+  const shapeSel = (id, v) => `<select id="${id}">` +
+    ['circle', 'square', 'triangle'].map((x) =>
+      `<option value="${x}" ${v === x ? 'selected' : ''}>${x}</option>`).join('') + '</select>';
+  const styleSel = (id, v) => `<select id="${id}">` +
+    [['solid', t('a.stroke.solid')], ['dashed', t('a.stroke.dashed')], ['dotted', t('a.stroke.dotted')]]
+      .map(([x, lbl]) => `<option value="${x}" ${v === x ? 'selected' : ''}>${lbl}</option>`).join('') + '</select>';
+  const pointRow = (key, label) => `
+    <tr><th style="text-align:left;">${label}</th>
+      <td>${shapeSel(`sdsym-${key}-shape`, sym[key].shape)}</td>
+      <td><input type="number" id="sdsym-${key}-size" value="${sym[key].size}" min="2" max="24" style="width:58px;"></td>
+      <td><input type="color" id="sdsym-${key}-color" value="${sym[key].color}"></td>
+      <td><input type="range" id="sdsym-${key}-opacity" value="${sym[key].opacity}" min="0.1" max="1" step="0.05"></td></tr>`;
+  const cellRow = (key, label) => `
+    <tr><th style="text-align:left;">${label}</th>
+      <td>${styleSel(`sdsym-${key}-style`, sym[key].style)}</td>
+      <td><input type="number" id="sdsym-${key}-width" value="${sym[key].width}" min="1" max="8" style="width:58px;"></td>
+      <td><input type="color" id="sdsym-${key}-color" value="${sym[key].color}"></td>
+      <td><input type="range" id="sdsym-${key}-opacity" value="${sym[key].opacity}" min="0.1" max="1" step="0.05"></td></tr>`;
   box.innerHTML = `
-    <div style="display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;padding:var(--sp-2) 0;border-top:1px solid var(--color-border);margin-top:var(--sp-2);">
-      <strong>#${r.design_id}</strong>
-      <label>${t('a.sd.symShape')}
-        <select id="sdsym-shape">
-          ${['circle', 'square', 'triangle'].map((x) =>
-            `<option value="${x}" ${(sym.shape || 'circle') === x ? 'selected' : ''}>${x}</option>`).join('')}
-        </select></label>
-      <label>${t('a.sd.symSize')} <input type="number" id="sdsym-size" value="${sym.size || 7}" min="3" max="20" style="width:60px;"></label>
-      <label>${t('a.sd.symColour')} <input type="color" id="sdsym-color" value="${sym.color || '#d97706'}"></label>
-      <label>${t('a.sd.symOutline')} <input type="color" id="sdsym-outline" value="${sym.outline_color || sym.color || '#d97706'}"></label>
-      <label>${t('a.sd.symOpacity')} <input type="range" id="sdsym-opacity" value="${sym.opacity != null ? sym.opacity : 1}" min="0.2" max="1" step="0.05"></label>
+    <div style="padding:var(--sp-2) 0;border-top:1px solid var(--color-border);margin-top:var(--sp-2);">
+      <strong>#${r.design_id} · ${t('a.sd.symbology')}</strong>
+      <table style="border-collapse:separate;border-spacing:10px 4px;">
+        <tr><th></th>
+          <th style="font-weight:normal;">${t('a.sd.symShape')} / ${t('a.strokeType')}</th>
+          <th style="font-weight:normal;">${t('a.sd.symSize')} / ${t('a.strokeWidth')}</th>
+          <th style="font-weight:normal;">${t('a.sd.symColour')}</th>
+          <th style="font-weight:normal;">${t('a.sd.symOpacity')}</th></tr>
+        ${pointRow('point', t('a.sd.symPoints'))}
+        ${pointRow('replacement', t('a.sd.symRepl'))}
+        ${cellRow('psu', t('a.sd.symPsu'))}
+        ${cellRow('ssu', t('a.sd.symSsu'))}
+      </table>
       <button type="button" class="btn btn-sm btn-primary" id="sdsym-save">${t('a.save')}</button>
     </div>`;
   document.getElementById('sdsym-save').addEventListener('click', async () => {
+    const v = (id) => document.getElementById(id).value;
+    const n = (id) => Number(v(id));
     await api.updateSamplingDesign(r.design_id, { symbology: {
-      shape: document.getElementById('sdsym-shape').value,
-      size: Number(document.getElementById('sdsym-size').value) || 7,
-      color: document.getElementById('sdsym-color').value,
-      outline_color: document.getElementById('sdsym-outline').value,
-      opacity: Number(document.getElementById('sdsym-opacity').value),
+      point: { shape: v('sdsym-point-shape'), size: n('sdsym-point-size'),
+               color: v('sdsym-point-color'), opacity: n('sdsym-point-opacity') },
+      replacement: { shape: v('sdsym-replacement-shape'), size: n('sdsym-replacement-size'),
+                     color: v('sdsym-replacement-color'), opacity: n('sdsym-replacement-opacity') },
+      psu: { style: v('sdsym-psu-style'), width: n('sdsym-psu-width'),
+             color: v('sdsym-psu-color'), opacity: n('sdsym-psu-opacity') },
+      ssu: { style: v('sdsym-ssu-style'), width: n('sdsym-ssu-width'),
+             color: v('sdsym-ssu-color'), opacity: n('sdsym-ssu-opacity') },
     }});
     box.style.display = 'none';
     refresh();

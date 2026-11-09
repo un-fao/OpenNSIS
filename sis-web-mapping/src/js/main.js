@@ -1045,36 +1045,49 @@ async function loadSamplingDesigns() {
   group.appendChild(content);
 
   designs.forEach((d) => {
-    const sym = d.symbology || {};
-    const color = sym.color || '#d97706';
-    const size = Number(sym.size) || 7;
-    const opacity = sym.opacity != null ? Number(sym.opacity) : 1;
-    const shape = sym.shape || 'circle';
+    // Per-layer symbology (structured), tolerating the legacy flat form.
+    const raw = d.symbology || {};
+    const flat = { shape: raw.shape || 'circle', size: Number(raw.size) || 7,
+                   color: raw.color || '#d97706',
+                   opacity: raw.opacity != null ? Number(raw.opacity) : 1 };
+    const cellCol = raw.outline_color || flat.color;
+    const sym = {
+      point: { ...flat, ...(raw.point || {}) },
+      replacement: { shape: flat.shape, size: Math.max(3, flat.size - 3),
+                     color: flat.color, opacity: flat.opacity * 0.45,
+                     ...(raw.replacement || {}) },
+      psu: { color: cellCol, width: 2, opacity: 0.9, style: 'solid', ...(raw.psu || {}) },
+      ssu: { color: cellCol, width: 1, opacity: 0.7, style: 'dashed', ...(raw.ssu || {}) },
+    };
+    const DASHES = { solid: undefined, dashed: [4, 3], dotted: [1, 3] };
 
-    const mkPoint = (radius, alpha) => {
-      const fill = new Fill({ color: hexWithAlpha(color, alpha) });
+    const mkPoint = (p) => {
+      const fill = new Fill({ color: hexWithAlpha(p.color, p.opacity) });
       const stroke = new Stroke({ color: '#ffffff', width: 1.2 });
-      if (shape === 'square') {
+      const radius = Number(p.size) || 7;
+      if (p.shape === 'square') {
         return new RegularShape({ points: 4, radius, angle: Math.PI / 4, fill, stroke });
       }
-      if (shape === 'triangle') {
+      if (p.shape === 'triangle') {
         return new RegularShape({ points: 3, radius, fill, stroke });
       }
       return new CircleStyle({ radius, fill, stroke });
     };
-    const outline = sym.outline_color || color;
+    const mkCell = (cc) => new Style({ stroke: new Stroke({
+      color: hexWithAlpha(cc.color, cc.opacity),
+      width: Number(cc.width) || 1,
+      lineDash: DASHES[cc.style] }) });
+    const styles = {
+      psu: mkCell(sym.psu),
+      ssu: mkCell(sym.ssu),
+      target: new Style({ image: mkPoint(sym.point) }),
+      replacement: new Style({ image: mkPoint(sym.replacement) }),
+    };
     const styleFn = (feature) => {
       const kind = feature.get('kind');
-      if (kind === 'psu') {
-        return new Style({ stroke: new Stroke({ color: hexWithAlpha(outline, 0.9), width: 2 }) });
-      }
-      if (kind === 'ssu') {
-        return new Style({ stroke: new Stroke({ color: hexWithAlpha(outline, 0.7), width: 1, lineDash: [4, 3] }) });
-      }
-      const rank = feature.get('rank') || 0;
-      return new Style({ image: rank === 0
-        ? mkPoint(size, opacity)
-        : mkPoint(Math.max(3, size - 3), opacity * 0.45) });
+      if (kind === 'psu') return styles.psu;
+      if (kind === 'ssu') return styles.ssu;
+      return (feature.get('rank') || 0) === 0 ? styles.target : styles.replacement;
     };
     const layer = new VectorLayer({
       source: new VectorSource({
