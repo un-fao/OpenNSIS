@@ -972,6 +972,14 @@ class AdminDashboard {
     const zoom = getSetting('ZOOM', 2);
     const baseEntry = BASE_MAP_OPTIONS['osm'];
 
+    // The editor strip is far smaller than a visitor's screen, so the saved
+    // zoom would frame a much smaller extent here. Offset the zoom so the
+    // strip shows the extent a typical full-width map canvas will show;
+    // saves apply the reverse offset, keeping ZOOM in canvas terms.
+    const REF_CANVAS_WIDTH = 1920;
+    const w = container.clientWidth;
+    this.viewZoomOffset = w > 0 ? Math.log2(REF_CANVAS_WIDTH / w) : 0;
+
     if (this.viewEditorMap) {
       this.viewEditorMap.setTarget(null);
       this.viewEditorMap = null;
@@ -982,7 +990,7 @@ class AdminDashboard {
       layers: [baseEntry.factory()],
       view: new View({
         center: fromLonLat([lon, lat]),
-        zoom
+        zoom: zoom - this.viewZoomOffset
       })
     });
 
@@ -1000,7 +1008,7 @@ class AdminDashboard {
     if (!this.viewEditorMap) return;
     const view = this.viewEditorMap.getView();
     const [lon, lat] = toLonLat(view.getCenter());
-    const zoom = view.getZoom();
+    const zoom = view.getZoom() + (this.viewZoomOffset || 0);
 
     const upsert = async (key, value) => {
       const exists = this.settings.find(s => s.key === key);
