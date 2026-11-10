@@ -7562,6 +7562,23 @@ async def put_site_draft(payload: dict, current_user: dict = Depends(get_current
     return {"message": "Draft saved"}
 
 
+@app.get("/api/site/preview")
+async def preview_site(current_user: dict = Depends(get_current_user)):
+    """The draft rendered exactly as publish would render it — same Markdown
+    pipeline, same sanitising — but nothing is persisted. Feeds the landing
+    page's ?preview mode so admins see their edits before going live."""
+    _require_admin(current_user)
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT content, updated_at FROM api.site_draft WHERE id = 1")
+            row = cur.fetchone()
+    if not row or not row["content"]:
+        raise HTTPException(status_code=404, detail="The draft is empty")
+    return {"enabled": True, "snapshot_id": None, "preview": True,
+            "content": _site_render(row["content"]),
+            "updated_at": row["updated_at"]}
+
+
 @app.post("/api/site/publish")
 async def publish_site(request: Request, current_user: dict = Depends(get_current_user)):
     _require_admin(current_user)

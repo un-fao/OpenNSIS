@@ -30,17 +30,29 @@ function applyColors(colors) {
 }
 
 async function init() {
+  const isPreview = new URLSearchParams(location.search).has('preview');
   let data = null;
   try {
-    data = await api.getSite();
+    // The landing page never shows a login — preview rides on the admin
+    // session already stored by the map/admin pages.
+    if (isPreview) api.restoreSession();
+    data = isPreview ? await api.getSitePreview() : await api.getSite();
   } catch (e) {
-    // API unreachable: the map is the only useful destination.
+    // Preview without an admin session, or API unreachable: go to the map.
     location.replace('/map');
     return;
   }
-  if (!data || !data.enabled || !data.content) {
+  if (!data || !data.content || (!data.enabled && !isPreview)) {
     location.replace('/map');
     return;
+  }
+  if (isPreview) {
+    const bar = document.createElement('div');
+    bar.textContent = t('site.previewBanner');
+    bar.style.cssText = 'position:sticky;top:0;z-index:50;text-align:center;'
+      + 'padding:7px 12px;font-weight:700;font-size:14px;'
+      + 'background:#b45309;color:#fff;letter-spacing:0.02em;';
+    document.body.prepend(bar);
   }
   const c = data.content;
   document.title = pick((c.hero || {}).title) || 'Soil Information System';

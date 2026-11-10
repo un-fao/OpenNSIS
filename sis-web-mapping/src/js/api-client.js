@@ -181,6 +181,7 @@ class SISApiClient {
       method: 'PUT', body: JSON.stringify({ content })
     });
   }
+  async getSitePreview() { return this.authenticatedRequest('/api/site/preview'); }
   async publishSite() { return this.authenticatedRequest('/api/site/publish', { method: 'POST' }); }
   async listSiteSnapshots() { return this.authenticatedRequest('/api/site/snapshots'); }
   async rollbackSite(snapshotId) {

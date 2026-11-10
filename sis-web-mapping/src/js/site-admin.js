@@ -87,6 +87,7 @@ function markup() {
 
       <div style="display:flex;align-items:center;gap:var(--sp-3);margin-top:var(--sp-4);">
         <button type="button" class="btn btn-secondary" id="site-save">${t('a.site.saveDraft')}</button>
+        <button type="button" class="btn btn-secondary" id="site-preview">${t('a.site.previewBtn')}</button>
         <button type="button" class="btn btn-primary" id="site-publish">${t('a.site.publish')}</button>
         <span id="site-status" style="font-size:var(--fs-sm);"></span>
       </div>
@@ -198,6 +199,15 @@ export async function mountSiteAdmin() {
     document.getElementById('site-enabled').addEventListener('change', async (ev) => {
       await api.updateSetting('SITE_LANDING_ENABLED', ev.target.checked ? 'true' : 'false');
       state.enabled = ev.target.checked;
+    });
+    document.getElementById('site-preview').addEventListener('click', async () => {
+      const status = document.getElementById('site-status');
+      readForm();
+      try {
+        await api.saveSiteDraft(state.content);
+        status.textContent = t('a.site.draftSaved');
+        window.open('/?preview=1', '_blank', 'noopener');
+      } catch (err) { status.textContent = err.message; }
     });
     document.getElementById('site-save').addEventListener('click', async () => {
       const status = document.getElementById('site-status');
