@@ -11,6 +11,16 @@ import { initThemeButton } from './theme.js';
 
 const PAGE_IDS = { about: 'nav-about', people: 'nav-people', contact: 'nav-contact' };
 
+// Canonical header entries and their default order; the admin can reorder
+// them (content.nav_order), and every page renders the same sequence.
+export const NAV_SLUGS = ['home', 'about', 'map', 'catalogue', 'dashboard', 'people', 'contact'];
+
+export function normalizeOrder(order) {
+  const base = Array.isArray(order) ? order.filter((s) => NAV_SLUGS.includes(s)) : [];
+  NAV_SLUGS.forEach((s) => { if (!base.includes(s)) base.push(s); });
+  return base;
+}
+
 export function applyNav(current, pages, content) {
   const items = [['nav-home', 'site.nav.home', '/'], ['nav-about', 'site.nav.about', '/about'],
                  ['nav-map', 'site.nav.map', '/map'], ['nav-catalogue', 'site.nav.catalogue', null],
@@ -42,13 +52,21 @@ export function applyNav(current, pages, content) {
     el.style.display = published ? '' : 'none';
   });
   // Catalogue and Dashboard are features, not CMS pages; their links can
-  // be unpublished from the Website tab's General panel (default: shown).
+  // be unpublished from the Website tab (default: shown).
   if (content) {
     [['nav-catalogue', 'catalogue_published'], ['nav-dashboard', 'dashboard_published']]
       .forEach(([id, key]) => {
         const el = document.getElementById(id);
         if (el) el.style.display = content[key] === false ? 'none' : '';
       });
+  }
+  // Admin-chosen ordering: moving each entry in sequence re-sorts the bar.
+  const navEl = document.querySelector('.site-nav');
+  if (navEl) {
+    normalizeOrder(content && content.nav_order).forEach((slug) => {
+      const el = document.getElementById(`nav-${slug}`);
+      if (el && el.parentElement === navEl) navEl.appendChild(el);
+    });
   }
 }
 

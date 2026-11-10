@@ -8,6 +8,7 @@
  */
 import api from './api-client.js';
 import { t, AVAILABLE } from './i18n.js';
+import { normalizeOrder } from './site-nav.js';
 
 let state = { content: {}, lang: 'en', enabled: false, mounted: false, page: 'general' };
 
@@ -145,14 +146,13 @@ function markup() {
     <div class="admin-section" style="max-width:1150px;">
       <h3 class="admin-section-title">${t('a.site.title')}</h3>
 
-      <div style="display:flex;gap:6px;margin-bottom:var(--sp-3);" id="site-pages-bar">
-        ${['general', 'home', 'about', 'people', 'contact', 'catalogue', 'dashboard'].map((p) =>
-          `<button type="button" class="btn btn-sm site-page-tab${p === 'general' ? ' btn-primary' : ''}" data-page="${p}">${p === 'general' ? t('a.site.general') : t('site.nav.' + p)}</button>`).join('')}
-      </div>
+      <div style="display:flex;gap:6px;margin-bottom:var(--sp-3);flex-wrap:wrap;" id="site-pages-bar"></div>
 
-      <div data-sitepage="general" style="display:grid;grid-template-columns:auto 1fr;gap:var(--sp-3);align-items:center;">
+      <div data-sitepage="general" style="display:grid;grid-template-columns:auto 1fr;gap:var(--sp-3);align-items:start;">
         <label>${t('a.site.langLbl')}</label>
         <span style="display:flex;gap:4px;" id="site-langs"></span>
+        <label>${t('a.site.orderLbl')}</label>
+        <div id="site-nav-order" style="display:flex;flex-direction:column;gap:4px;width:fit-content;"></div>
       </div>
 
       <div data-sitepage="home" style="display:none;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:center;">
@@ -243,6 +243,58 @@ function pageIsPublished(slug) {
   return p.published !== false;
 }
 
+// Website sub-tabs follow the admin-chosen page order (General first;
+// Map is header-only and has no sub-tab).
+const TAB_SLUGS = ['home', 'about', 'people', 'contact', 'catalogue', 'dashboard'];
+
+function renderPagesBar() {
+  const bar = document.getElementById('site-pages-bar');
+  if (!bar) return;
+  const tabs = ['general',
+                ...normalizeOrder(state.content.nav_order).filter((s) => TAB_SLUGS.includes(s))];
+  bar.innerHTML = tabs.map((p) =>
+    `<button type="button" class="btn btn-sm site-page-tab${p === state.page ? ' btn-primary' : ''}" data-page="${p}">${p === 'general' ? t('a.site.general') : t('site.nav.' + p)}</button>`).join('');
+  bar.querySelectorAll('.site-page-tab').forEach((b) => b.addEventListener('click', () => {
+    state.page = b.dataset.page;
+    bar.querySelectorAll('.site-page-tab').forEach((x) =>
+      x.classList.toggle('btn-primary', x === b));
+    document.querySelectorAll('[data-sitepage]').forEach((panel) => {
+      const mine = panel.dataset.sitepage === state.page;
+      panel.style.display = mine ? 'grid' : 'none';
+    });
+    updatePublishBtn();
+  }));
+}
+
+function renderOrderList() {
+  const wrap = document.getElementById('site-nav-order');
+  if (!wrap) return;
+  const order = normalizeOrder(state.content.nav_order);
+  wrap.innerHTML = order.map((slug, i) => `
+    <div style="display:flex;align-items:center;gap:6px;">
+      <button type="button" class="btn btn-sm ord-up" data-i="${i}" ${i === 0 ? 'disabled' : ''} style="padding:2px 9px;">↑</button>
+      <button type="button" class="btn btn-sm ord-down" data-i="${i}" ${i === order.length - 1 ? 'disabled' : ''} style="padding:2px 9px;">↓</button>
+      <span>${t('site.nav.' + slug)}</span>
+    </div>`).join('');
+  wrap.querySelectorAll('button').forEach((b) => b.addEventListener('click', async () => {
+    const i = Number(b.dataset.i);
+    const j = b.classList.contains('ord-up') ? i - 1 : i + 1;
+    const status = document.getElementById('site-status');
+    readForm();
+    const ord = normalizeOrder(state.content.nav_order);
+    [ord[i], ord[j]] = [ord[j], ord[i]];
+    state.content.nav_order = ord;
+    renderOrderList();
+    renderPagesBar();
+    try {
+      await api.saveSiteDraft(state.content);
+      await api.publishSite();
+      status.textContent = '';
+      window.dispatchEvent(new CustomEvent('site:published'));
+    } catch (err) { status.textContent = err.message; }
+  }));
+}
+
 function updatePublishBtn() {
   const pubBtn = document.getElementById('site-publish');
   const saveBtn = document.getElementById('site-save');
@@ -301,6 +353,8 @@ function fillForm() {
   renderMembers();
   renderLangPills();
   checkContrast();
+  renderPagesBar();
+  renderOrderList();
   updatePublishBtn();
 }
 
@@ -348,16 +402,7 @@ export async function mountSiteAdmin() {
     root.innerHTML = markup();
     state.mounted = true;
 
-    document.querySelectorAll('.site-page-tab').forEach((b) => b.addEventListener('click', () => {
-      state.page = b.dataset.page;
-      document.querySelectorAll('.site-page-tab').forEach((x) =>
-        x.classList.toggle('btn-primary', x === b));
-      document.querySelectorAll('[data-sitepage]').forEach((panel) => {
-        const mine = panel.dataset.sitepage === state.page;
-        panel.style.display = mine ? 'grid' : 'none';
-      });
-      updatePublishBtn();
-    }));
+    renderPagesBar();
     document.getElementById('site-people-add').addEventListener('click', () => {
       readMembers();
       members().push({ name: '', position: {}, email: '', phone: '', photo: '' });
