@@ -585,7 +585,7 @@
   "site.landing.q4c": "Open the dashboard",
   "site.landing.toolsTitle": "Access soil data",
   "site.landing.toolsLede": "The Soil Information System provides access to nationally consistent soil data and information to support the sustainable management of soil. Each tool works on the same underlying database.",
-  "site.landing.aboutTitle": "One data model, many providers",
+  "site.landing.aboutTitle": "Soil data, from profile to map.",
   "site.landing.aboutBody1": "Soil profiles, observations and maps are harmonised against the ISO 28258 data model and the GloSIS property and procedure codelists, so a pH value from one project means the same thing as a pH value from another.",
   "site.landing.aboutBody2": "Each country or organisation runs its own node. Data stays where it is produced; only what the provider chooses to publish becomes visible to the federation.",
   "site.landing.aboutCta": "Read more",

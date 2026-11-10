@@ -585,7 +585,7 @@
   "site.landing.q4c": "打开仪表板",
   "site.landing.toolsTitle": "获取土壤数据",
   "site.landing.toolsLede": "土壤信息系统提供全国一致的土壤数据与信息，支持土壤的可持续管理。所有工具共用同一个数据库。",
-  "site.landing.aboutTitle": "一套数据模型，多个数据提供方",
+  "site.landing.aboutTitle": "土壤数据，从剖面到地图。",
   "site.landing.aboutBody1": "剖面、观测与地图均按 ISO 28258 数据模型以及 GloSIS 属性与方法代码表进行统一，因此不同项目的 pH 值含义完全一致。",
   "site.landing.aboutBody2": "每个国家或机构运行自己的节点。数据保存在产生地；只有提供方选择发布的内容才会对联邦可见。",
   "site.landing.aboutCta": "查看更多",

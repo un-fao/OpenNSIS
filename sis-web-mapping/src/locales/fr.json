@@ -585,7 +585,7 @@
   "site.landing.q4c": "Ouvrir le tableau de bord",
   "site.landing.toolsTitle": "Accéder aux données de sol",
   "site.landing.toolsLede": "Le Système d’information sur les sols donne accès à des données cohérentes à l’échelle nationale pour soutenir la gestion durable des sols. Tous les outils s’appuient sur la même base de données.",
-  "site.landing.aboutTitle": "Un modèle de données, plusieurs fournisseurs",
+  "site.landing.aboutTitle": "Les données de sol, du profil à la carte.",
   "site.landing.aboutBody1": "Les profils, observations et cartes sont harmonisés selon le modèle ISO 28258 et les listes de codes GloSIS, si bien qu’une valeur de pH signifie la même chose d’un projet à l’autre.",
   "site.landing.aboutBody2": "Chaque pays ou organisation exploite son propre nœud. Les données restent là où elles sont produites ; seul ce que le fournisseur choisit de publier devient visible pour la fédération.",
   "site.landing.aboutCta": "En savoir plus",

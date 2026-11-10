@@ -15,9 +15,8 @@ import api from './api-client.js';
 import { t, currentLang } from './i18n.js';
 import { applyNav, applyBrand, initHeaderControls, applyFooter } from './site-nav.js';
 
-// Bundled by Parcel into hashed, long-cached URLs.
+// Bundled by Parcel into a hashed, long-cached URL.
 import IMG_LANDSCAPE from 'url:../img/hero-landscape-map.jpg';
-import IMG_STRATA from 'url:../img/hero-soil-strata.jpg';
 
 const ICONS = {
   map: '<path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/>',
@@ -132,7 +131,6 @@ async function init() {
     cta.href = '/about';
     cta.hidden = false;
   }
-  document.getElementById('about-figure').style.backgroundImage = `url('${IMG_STRATA}')`;
 
   // ---------- footer ----------
   applyFooter(data);

@@ -585,7 +585,7 @@
   "site.landing.q4c": "Abrir el panel",
   "site.landing.toolsTitle": "Acceder a los datos de suelo",
   "site.landing.toolsLede": "El Sistema de Información de Suelos da acceso a datos e información de suelos coherentes a escala nacional para apoyar la gestión sostenible del suelo. Todas las herramientas trabajan sobre la misma base de datos.",
-  "site.landing.aboutTitle": "Un modelo de datos, muchos proveedores",
+  "site.landing.aboutTitle": "Datos de suelo, del perfil al mapa.",
   "site.landing.aboutBody1": "Los perfiles, observaciones y mapas se armonizan con el modelo ISO 28258 y las listas de códigos de propiedades y procedimientos de GloSIS, de modo que un valor de pH significa lo mismo en todos los proyectos.",
   "site.landing.aboutBody2": "Cada país u organización opera su propio nodo. Los datos permanecen donde se producen; solo lo que el proveedor decide publicar es visible para la federación.",
   "site.landing.aboutCta": "Leer más",

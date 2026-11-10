@@ -150,10 +150,7 @@ a { color: var(--color-primary); }
 .land-linkcard-go { margin-top: auto; font-size: 14px; font-weight: 700; color: var(--color-primary); }
 
 /* ---------- landing: about ---------- */
-.land-about-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: clamp(28px, 4vw, 48px); align-items: center;
-}
+.land-about-col { max-width: 780px; }
 .land-about-title {
     margin: 0 0 16px; font-family: var(--font-display); font-weight: 800;
     font-size: clamp(26px, 3vw, 38px); letter-spacing: -0.01em;
@@ -162,11 +159,6 @@ a { color: var(--color-primary); }
     background: none; border: none; border-radius: 0; box-shadow: none;
     padding: 0; font-size: 16.5px; line-height: 1.65; color: var(--color-text-muted);
     margin-bottom: 22px;
-}
-.land-figure {
-    aspect-ratio: 16 / 10; border-radius: 18px;
-    border: 1px solid var(--color-border); box-shadow: var(--shadow-lift);
-    background-size: cover; background-position: center;
 }
 /* ---------- landing: footer ---------- */
 .land-footer { background: var(--land-deep-footer); color: #fff; padding: 48px 0 32px; }
