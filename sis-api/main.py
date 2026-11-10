@@ -7489,10 +7489,12 @@ def _require_admin(current_user: dict):
         raise HTTPException(status_code=403, detail="Admin only")
 
 
-def _site_render(content: dict) -> dict:
-    """Draft → publishable snapshot: render about/footer Markdown per
+def _site_render(content: dict, include_unpublished: bool = False) -> dict:
+    """Draft → publishable copy: render about/footer Markdown per
     language and sanitise the HTML. The Markdown source stays in the
-    snapshot too, so a rollback can be re-edited."""
+    copy too, so it can be re-edited. Pages carry a per-page `published`
+    flag (default true once they have content); unpublished pages are left
+    out, except in the admin preview."""
     from markdown_it import MarkdownIt
     import base64
     import nh3
@@ -7524,6 +7526,8 @@ def _site_render(content: dict) -> dict:
     pages_out = {}
     for slug, page in (out.get("pages") or {}).items():
         if slug not in ("about", "people", "contact") or not isinstance(page, dict):
+            continue
+        if not include_unpublished and page.get("published") is False:
             continue
         if slug == "people":
             # Structured page: member cards (photo, name, position, email,
@@ -7566,9 +7570,15 @@ async def get_site(request: Request, api_client: dict = Depends(verify_api_key))
             org_logo = _setting_value(cur, "ORG_LOGO_URL", "")
             cur.execute("SELECT content, published_at FROM api.site_published WHERE id = 1")
             row = cur.fetchone()
+    content = row["content"] if row else None
+    # Home's own publish flag is the landing switch; older content without
+    # the flag falls back to the SITE_LANDING_ENABLED setting.
+    home_published = (content or {}).get("home_published")
+    if isinstance(home_published, bool):
+        enabled = home_published
     body = {"enabled": enabled,
             "app_title": app_title, "org_logo": org_logo,
-            "content": row["content"] if row else None}
+            "content": content}
     etag = hashlib.md5(json.dumps(body, sort_keys=True, default=str).encode()).hexdigest()
     if request.headers.get("if-none-match") == etag:
         return Response(status_code=304)
@@ -7627,7 +7637,7 @@ async def preview_site(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="The draft is empty")
     return {"enabled": True, "preview": True,
             "app_title": app_title, "org_logo": org_logo,
-            "content": _site_render(row["content"]),
+            "content": _site_render(row["content"], include_unpublished=True),
             "updated_at": row["updated_at"]}
 
 

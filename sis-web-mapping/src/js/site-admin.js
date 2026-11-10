@@ -155,10 +155,6 @@ function markup() {
         <label>${t('a.site.langLbl')}</label>
         <span style="display:flex;gap:4px;" id="site-langs"></span>
         <span></span>
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;width:fit-content;">
-          <input type="checkbox" id="site-enabled"> ${t('a.site.enabled')}
-        </label>
-        <span></span>
         <a href="/" target="_blank" rel="noopener" style="font-size:var(--fs-sm);width:fit-content;">${t('a.site.view')} ↗</a>
       </div>
 
@@ -215,12 +211,33 @@ function markup() {
       </div>
 
       <div style="display:flex;align-items:center;gap:var(--sp-3);margin-top:var(--sp-4);">
-        <button type="button" class="btn btn-secondary" id="site-save">${t('a.site.saveDraft')}</button>
+        <button type="button" class="btn btn-secondary" id="site-save">${t('a.site.save')}</button>
         <button type="button" class="btn btn-secondary" id="site-preview">${t('a.site.previewBtn')}</button>
-        <button type="button" class="btn btn-primary" id="site-publish">${t('a.site.publish')}</button>
+        <button type="button" class="btn btn-primary" id="site-publish"></button>
         <span id="site-status" style="font-size:var(--fs-sm);"></span>
       </div>
     </div>`;
+}
+
+// Per-page publish state: a page with content is public unless its flag
+// was set to false; Home's flag is the landing switch itself (legacy
+// content without the flag follows the old SITE_LANDING_ENABLED setting,
+// surfaced here as state.enabled).
+function pageIsPublished(slug) {
+  if (slug === 'home') {
+    const hp = state.content.home_published;
+    return typeof hp === 'boolean' ? hp : !!state.enabled;
+  }
+  const p = ((state.content.pages || {})[slug]) || {};
+  return p.published !== false;
+}
+
+function updatePublishBtn() {
+  const btn = document.getElementById('site-publish');
+  if (!btn) return;
+  if (state.page === 'general') { btn.style.display = 'none'; return; }
+  btn.style.display = '';
+  btn.textContent = pageIsPublished(state.page) ? t('a.site.unpublish') : t('a.site.publish');
 }
 
 function readForm() {
@@ -262,9 +279,9 @@ function fillForm() {
   });
   set('site-page-people-title', pageVal('people', 'title'));
   renderMembers();
-  document.getElementById('site-enabled').checked = !!state.enabled;
   renderLangPills();
   checkContrast();
+  updatePublishBtn();
 }
 
 function renderLangPills() {
@@ -319,6 +336,7 @@ export async function mountSiteAdmin() {
         const mine = panel.dataset.sitepage === state.page;
         panel.style.display = mine ? 'grid' : 'none';
       });
+      updatePublishBtn();
     }));
     document.getElementById('site-people-add').addEventListener('click', () => {
       readMembers();
@@ -328,10 +346,6 @@ export async function mountSiteAdmin() {
     document.getElementById('site-logo-upload').addEventListener('click', () => uploadInto('site-logo-url'));
     document.getElementById('site-hero-upload').addEventListener('click', () => uploadInto('site-hero-image'));
     document.getElementById('site-color-primary').addEventListener('input', checkContrast);
-    document.getElementById('site-enabled').addEventListener('change', async (ev) => {
-      await api.updateSetting('SITE_LANDING_ENABLED', ev.target.checked ? 'true' : 'false');
-      state.enabled = ev.target.checked;
-    });
     document.getElementById('site-preview').addEventListener('click', async () => {
       const status = document.getElementById('site-status');
       readForm();
@@ -353,10 +367,19 @@ export async function mountSiteAdmin() {
     document.getElementById('site-publish').addEventListener('click', async () => {
       const status = document.getElementById('site-status');
       readForm();
+      const makePublic = !pageIsPublished(state.page);
+      if (state.page === 'home') {
+        state.content.home_published = makePublic;
+      } else {
+        if (!state.content.pages) state.content.pages = {};
+        if (!state.content.pages[state.page]) state.content.pages[state.page] = {};
+        state.content.pages[state.page].published = makePublic;
+      }
       try {
         await api.saveSiteDraft(state.content);
         await api.publishSite();
-        status.textContent = t('a.site.published');
+        status.textContent = makePublic ? t('a.site.published') : t('a.site.unpublished');
+        updatePublishBtn();
       } catch (err) { status.textContent = err.message; }
     });
   }
