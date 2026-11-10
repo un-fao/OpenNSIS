@@ -153,8 +153,10 @@ function markup() {
       <div data-sitepage="general" style="display:grid;grid-template-columns:auto 1fr;gap:var(--sp-3);align-items:center;">
         <label>${t('a.site.langLbl')}</label>
         <span style="display:flex;gap:4px;" id="site-langs"></span>
-        <span></span>
-        <a href="/" target="_blank" rel="noopener" style="font-size:var(--fs-sm);width:fit-content;">${t('a.site.view')} ↗</a>
+        <label>${t('site.nav.catalogue')}</label>
+        <button type="button" class="btn btn-sm" id="site-pub-catalogue" style="width:fit-content;"></button>
+        <label>${t('site.nav.dashboard')}</label>
+        <button type="button" class="btn btn-sm" id="site-pub-dashboard" style="width:fit-content;"></button>
       </div>
 
       <div data-sitepage="home" style="display:none;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:center;">
@@ -183,8 +185,6 @@ function markup() {
         <input type="text" id="site-page-about-title">
         <label>${t('a.site.pageBody')}</label>
         <textarea id="site-page-about-body" rows="14" style="font-family:var(--font-mono,monospace);font-size:var(--fs-sm);"></textarea>
-        <span></span>
-        <span style="color:var(--color-text-muted);font-size:var(--fs-sm);">${t('a.site.pageHint')}</span>
       </div>
 
       <div data-sitepage="contact" style="display:none;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:start;">
@@ -198,8 +198,6 @@ function markup() {
         <input type="text" id="site-contact-phone" style="max-width:220px;">
         <label>${t('a.site.pageBody')}</label>
         <textarea id="site-page-contact-body" rows="10" style="font-family:var(--font-mono,monospace);font-size:var(--fs-sm);"></textarea>
-        <span></span>
-        <span style="color:var(--color-text-muted);font-size:var(--fs-sm);">${t('a.site.pageHint')}</span>
       </div>
 
       <div data-sitepage="people" style="display:none;">
@@ -209,7 +207,6 @@ function markup() {
         </div>
         <div id="site-people-list" style="margin-top:var(--sp-3);"></div>
         <button type="button" class="btn btn-sm" id="site-people-add" style="margin-top:var(--sp-2);width:fit-content;justify-self:start;">${t('a.site.ppl.add')}</button>
-        <p style="color:var(--color-text-muted);font-size:var(--fs-sm);margin-top:var(--sp-2);">${t('a.site.pageHint')}</p>
       </div>
 
       <div data-sitepage="home" style="display:none;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:center;margin-top:var(--sp-2);">
@@ -243,6 +240,17 @@ function pageIsPublished(slug) {
   }
   const p = ((state.content.pages || {})[slug]) || {};
   return p.published !== false;
+}
+
+// Catalogue and Dashboard are features with their own routes; these flags
+// only control whether their links appear in the shared header.
+const FEATURE_FLAGS = { catalogue: 'catalogue_published', dashboard: 'dashboard_published' };
+
+function updateFeatureBtns() {
+  Object.entries(FEATURE_FLAGS).forEach(([name, key]) => {
+    const btn = document.getElementById(`site-pub-${name}`);
+    if (btn) btn.textContent = state.content[key] === false ? t('a.site.publish') : t('a.site.unpublish');
+  });
 }
 
 function updatePublishBtn() {
@@ -302,6 +310,7 @@ function fillForm() {
   renderLangPills();
   checkContrast();
   updatePublishBtn();
+  updateFeatureBtns();
 }
 
 function renderLangPills() {
@@ -366,6 +375,21 @@ export async function mountSiteAdmin() {
     document.getElementById('site-logo-upload').addEventListener('click', () => uploadInto('site-logo-url'));
     document.getElementById('site-hero-upload').addEventListener('click', () => uploadInto('site-hero-image'));
     document.getElementById('site-color-primary').addEventListener('input', checkContrast);
+    Object.entries(FEATURE_FLAGS).forEach(([name, key]) => {
+      document.getElementById(`site-pub-${name}`).addEventListener('click', async () => {
+        const status = document.getElementById('site-status');
+        readForm();
+        const makePublic = state.content[key] === false;
+        state.content[key] = makePublic;
+        try {
+          await api.saveSiteDraft(state.content);
+          await api.publishSite();
+          status.textContent = makePublic ? t('a.site.published') : '';
+          updateFeatureBtns();
+          window.dispatchEvent(new CustomEvent('site:published'));
+        } catch (err) { status.textContent = err.message; }
+      });
+    });
     document.getElementById('site-preview').addEventListener('click', async () => {
       const status = document.getElementById('site-status');
       readForm();
@@ -398,8 +422,9 @@ export async function mountSiteAdmin() {
       try {
         await api.saveSiteDraft(state.content);
         await api.publishSite();
-        status.textContent = makePublic ? t('a.site.published') : t('a.site.unpublished');
+        status.textContent = makePublic ? t('a.site.published') : '';
         updatePublishBtn();
+        window.dispatchEvent(new CustomEvent('site:published'));
       } catch (err) { status.textContent = err.message; }
     });
   }

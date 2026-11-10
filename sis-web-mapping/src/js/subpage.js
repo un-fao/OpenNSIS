@@ -42,7 +42,7 @@ async function init() {
   document.title = title;
   applyBrand(data);
   initHeaderControls();
-  applyNav(slug, c.pages);
+  applyNav(slug, c.pages, c);
   const esc = (x) => String(x ?? '').replace(/[&<>"']/g,
     (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const body = document.getElementById('page-body');

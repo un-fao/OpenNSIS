@@ -121,12 +121,16 @@ function applySettings() {
 async function applySiteNav() {
   try {
     const site = await api.getSite();
-    if (site && site.enabled && site.content) {
-      applyNav('map', site.content.pages);
-      document.getElementById('site-nav').hidden = false;
-    }
+    const nav = document.getElementById('site-nav');
+    const ok = !!(site && site.enabled && site.content);
+    if (ok) applyNav('map', site.content.pages, site.content);
+    if (nav) nav.hidden = !ok;
   } catch (e) { /* nav stays hidden */ }
 }
+
+// The Website tab announces every publish/unpublish so the header above
+// the admin panel reflects it immediately.
+window.addEventListener('site:published', () => applySiteNav());
 
 // ==================== Map Initialization ====================
 

@@ -62,7 +62,7 @@ async function init() {
   applyBrand(data);
   initHeaderControls();
 
-  applyNav('home', c.pages);
+  applyNav('home', c.pages, c);
   document.getElementById('hero-cta').textContent = t('site.openMap');
   document.getElementById('hero-catalogue').textContent = t('site.catalogue');
   document.getElementById('hero-title').textContent = pick((c.hero || {}).title);

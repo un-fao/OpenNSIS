@@ -231,13 +231,15 @@ function renderDashboardCharts(stats) {
 
 async function init() {
   let pages = null;
+  let siteContent = null;
   try {
     const site = (await api.getSite()) || {};
-    pages = site.content?.pages;
+    siteContent = site.content;
+    pages = siteContent?.pages;
     applyBrand(site);
   } catch (e) { /* nav stays muted */ }
   initHeaderControls();
-  applyNav('dashboard', pages);
+  applyNav('dashboard', pages, siteContent);
   document.getElementById('dash-title').textContent = t('site.nav.dashboard');
 
   const empty = document.getElementById('dashboard-empty');
