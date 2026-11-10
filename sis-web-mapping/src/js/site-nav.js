@@ -72,6 +72,43 @@ export function applyNav(current, pages, content) {
 }
 
 /**
+ * Shared deep footer (landing, dashboard): instance name, links to the
+ * published pages in the admin-chosen order, and the CMS footer text
+ * (Website → Home → Footer, rendered and sanitised at publish time).
+ * The page provides #site-footer with #footer-name/#footer-nav/#footer-custom.
+ */
+export function applyFooter(data) {
+  const wrap = document.getElementById('site-footer');
+  if (!wrap || !data) return;
+  const c = data.content || {};
+  const pages = c.pages || {};
+  const name = document.getElementById('footer-name');
+  if (name) name.textContent = data.app_title || '';
+  const entries = {
+    map: c.map_published !== false && { href: '/map' },
+    catalogue: c.catalogue_published !== false && { href: '/collections?f=html', blank: true },
+    dashboard: c.dashboard_published !== false && { href: '/dashboard' },
+    about: pages.about && { href: '/about' },
+    people: pages.people && { href: '/people' },
+    contact: pages.contact && { href: '/contact' },
+  };
+  const linkHtml = (slug) => {
+    const e = entries[slug];
+    if (!e) return '';
+    return `<a href="${e.href}"${e.blank ? ' target="_blank" rel="noopener"' : ''}>`
+      + `${t('site.nav.' + slug)}</a>`;
+  };
+  const order = normalizeOrder(c.nav_order).filter((s) => s !== 'home');
+  const nav = document.getElementById('footer-nav');
+  if (nav) nav.innerHTML = `<a href="/">${t('site.nav.home')}</a>` + order.map(linkHtml).join('');
+  const fc = document.getElementById('footer-custom');
+  const dict = c.footer_html;
+  const footer = (dict && typeof dict === 'object')
+    ? (dict[currentLang()] || dict.en || Object.values(dict)[0] || '') : '';
+  if (fc && footer) { fc.innerHTML = footer; fc.hidden = false; }
+}
+
+/**
  * Brand area: instance logo + name, same sources as the map page
  * (ORG_LOGO_URL / APP_TITLE settings, surfaced through GET /api/site; a
  * CMS-uploaded logo wins over the setting). Never touches document.title —
@@ -121,20 +158,21 @@ export function initHeaderControls(opts = {}) {
     });
   }
 
-  const langBtn = document.createElement('button');
-  langBtn.id = 'lang-btn';
-  langBtn.type = 'button';
-  langBtn.className = 'hdr-glyph';
-  langBtn.innerHTML = GLOBE_GLYPH;
-  langBtn.title = t('lang.label');
-  wrap.appendChild(langBtn);
-
   const themeBtn = document.createElement('button');
   themeBtn.id = 'theme-btn';
   themeBtn.type = 'button';
   themeBtn.className = 'hdr-glyph';
   initThemeButton(themeBtn);
   wrap.appendChild(themeBtn);
+
+  const langBtn = document.createElement('button');
+  langBtn.id = 'lang-btn';
+  langBtn.type = 'button';
+  langBtn.className = 'hdr-glyph';
+  langBtn.innerHTML = GLOBE_GLYPH
+    + `<span class="lang-code">${currentLang().toUpperCase()}</span>`;
+  langBtn.title = t('lang.label');
+  wrap.appendChild(langBtn);
 
   const menu = document.createElement('div');
   menu.id = 'lang-menu';

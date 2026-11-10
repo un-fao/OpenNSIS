@@ -1,15 +1,34 @@
 /**
- * Public landing page (issue #13, v1).
+ * Public landing page (issue #13, v3 — editorial layout).
  *
  * One request to GET /api/site decides everything: while the landing is
  * disabled the visitor is sent straight to /map (the map's permanent home),
- * otherwise the published snapshot fills the shell. The snapshot's
+ * otherwise the published snapshot fills the shell. The page is a set of
+ * full-bleed bands — hero, quick links, tools, resources, how-it-works and
+ * footer — whose copy ships in the locales; the CMS supplies the hero
+ * title/lede/image, the about text, the footer note and the colours, and
+ * the published flags decide which links appear. The snapshot's
  * about/footer HTML was rendered AND sanitised server-side at publish time —
  * this script only places it, it never parses Markdown or cleans HTML.
  */
 import api from './api-client.js';
 import { t, currentLang } from './i18n.js';
-import { applyNav, applyBrand, initHeaderControls } from './site-nav.js';
+import { applyNav, applyBrand, initHeaderControls, applyFooter } from './site-nav.js';
+
+// Bundled by Parcel into hashed, long-cached URLs.
+import IMG_LANDSCAPE from 'url:../img/hero-landscape-map.jpg';
+import IMG_STRATA from 'url:../img/hero-soil-strata.jpg';
+
+const ICONS = {
+  map: '<path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/>',
+  file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>',
+  chart: '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+};
+
+function icon(name) {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" `
+    + `stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
+}
 
 function pick(dict) {
   // Same fallback order as t(): visitor language → English → anything.
@@ -29,6 +48,8 @@ function applyColors(colors) {
   if (primary) root.style.setProperty('--color-primary', primary);
   if (secondary) root.style.setProperty('--color-secondary', secondary);
 }
+
+function set(id, text) { document.getElementById(id).textContent = text; }
 
 async function init() {
   const isPreview = new URLSearchParams(location.search).has('preview');
@@ -56,36 +77,66 @@ async function init() {
     document.body.prepend(bar);
   }
   const c = data.content;
+  const pages = c.pages || {};
+  const showMap = c.map_published !== false;
+  const showCatalogue = c.catalogue_published !== false;
+  const showDashboard = c.dashboard_published !== false;
+
   document.title = pick((c.hero || {}).title) || data.app_title || 'Soil Information System';
   applyColors(c.colors);
 
   applyBrand(data);
   initHeaderControls();
+  applyNav('home', pages, c);
 
-  applyNav('home', c.pages, c);
-  document.getElementById('hero-cta').textContent = t('site.openMap');
-  document.getElementById('hero-catalogue').textContent = t('site.catalogue');
-  document.getElementById('hero-title').textContent = pick((c.hero || {}).title);
-  document.getElementById('hero-subtitle').textContent = pick((c.hero || {}).subtitle);
-  const heroImg = (c.hero || {}).image;
-  if (heroImg) {
-    const d = document.getElementById('hero-image');
-    d.style.backgroundImage = `url("${encodeURI(heroImg)}")`;
-    d.hidden = false;
-  }
+  // ---------- hero ----------
+  set('hero-title', pick((c.hero || {}).title) || t('site.landing.heroTitle'));
+  set('hero-subtitle', pick((c.hero || {}).subtitle) || t('site.landing.heroLede'));
+  set('hero-cta', t('site.landing.ctaExplore'));
+  set('hero-map', t('site.landing.ctaMap'));
+  document.getElementById('hero-map').hidden = !showMap;
+  document.getElementById('hero-cta').hidden = !showCatalogue;
 
+  const heroImg = (c.hero || {}).image || IMG_LANDSCAPE;
+  document.querySelector('.land-hero')
+    .style.setProperty('--hero-img', `url("${encodeURI(heroImg)}")`);
+
+  // ---------- quick links ----------
+  set('quick-title', t('site.landing.toolsTitle'));
+  set('quick-lede', t('site.landing.toolsLede'));
+  const quick = [
+    showMap && { icon: 'map', n: 2, href: '/map' },
+    showCatalogue && { icon: 'file', n: 3, href: '/collections?f=html', blank: true },
+    showDashboard && { icon: 'chart', n: 4, href: '/dashboard' },
+  ].filter(Boolean);
+  document.getElementById('quick-grid').innerHTML = quick.map((q) => `
+    <a class="land-linkcard" href="${q.href}"${q.blank ? ' target="_blank" rel="noopener"' : ''}>
+      <span class="land-linkcard-icon">${icon(q.icon)}</span>
+      <h3>${t(`site.landing.q${q.n}t`)}</h3>
+      <p>${t(`site.landing.q${q.n}b`)}</p>
+      <span class="land-linkcard-go">${t(`site.landing.q${q.n}c`)} →</span>
+    </a>`).join('');
+
+  // ---------- about ----------
+  set('about-title', t('site.landing.aboutTitle'));
+  const aboutEl = document.getElementById('about');
   const about = pick(c.about_html);
   if (about) {
-    const el = document.getElementById('about');
-    el.innerHTML = about;          // sanitised server-side at publish time
-    el.hidden = false;
+    aboutEl.innerHTML = about;       // sanitised server-side at publish time
+  } else {
+    aboutEl.innerHTML = `<p>${t('site.landing.aboutBody1')}</p><p>${t('site.landing.aboutBody2')}</p>`;
   }
-  const footer = pick(c.footer_html);
-  if (footer) {
-    const el = document.getElementById('site-footer');
-    el.innerHTML = footer;         // sanitised server-side at publish time
-    el.hidden = false;
+  if (pages.about) {
+    const cta = document.getElementById('about-cta');
+    cta.textContent = t('site.landing.aboutCta');
+    cta.href = '/about';
+    cta.hidden = false;
   }
+  document.getElementById('about-figure').style.backgroundImage = `url('${IMG_STRATA}')`;
+
+  // ---------- footer ----------
+  applyFooter(data);
+
   document.getElementById('site-header').hidden = false;
   document.getElementById('site').hidden = false;
 }

@@ -43,49 +43,49 @@
             <div class="site-controls" id="site-controls"></div>
         </div>
     </header>
-    <main id="site" hidden>
+    <main id="site" class="landing" hidden>
 
-        <section class="hero">
-            <div class="hero-text">
+        <section class="land-hero" id="top">
+            <div class="land-wrap land-hero-inner">
                 <h1 id="hero-title"></h1>
                 <p id="hero-subtitle"></p>
-                <div class="hero-actions">
-                    <a class="btn-pill btn-lg" href="/map" id="hero-cta"></a>
-                    <a class="btn-ghost" href="/collections?f=html" id="hero-catalogue"></a>
+                <div class="land-hero-actions">
+                    <a class="btn-pill btn-lg" href="/map" id="hero-map"></a>
+                    <a class="btn-outline btn-lg" href="/collections?f=html" id="hero-cta" target="_blank" rel="noopener"></a>
                 </div>
             </div>
-            <div class="hero-visual">
-                <div class="hero-image" id="hero-image" hidden></div>
-                <!-- Default artwork when no hero image is set: a stylised soil
-                     profile — wavy horizons from topsoil to parent material. -->
-                <svg id="hero-art" viewBox="0 0 420 520" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-                    <rect x="0" y="0" width="420" height="520" fill="var(--strata-sky)"/>
-                    <path d="M0 96 Q70 76 140 92 T280 88 T420 96 L420 520 L0 520 Z" fill="var(--strata-1)"/>
-                    <path d="M0 190 Q90 168 180 186 T420 182 L420 520 L0 520 Z" fill="var(--strata-2)"/>
-                    <path d="M0 300 Q110 280 210 296 T420 290 L420 520 L0 520 Z" fill="var(--strata-3)"/>
-                    <path d="M0 410 Q120 392 230 404 T420 400 L420 520 L0 520 Z" fill="var(--strata-4)"/>
-                    <g stroke="var(--strata-root)" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55">
-                        <path d="M210 96 C 205 150, 225 180, 215 235 C 208 275, 220 300, 214 330"/>
-                        <path d="M210 150 C 185 170, 170 200, 158 228"/>
-                        <path d="M212 190 C 240 212, 252 238, 262 268"/>
-                        <path d="M214 250 C 195 272, 188 292, 184 312"/>
-                    </g>
-                    <g fill="var(--strata-stone)" opacity="0.7">
-                        <ellipse cx="90" cy="345" rx="11" ry="7"/>
-                        <ellipse cx="330" cy="365" rx="14" ry="8"/>
-                        <ellipse cx="150" cy="455" rx="16" ry="9"/>
-                        <ellipse cx="290" cy="470" rx="10" ry="6"/>
-                        <ellipse cx="60" cy="480" rx="12" ry="7"/>
-                    </g>
-                </svg>
+        </section>
+
+        <section class="land-section land-paper" id="start">
+            <div class="land-wrap">
+                <div class="land-head">
+                    <h2 id="quick-title"></h2>
+                    <p id="quick-lede"></p>
+                </div>
+                <div class="land-grid land-grid-4" id="quick-grid"></div>
             </div>
         </section>
 
-        <section class="about-wrap">
-            <article class="about" id="about" hidden></article>
+        <section class="land-section land-paper" id="about-section">
+            <div class="land-wrap land-about-grid">
+                <div>
+                    <h2 class="land-about-title" id="about-title"></h2>
+                    <div class="about land-about-body" id="about"></div>
+                    <a class="btn-pill" id="about-cta" hidden></a>
+                </div>
+                <div class="land-figure" id="about-figure"></div>
+            </div>
         </section>
 
-        <footer class="site-footer" id="site-footer" hidden></footer>
+        <footer class="land-footer" id="site-footer">
+            <div class="land-wrap">
+                <div class="land-footer-top">
+                    <div class="land-footer-name" id="footer-name"></div>
+                    <nav class="land-footer-nav" id="footer-nav"></nav>
+                </div>
+                <div class="land-footer-note" id="footer-custom" hidden></div>
+            </div>
+        </footer>
     </main>
     <script type="module" src="./js/site.js"></script>
 </body>

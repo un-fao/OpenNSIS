@@ -474,6 +474,14 @@ export async function mountSiteAdmin() {
       readForm();
       try {
         await api.saveSiteDraft(state.content);
+        // Editing a page that is already live publishes the change right
+        // away; an unpublished page stays draft-only (visible in Preview)
+        // until its Publish button is pressed. General has no publish
+        // toggle of its own — its logo/colours affect the live site.
+        if (state.page === 'general' || pageIsPublished(state.page)) {
+          await api.publishSite();
+          window.dispatchEvent(new CustomEvent('site:published'));
+        }
         status.textContent = t('a.site.draftSaved');
       } catch (err) { status.textContent = err.message; }
     });

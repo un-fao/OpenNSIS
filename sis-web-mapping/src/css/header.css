@@ -84,6 +84,13 @@ a.nav-link:hover { color: var(--color-primary); border-bottom-color: var(--color
     line-height: 0;
 }
 .hdr-glyph:hover { background: var(--color-bg-accent, rgba(128, 128, 128, 0.15)); }
+.hdr-glyph .lang-code {
+    margin-left: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1;
+}
 
 #lang-menu {
     position: absolute;

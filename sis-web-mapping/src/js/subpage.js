@@ -5,7 +5,7 @@
  */
 import api from './api-client.js';
 import { t, currentLang } from './i18n.js';
-import { applyNav, applyBrand, initHeaderControls, deobf, armContact } from './site-nav.js';
+import { applyNav, applyBrand, initHeaderControls, applyFooter, deobf, armContact } from './site-nav.js';
 
 function pick(dict) {
   if (!dict || typeof dict !== 'object') return '';
@@ -87,12 +87,8 @@ async function init() {
   body.innerHTML = inner;
   contacts.forEach(([id, kind, value]) => armContact(document.getElementById(id), kind, value));
   body.hidden = false;
-  const footer = pick(c.footer_html);
-  if (footer) {
-    const el = document.getElementById('site-footer');
-    el.innerHTML = footer;
-    el.hidden = false;
-  }
+  applyFooter(data);
+  document.getElementById('site-footer').hidden = false;
   document.getElementById('site-header').hidden = false;
   document.getElementById('site').hidden = false;
 }

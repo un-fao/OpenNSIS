@@ -6,7 +6,7 @@
 import Chart from 'chart.js/auto';
 import api from './api-client.js';
 import { t } from './i18n.js';
-import { applyNav, applyBrand, initHeaderControls } from './site-nav.js';
+import { applyNav, applyBrand, initHeaderControls, applyFooter } from './site-nav.js';
 
 let _charts = {};
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g,
@@ -237,6 +237,7 @@ async function init() {
     siteContent = site.content;
     pages = siteContent?.pages;
     applyBrand(site);
+    applyFooter(site);
   } catch (e) { /* nav stays muted */ }
   initHeaderControls();
   applyNav('dashboard', pages, siteContent);
