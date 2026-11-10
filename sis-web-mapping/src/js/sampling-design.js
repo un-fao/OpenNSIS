@@ -8,9 +8,19 @@
  */
 import api from './api-client.js';
 import { t } from './i18n.js';
+import { formatSamplingMeta } from './sampling-meta.js';
+import Map from 'ol/Map';
+import View from 'ol/View';
+import { Tile as TileLayer, Vector as VectorLayer } from 'ol/layer';
+import { OSM, Vector as VectorSource } from 'ol/source';
+import Draw from 'ol/interaction/Draw';
+import { toLonLat, transformExtent } from 'ol/proj';
+import { Fill, Stroke, Style } from 'ol/style';
 
 let mounted = false;
 let pollTimer = null;
+let openLogId = null;   // design whose log is open — kept live while runs poll
+let openSymId = null;   // design whose symbology editor is open (toggle)
 
 const e = (s) => String(s ?? '').replace(/[&<>"']/g,
   (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -25,7 +35,7 @@ function markup(sources) {
       ${s.required ? `<span style="font-size:var(--fs-sm);color:var(--color-text-muted);">${t('a.sd.required')}</span>` : ''}
     </label>`).join('');
   return `
-    <div class="admin-section" style="max-width:900px;">
+    <div class="admin-section" style="max-width:1150px;">
       <h3 class="admin-section-title">${t('a.sd.title')}</h3>
       <p style="color:var(--color-text-muted);font-size:var(--fs-sm);margin:0 0 var(--sp-3);">${t('a.sd.intro')}</p>
 
@@ -48,9 +58,16 @@ function markup(sources) {
         <input type="number" id="sd-pts" value="3" min="1" max="20">
         <label title="${t('a.sd.seedTip')}">${t('a.sd.seed')}</label>
         <input type="number" id="sd-seed" placeholder="${t('a.sd.seedAuto')}">
+        <label title="${t('a.sd.bboxTip')}">${t('a.sd.bbox')}</label>
+        <div style="grid-column:2 / span 3;display:flex;gap:6px;">
+          <input type="text" id="sd-bbox" placeholder="-102.1, 36.9, -94.6, 40.0" style="flex:1;">
+          <button type="button" class="btn btn-sm" id="sd-bbox-draw">${t('a.sd.drawBbox')}</button>
+        </div>
         <label>${t('a.sd.croplandOnly')}</label>
         <input type="checkbox" id="sd-cropland" checked style="justify-self:start;">
       </div>
+
+      <div id="sd-bbox-map" style="display:none;height:320px;max-width:620px;margin-top:var(--sp-3);border:1px solid var(--color-border-strong);border-radius:6px;"></div>
 
       <div style="display:flex;align-items:center;gap:var(--sp-3);margin-top:var(--sp-4);">
         <button type="button" class="btn btn-primary" id="sd-run">${t('a.sd.run')}</button>
@@ -58,7 +75,7 @@ function markup(sources) {
       </div>
 
       <h4 style="margin:var(--sp-5) 0 var(--sp-2);">${t('a.sd.designs')}</h4>
-      <div id="sd-list" style="font-size:var(--fs-sm);">${t('a.loading')}</div>
+      <div id="sd-list" style="font-size:var(--fs-sm);overflow-x:auto;">${t('a.loading')}</div>
       <pre id="sd-log" style="display:none;max-height:300px;overflow:auto;background:var(--color-surface-alt);color:var(--color-text);border:1px solid var(--color-border);border-radius:4px;padding:8px;font-size:11px;margin-top:var(--sp-3);"></pre>
     </div>`;
 }
@@ -95,7 +112,7 @@ async function refresh() {
       return `
       <tr data-id="${r.design_id}">
         <td>${r.design_id}</td>
-        <td style="white-space:nowrap;">${e(r.name)}</td>
+        <td style="white-space:nowrap;"><span class="sd-name" data-id="${r.design_id}" style="cursor:text;border-bottom:1px dashed var(--color-border-strong);" title="${t('a.sd.renameTip')}">${e(r.name)}</span></td>
         <td>${r.status === 'failed'
             ? `<span class="badge badge-danger" title="${e(r.error || '')}">${e(r.status)}</span>`
             : `<span class="badge ${r.status === 'done' ? 'badge-success' : ''}">${e(r.status)}</span>`}</td>
@@ -126,32 +143,85 @@ async function refresh() {
     await api.deleteSamplingDesign(Number(b.dataset.id));
     refresh();
   }));
+  el.querySelectorAll('.sd-name').forEach((sp) => sp.addEventListener('click', () => {
+    if (sp.querySelector('input')) return;
+    const id = Number(sp.dataset.id);
+    const current = sp.textContent;
+    sp.innerHTML = `<input type="text" value="${e(current)}" maxlength="120" style="width:160px;">`;
+    const inp = sp.querySelector('input');
+    inp.focus(); inp.select();
+    const finish = async (save) => {
+      const val = inp.value.trim();
+      if (save && val && val !== current) {
+        try { await api.updateSamplingDesign(id, { name: val }); }
+        catch (err) { document.getElementById('sd-status').textContent = err.message; }
+      }
+      refresh();
+    };
+    inp.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') finish(true);
+      if (ev.key === 'Escape') finish(false);
+    });
+    inp.addEventListener('blur', () => finish(true));
+  }));
+
   el.querySelectorAll('.sd-toggle').forEach((b) => b.addEventListener('click', async () => {
     await api.updateSamplingDesign(Number(b.dataset.id),
       { [b.dataset.field]: b.dataset.value === '1' });
     refresh();
   }));
-  el.querySelectorAll('.sd-meta').forEach((b) => b.addEventListener('click', () => {
-    const r = rows.find((x) => x.design_id === Number(b.dataset.id));
-    const pre = document.getElementById('sd-log');
-    pre.style.display = 'block';
-    pre.textContent = r.abstract || '';
+  el.querySelectorAll('.sd-meta').forEach((b) => b.addEventListener('click', async () => {
+    const d = await api.getSamplingDesign(Number(b.dataset.id));
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;';
+    modal.innerHTML = `<div style="background:var(--color-surface);color:var(--color-text);border-radius:8px;max-width:720px;max-height:82vh;overflow:auto;padding:22px 26px;">${formatSamplingMeta(d.name, d.manifest, d.abstract)}</div>`;
+    modal.addEventListener('click', (ev) => { if (ev.target === modal) modal.remove(); });
+    document.body.appendChild(modal);
   }));
   el.querySelectorAll('.sd-sym').forEach((b) => b.addEventListener('click', () => {
-    const r = rows.find((x) => x.design_id === Number(b.dataset.id));
-    openSymEditor(r);
+    const id = Number(b.dataset.id);
+    const box = document.getElementById('sd-sym-editor');
+    if (openSymId === id && box && box.style.display !== 'none') {
+      box.style.display = 'none';
+      openSymId = null;
+      return;
+    }
+    openSymId = id;
+    openSymEditor(rows.find((x) => x.design_id === id));
   }));
   el.querySelectorAll('.sd-log-btn').forEach((b) => b.addEventListener('click', async () => {
-    const d = await api.getSamplingDesign(Number(b.dataset.id));
-    const pre = document.getElementById('sd-log');
-    pre.style.display = 'block';
-    pre.textContent = (d.step_log || '') +
-      (d.manifest ? '\n--- manifest ---\n' + JSON.stringify(d.manifest, null, 2) : '');
+    const id = Number(b.dataset.id);
+    if (openLogId === id) {
+      // Second press on the same design: hide the log.
+      openLogId = null;
+      const pre = document.getElementById('sd-log');
+      if (pre) { pre.style.display = 'none'; pre.textContent = ''; }
+      return;
+    }
+    openLogId = id;
+    await showLog(openLogId);
   }));
+
+  // Keep an open log following the run — and refresh it one final time
+  // when polling stops, so the tail ("Design complete") is never missed.
+  if (openLogId != null) showLog(openLogId);
 
   const active = rows.some((r) => r.status === 'queued' || r.status === 'running');
   clearTimeout(pollTimer);
   if (active) pollTimer = setTimeout(refresh, 5000);
+}
+
+async function showLog(id) {
+  const pre = document.getElementById('sd-log');
+  if (!pre) return;
+  try {
+    const d = await api.getSamplingDesign(id);
+    pre.style.display = 'block';
+    const atBottom = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 8;
+    pre.textContent = (d.step_log || '') +
+      (d.manifest ? '\n--- manifest ---\n' + JSON.stringify(d.manifest, null, 2) : '');
+    if (atBottom) pre.scrollTop = pre.scrollHeight;
+  } catch (e) { /* design may have been deleted */ }
 }
 
 function symDefaults(sym) {
@@ -178,6 +248,7 @@ function openSymEditor(r) {
   const box = document.getElementById('sd-sym-editor');
   const sym = symDefaults(r.symbology);
   box.style.display = 'block';
+  setTimeout(() => box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
   const shapeSel = (id, v) => `<select id="${id}">` +
     ['circle', 'square', 'triangle'].map((x) =>
       `<option value="${x}" ${v === x ? 'selected' : ''}>${x}</option>`).join('') + '</select>';
@@ -215,7 +286,9 @@ function openSymEditor(r) {
   document.getElementById('sdsym-save').addEventListener('click', async () => {
     const v = (id) => document.getElementById(id).value;
     const n = (id) => Number(v(id));
-    await api.updateSamplingDesign(r.design_id, { symbology: {
+    const status = document.getElementById('sd-status');
+    try {
+      const sym2 = {
       point: { shape: v('sdsym-point-shape'), size: n('sdsym-point-size'),
                color: v('sdsym-point-color'), opacity: n('sdsym-point-opacity') },
       replacement: { shape: v('sdsym-replacement-shape'), size: n('sdsym-replacement-size'),
@@ -224,10 +297,75 @@ function openSymEditor(r) {
              color: v('sdsym-psu-color'), opacity: n('sdsym-psu-opacity') },
       ssu: { style: v('sdsym-ssu-style'), width: n('sdsym-ssu-width'),
              color: v('sdsym-ssu-color'), opacity: n('sdsym-ssu-opacity') },
-    }});
-    box.style.display = 'none';
-    refresh();
+      };
+      await api.updateSamplingDesign(r.design_id, { symbology: sym2 });
+      status.textContent = t('a.sd.symSaved');
+      box.style.display = 'none';
+      openSymId = null;
+      // Restyle the live map layer immediately — no page reload needed.
+      window.dispatchEvent(new CustomEvent('sampling:symbology', {
+        detail: { design_id: r.design_id, symbology: sym2 } }));
+      refresh();
+    } catch (err) {
+      status.textContent = err.message;
+    }
   });
+}
+
+let bboxMap = null;
+let regionPolygon = null;   // [[lon,lat],...] drawn on the mini-map (closed ring)
+
+function toggleBboxDrawer() {
+  const div = document.getElementById('sd-bbox-map');
+  if (div.style.display !== 'none') { div.style.display = 'none'; return; }
+  div.style.display = 'block';
+  if (!bboxMap) {
+    div.style.position = 'relative';
+    const source = new VectorSource();
+    const rectLayer = new VectorLayer({
+      source,
+      style: new Style({
+        stroke: new Stroke({ color: '#d97706', width: 2 }),
+        fill: new Fill({ color: 'rgba(217, 119, 6, 0.08)' }),
+      }),
+    });
+    bboxMap = new Map({
+      target: div,
+      layers: [new TileLayer({ source: new OSM() }), rectLayer],
+      view: new View({ center: [0, 0], zoom: 2 }),
+    });
+    const draw = new Draw({ source, type: 'Polygon' });
+    draw.on('drawstart', () => source.clear());
+    draw.on('drawend', (ev) => {
+      // The drawn polygon IS the region (intersected exactly server-side);
+      // the text field shows its bounding box for reference.
+      regionPolygon = ev.feature.getGeometry().getCoordinates()[0]
+        .map((c) => toLonLat(c).map((v) => Number(v.toFixed(5))));
+      const ext = transformExtent(ev.feature.getGeometry().getExtent(),
+                                  'EPSG:3857', 'EPSG:4326');
+      document.getElementById('sd-bbox').value =
+        ext.map((v) => v.toFixed(4)).join(', ');
+    });
+    bboxMap.addInteraction(draw);
+    // A manually edited bbox overrides the drawn polygon.
+    document.getElementById('sd-bbox').addEventListener('input', () => {
+      regionPolygon = null;
+      source.clear();
+    });
+    // Erase button over the map: removes the drawn polygon and the region.
+    const eraseBtn = document.createElement('button');
+    eraseBtn.type = 'button';
+    eraseBtn.className = 'btn btn-sm';
+    eraseBtn.textContent = t('a.sd.erase');
+    eraseBtn.style.cssText = 'position:absolute;top:8px;right:8px;z-index:10;';
+    eraseBtn.addEventListener('click', () => {
+      source.clear();
+      regionPolygon = null;
+      document.getElementById('sd-bbox').value = '';
+    });
+    div.appendChild(eraseBtn);
+  }
+  setTimeout(() => bboxMap.updateSize(), 50);
 }
 
 export async function mountSamplingDesign() {
@@ -237,6 +375,7 @@ export async function mountSamplingDesign() {
     const sources = await api.samplingSources();
     root.innerHTML = markup(sources);
     mounted = true;
+    document.getElementById('sd-bbox-draw').addEventListener('click', toggleBboxDrawer);
     document.getElementById('sd-run').addEventListener('click', async () => {
       const status = document.getElementById('sd-status');
       const num = (id) => Number(document.getElementById(id).value) || undefined;
@@ -247,6 +386,12 @@ export async function mountSamplingDesign() {
           pts_per_ssu: num('sd-pts'), psu_size_m: num('sd-psu-size'),
           ssu_size_m: num('sd-ssu-size'), seed: num('sd-seed'),
           cropland_only: document.getElementById('sd-cropland').checked,
+          bbox: (() => {
+            const parts = document.getElementById('sd-bbox').value
+              .split(',').map((x) => Number(x.trim())).filter((x) => !Number.isNaN(x));
+            return parts.length === 4 ? parts : undefined;
+          })(),
+          region_polygon: regionPolygon || undefined,
         },
         source_ids: [...document.querySelectorAll('.sd-source:checked')].map((c) => c.value),
       };

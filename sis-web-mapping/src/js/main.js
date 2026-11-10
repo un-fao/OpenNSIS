@@ -13,6 +13,7 @@ import api, { MAPSERVER_URL } from './api-client.js';
 import adminDashboard from './admin-dashboard.js';
 import { t, AVAILABLE, currentLang, setInstanceDefault, switchLanguage } from './i18n.js';
 import { initThemeButton } from './theme.js';
+import { formatSamplingMeta } from './sampling-meta.js';
 
 // Global variables
 let map;
@@ -1045,8 +1046,9 @@ async function loadSamplingDesigns() {
   group.appendChild(content);
 
   designs.forEach((d) => {
+    const styleFactory = (rawSym) => {
     // Per-layer symbology (structured), tolerating the legacy flat form.
-    const raw = d.symbology || {};
+    const raw = rawSym || {};
     const flat = { shape: raw.shape || 'circle', size: Number(raw.size) || 7,
                    color: raw.color || '#d97706',
                    opacity: raw.opacity != null ? Number(raw.opacity) : 1 };
@@ -1073,32 +1075,59 @@ async function loadSamplingDesigns() {
       }
       return new CircleStyle({ radius, fill, stroke });
     };
-    const mkCell = (cc) => new Style({ stroke: new Stroke({
-      color: hexWithAlpha(cc.color, cc.opacity),
-      width: Number(cc.width) || 1,
-      lineDash: DASHES[cc.style] }) });
+    const mkCell = (cc) => new Style({
+      stroke: new Stroke({
+        color: hexWithAlpha(cc.color, cc.opacity),
+        width: Number(cc.width) || 1,
+        lineDash: DASHES[cc.style] }),
+      // Near-invisible fill: without one, OpenLayers only hit-tests the
+      // outline, so clicks inside the cell would never open the popup.
+      fill: new Fill({ color: 'rgba(255,255,255,0.01)' }),
+    });
     const styles = {
       psu: mkCell(sym.psu),
       ssu: mkCell(sym.ssu),
       target: new Style({ image: mkPoint(sym.point) }),
       replacement: new Style({ image: mkPoint(sym.replacement) }),
     };
-    const styleFn = (feature) => {
+    const DESIGN_LABEL_RES = 40;   // sample-id labels appear when zoomed in
+    const styleFn = (feature, resolution) => {
       const kind = feature.get('kind');
       if (kind === 'psu') return styles.psu;
       if (kind === 'ssu') return styles.ssu;
-      return (feature.get('rank') || 0) === 0 ? styles.target : styles.replacement;
+      const isTarget = (feature.get('rank') || 0) === 0;
+      if (isTarget && resolution < DESIGN_LABEL_RES && feature.get('sample_id')) {
+        return new Style({
+          image: mkPoint(sym.point),
+          text: new Text({
+            text: feature.get('sample_id'),
+            offsetY: -(Number(sym.point.size) || 7) - 8,
+            font: '11px var(--font-sans, sans-serif)',
+            fill: new Fill({ color: '#222' }),
+            stroke: new Stroke({ color: 'rgba(255,255,255,0.9)', width: 2.5 }),
+          }),
+        });
+      }
+      return isTarget ? styles.target : styles.replacement;
+    };
+    return styleFn;
     };
     const layer = new VectorLayer({
       source: new VectorSource({
         features: new GeoJSON().readFeatures(d.features,
           { featureProjection: 'EPSG:3857' }),
       }),
-      style: styleFn,
+      style: styleFactory(d.symbology),
       visible: d.active_default !== false,
       zIndex: 900,
     });
     map.addLayer(layer);
+    // Admin tab saves restyle the layer in place (same SPA, same session).
+    window.addEventListener('sampling:symbology', (ev) => {
+      if (ev.detail && ev.detail.design_id === d.design_id) {
+        layer.setStyle(styleFactory(ev.detail.symbology));
+      }
+    });
 
     const item = document.createElement('div');
     item.className = 'layer-item';
@@ -1118,7 +1147,7 @@ async function loadSamplingDesigns() {
       icons.innerHTML = `<a href="#" title="${t('icons.metadata')}"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 3h7l5 5v13H7z'/%3E%3Cpath d='M14 3v5h5M10 13h6M10 17h6'/%3E%3C/svg%3E" alt="${t('icons.info')}"></a>`;
       icons.querySelector('a').addEventListener('click', (ev) => {
         ev.preventDefault();
-        showTextPopup(d.name, d.abstract);
+        showHtmlPopup(formatSamplingMeta(d.name, d.manifest, d.abstract));
       });
       item.appendChild(icons);
     }
@@ -1135,6 +1164,36 @@ async function loadSamplingDesigns() {
   }
 }
 
+function showDesignFeaturePopup(evt, feature, popupOverlay) {
+  const kind = feature.get('kind');
+  const rank = feature.get('rank') || 0;
+  const title = kind === 'point'
+    ? (feature.get('sample_id') || t('groups.sampling'))
+    : `${kind.toUpperCase()} ${feature.get(kind) || ''}`;
+  const sub = kind === 'point'
+    ? (rank === 0 ? t('sd.target') : `${t('sd.replacement')} R${rank}`)
+    : (kind === 'psu' ? t('a.sd.symPsu') : t('a.sd.symSsu'));
+  const rows = [];
+  if (kind === 'point') rows.push([t('a.sd.psus'), feature.get('psu')], [t('a.sd.ssus'), feature.get('ssu')]);
+  const props = feature.getProperties();
+  Object.keys(props).filter((k) => k.startsWith('cov_')).sort().forEach((k) => {
+    const v = props[k];
+    rows.push([k.slice(4), v == null ? '—' : v]);
+  });
+  const html = `
+    <div style="min-width:190px;">
+      <strong>${escapeHtml(title)}</strong>
+      <div style="color:var(--color-text-muted);font-size:12px;margin-bottom:6px;">${escapeHtml(sub)}</div>
+      <table style="border-collapse:collapse;font-size:12.5px;">
+        ${rows.map(([k, v]) => `<tr>
+          <td style="padding:1px 10px 1px 0;color:var(--color-text-muted);">${escapeHtml(String(k))}</td>
+          <td style="padding:1px 0;">${escapeHtml(String(v ?? ''))}</td></tr>`).join('')}
+      </table>
+    </div>`;
+  document.getElementById('popup-content').innerHTML = html;
+  popupOverlay.setPosition(evt.coordinate);
+}
+
 function hexWithAlpha(hex, alpha) {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
   if (!m) return hex;
@@ -1142,14 +1201,12 @@ function hexWithAlpha(hex, alpha) {
   return `rgba(${n >> 16}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }
 
-function showTextPopup(title, text) {
+function showHtmlPopup(html) {
+  // html comes from our own formatter (every data value escaped there).
   const modal = document.createElement('div');
   modal.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px;';
   modal.innerHTML = `
-    <div style="background: var(--color-surface); color: var(--color-text); border-radius: 8px; max-width: 680px; max-height: 80vh; overflow: auto; padding: 22px 26px;">
-      <h3 style="margin-top:0;">${escapeHtml(title)}</h3>
-      <pre style="white-space: pre-wrap; font-family: inherit; font-size: 14px; line-height: 1.55; margin: 0;">${escapeHtml(text)}</pre>
-    </div>`;
+    <div style="background: var(--color-surface); color: var(--color-text); border-radius: 8px; max-width: 720px; max-height: 82vh; overflow: auto; padding: 22px 26px;">${html}</div>`;
   modal.addEventListener('click', (ev) => { if (ev.target === modal) modal.remove(); });
   document.body.appendChild(modal);
 }
@@ -2288,7 +2345,8 @@ function setupPopup() {
   // Handle map clicks
   map.on('singleclick', async (evt) => {
     const features = map.getFeaturesAtPixel(evt.pixel, {
-      layerFilter: (lyr) => lyr !== highlightLayer
+      layerFilter: (lyr) => lyr !== highlightLayer,
+      hitTolerance: 4
     });
     
     // Check for profile points first (priority)
@@ -2320,6 +2378,14 @@ function setupPopup() {
           if (btn) btn.textContent = t('profiles.hide');
         }
         return; // Stop here
+      }
+
+      // Sampling-design features (points and PSU/SSU cells): attribute popup.
+      const sdFeat = features.find((f) => f.get('kind') === 'point' && !f.get('features'))
+        || features.find((f) => f.get('kind') && !f.get('features'));
+      if (sdFeat) {
+        showDesignFeaturePopup(evt, sdFeat, popup);
+        return;
       }
     }
     

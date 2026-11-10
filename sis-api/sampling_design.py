@@ -74,6 +74,15 @@ DEFAULT_SOURCES = [
 UA = {"User-Agent": "OpenNSIS-sampling-design"}
 
 
+def _source_meta(source_id):
+    """Display name/licence/link for a manifest entry, matched on the
+    registry id (per-band ids like climate-chelsa-bio1 match their parent)."""
+    for s in DEFAULT_SOURCES:
+        if source_id == s["id"] or source_id.startswith(s["id"].rsplit("-", 1)[0]):
+            return {"name": s["name"], "licence": s["licence"], "link": s["link"]}
+    return {}
+
+
 # --------------------------------------------------------------------------
 # Small geometry helpers (no shapely: numpy even-odd point-in-polygon)
 # --------------------------------------------------------------------------
@@ -126,9 +135,12 @@ def points_in_geom(xs, ys, rings, chunk=20_000):
     return inside
 
 
-def utm_crs_for(lon, lat):
-    zone = int(math.floor((lon + 180.0) / 6.0)) + 1
-    return f"EPSG:{(32600 if lat >= 0 else 32700) + zone}"
+def laea_crs_for(lon, lat):
+    """Lambert azimuthal equal-area centred on the design region: valid for
+    any country or region on Earth — no UTM-zone logic, no antimeridian
+    failure mode (the USA run that motivated this spanned -179..180°)."""
+    return (f"+proj=laea +lat_0={lat:.4f} +lon_0={lon:.4f} "
+            f"+x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs")
 
 
 # --------------------------------------------------------------------------
@@ -378,11 +390,15 @@ def execute_design(design_id, get_db):
                             (f"[{_now()}] {msg}\n", design_id))
 
     def fail(msg):
+        # The reason lands in the step log too, so the Log view tells the
+        # whole story — not only the error column's tooltip.
         with get_db() as conn:
             with conn.cursor() as cur:
                 cur.execute("""UPDATE api.sampling_design
-                               SET status='failed', error=%s, finished_at=now()
-                               WHERE design_id = %s""", (msg, design_id))
+                               SET status='failed', error=%s, finished_at=now(),
+                                   step_log = step_log || %s
+                               WHERE design_id = %s""",
+                            (msg, f"[{_now()}] FAILED: {msg}\n", design_id))
 
     try:
         with get_db() as conn:
@@ -417,27 +433,65 @@ def execute_design(design_id, get_db):
         # ---- boundary ----------------------------------------------------
         logstep(f"Fetching country boundary for {iso3} (geoBoundaries ADM0)")
         geom, bmeta = fetch_boundary(iso3, None)
-        manifest_sources.append({"id": "boundary-geoboundaries", **bmeta})
+        manifest_sources.append({"id": "boundary-geoboundaries", **_source_meta("boundary-geoboundaries"), **bmeta})
         rings = _rings_of(geom)
         lons = np.concatenate([r[:, 0] for r in rings])
         lats = np.concatenate([r[:, 1] for r in rings])
         bbox = (float(lons.min()), float(lats.min()),
                 float(lons.max()), float(lats.max()))
-        crs = utm_crs_for(float(lons.mean()), float(lats.mean()))
-        # boundary rings in UTM for the in-country test
+
+        # Optional region: a lon/lat bbox (W, S, E, N) confining the design —
+        # fetches, grid and CRS centre all follow it. Essential for countries
+        # whose full extent is unusable as one region (USA, Russia, Fiji).
+        region = params.get("bbox")
+        region_poly = params.get("region_polygon")
+        if region_poly:
+            rp = np.asarray(region_poly, dtype="float64")
+            region = [float(rp[:, 0].min()), float(rp[:, 1].min()),
+                      float(rp[:, 0].max()), float(rp[:, 1].max())]
+        if region:
+            w_, s_, e_, n_ = (float(v) for v in region)
+            bbox = (max(bbox[0], w_), max(bbox[1], s_),
+                    min(bbox[2], e_), min(bbox[3], n_))
+            if bbox[0] >= bbox[2] or bbox[1] >= bbox[3]:
+                fail("The region does not intersect the country boundary")
+                return
+            logstep(("Region restricted to drawn polygon "
+                     f"({len(region_poly) - 1} vertices), bbox "
+                     if region_poly else "Region restricted to bbox ")
+                    + f"{tuple(round(v, 3) for v in bbox)}")
+
+        crs = laea_crs_for((bbox[0] + bbox[2]) / 2.0, (bbox[1] + bbox[3]) / 2.0)
+        # boundary rings in the working CRS for the in-country test
         rings_utm = []
         for ring in rings:
             xs, ys = warp_transform("EPSG:4326", crs, ring[:, 0].tolist(), ring[:, 1].tolist())
             rings_utm.append(np.column_stack([xs, ys]))
-        all_utm = np.vstack(rings_utm)
-        bounds_utm = (all_utm[:, 0].min(), all_utm[:, 1].min(),
-                      all_utm[:, 0].max(), all_utm[:, 1].max())
-        logstep(f"Working CRS {crs}; bbox {tuple(round(v, 3) for v in bbox)}")
+        # Grid bounds: the (region-restricted) bbox, densified so projection
+        # curvature cannot clip the edges.
+        dens_lon = np.linspace(bbox[0], bbox[2], 21)
+        dens_lat = np.linspace(bbox[1], bbox[3], 21)
+        edge_lon = np.concatenate([dens_lon, dens_lon,
+                                   np.full(21, bbox[0]), np.full(21, bbox[2])])
+        edge_lat = np.concatenate([np.full(21, bbox[1]), np.full(21, bbox[3]),
+                                   dens_lat, dens_lat])
+        ex, ey = warp_transform("EPSG:4326", crs, edge_lon.tolist(), edge_lat.tolist())
+        bounds_utm = (min(ex), min(ey), max(ex), max(ey))
+        logstep(f"Working CRS LAEA centred {( round((bbox[0]+bbox[2])/2,3), round((bbox[1]+bbox[3])/2,3) )}; "
+                f"bbox {tuple(round(v, 3) for v in bbox)}")
 
         # ---- stage 1 grid + covariates ------------------------------------
         grid1 = _grid_for(bounds_utm, crs, psu_m)
         xs1, ys1 = _centres(grid1)
         inside = points_in_geom(xs1, ys1, rings_utm)
+        if region_poly:
+            # Exact region: candidate cells must also fall inside the drawn
+            # polygon, not merely its bounding box.
+            pxs, pys = warp_transform("EPSG:4326", crs,
+                                      [p[0] for p in region_poly],
+                                      [p[1] for p in region_poly])
+            inside &= points_in_geom(xs1, ys1,
+                                     [np.column_stack([pxs, pys])])
         logstep(f"Stage 1 grid: {grid1[2]}×{grid1[3]} cells at {int(psu_m)} m, "
                 f"{int(inside.sum())} inside the boundary")
 
@@ -453,7 +507,7 @@ def execute_design(design_id, get_db):
                 band_stack.append(arr)
                 band_names.append(nm)
             manifest_sources.append({
-                "id": "terrain-cop-dem-30", "stac": f"{EARTH_SEARCH} cop-dem-glo-30",
+                "id": "terrain-cop-dem-30", **_source_meta("terrain-cop-dem-30"), "stac": f"{EARTH_SEARCH} cop-dem-glo-30",
                 "tiles": len(dem_hrefs), "resolution_m": psu_m,
                 "resampling": "average", "retrieved_at": _now(),
                 "checksum": _checksum(dem1)})
@@ -466,7 +520,7 @@ def execute_design(design_id, get_db):
                 band_stack.append(arr)
                 band_names.append(bio)
                 manifest_sources.append({
-                    "id": f"climate-chelsa-{bio}", "url": url,
+                    "id": f"climate-chelsa-{bio}", **_source_meta("climate-chelsa-bio"), "url": url,
                     "resolution_m": psu_m, "resampling": "average",
                     "retrieved_at": _now(), "checksum": _checksum(arr)})
 
@@ -478,7 +532,7 @@ def execute_design(design_id, get_db):
             band_stack.append(lc1)
             band_names.append("landcover")
             manifest_sources.append({
-                "id": "landcover-worldcover", "tiles": len(wc_urls),
+                "id": "landcover-worldcover", **_source_meta("landcover-worldcover"), "tiles": len(wc_urls),
                 "url_base": WORLDCOVER_BASE, "resolution_m": psu_m,
                 "resampling": "nearest", "retrieved_at": _now(),
                 "checksum": _checksum(lc1)})
@@ -509,15 +563,25 @@ def execute_design(design_id, get_db):
         _, t1, w1, h1 = grid1
         features = []        # (kind, sample_id, rank, lon, lat, props, poly)
         total_pts = 0
+        def cov_values(stack, names, flat_idx, width):
+            # Raw covariate snapshot at a selected cell — design-time values
+            # from the fetched sources, for transparency and field context.
+            r_, c_ = divmod(flat_idx, width)
+            out = {}
+            for b_i, nm in enumerate(names):
+                v = float(stack[b_i, r_, c_])
+                out[f"cov_{nm}"] = None if math.isnan(v) else round(v, 4)
+            return out
+
         for p_i, pick in enumerate(picks1, start=1):
             flat = int(valid_idx1[pick[0]])
             row_, col_ = divmod(flat, w1)
             px_w = t1.c + col_ * t1.a
             px_n = t1.f + row_ * t1.e
-            psu_bounds = (px_w, px_n + t1.e * 1, px_w + t1.a * 1, px_n)  # (w,s,e,n)
             psu_bounds = (px_w, px_n - psu_m, px_w + psu_m, px_n)
+            psu_cov = cov_values(stack1, band_names, flat, w1)
             features.append(("psu", None, 0, None, None,
-                             {"psu": p_i}, (crs, psu_bounds)))
+                             {"psu": p_i, **psu_cov}, (crs, psu_bounds)))
 
             grid2 = _grid_for(psu_bounds, crs, ssu_m)
             dem2 = read_grid(dem_hrefs, grid2) if dem_hrefs else None
@@ -549,8 +613,9 @@ def execute_design(design_id, get_db):
                 sw = t2.c + c2_ * t2.a
                 sn = t2.f + r2_ * t2.e
                 ssu_bounds = (sw, sn - ssu_m, sw + ssu_m, sn)
+                ssu_cov = cov_values(stack2, names2, flat2, w2)
                 features.append(("ssu", None, 0, None, None,
-                                 {"psu": p_i, "ssu": s_i}, (crs, ssu_bounds)))
+                                 {"psu": p_i, "ssu": s_i, **ssu_cov}, (crs, ssu_bounds)))
                 # stage 3: SRS points + ranked replacements inside the SSU
                 n_needed = pts_per_ssu * 3  # target + 2 replacements each
                 px = rng.uniform(sw, sw + ssu_m, n_needed)
@@ -563,9 +628,11 @@ def execute_design(design_id, get_db):
                         sid = f"{iso3}-D{design_id:03d}-P{p_i:03d}-S{s_i:02d}-{t_i+1:02d}"
                         if rank:
                             sid += f"-R{rank}"
+                        # Points inherit their SSU's covariate snapshot —
+                        # sub-cell precision does not exist in the data.
                         features.append(("point", sid, rank,
                                          float(lon_pts[j]), float(lat_pts[j]),
-                                         {"psu": p_i, "ssu": s_i}, None))
+                                         {"psu": p_i, "ssu": s_i, **ssu_cov}, None))
                         total_pts += 0 if rank else 1
             logstep(f"PSU {p_i}/{n_psu}: {len(picks2)} SSUs, "
                     f"{len(picks2) * pts_per_ssu} points")
@@ -602,6 +669,8 @@ def execute_design(design_id, get_db):
         manifest = {
             "method": "Three-stage hierarchical CSC (SoilFER sampling design manual)",
             "iso3": iso3, "crs": crs, "seed": seed,
+            "region_bbox": list(bbox),
+            "region_polygon_vertices": (len(region_poly) - 1) if region_poly else None,
             "params": params, "covariates_stage1": band_names,
             "sources": manifest_sources,
             "quality": {"stage1_mssd": mssd1},

@@ -7679,6 +7679,29 @@ async def create_sampling_design(payload: dict, background: BackgroundTasks,
         if v is not None and not (isinstance(v, int) and lo <= v <= hi):
             raise HTTPException(status_code=400,
                                 detail=f"{key} must be an integer in [{lo}, {hi}]")
+    bbox = params.get("bbox")
+    if bbox is not None:
+        try:
+            w, s_, e, n = (float(x) for x in bbox)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400,
+                                detail="bbox must be [west, south, east, north]")
+        if not (-180 <= w < e <= 180 and -90 <= s_ < n <= 90):
+            raise HTTPException(status_code=400,
+                                detail="bbox out of range or inverted (W < E, S < N)")
+        params["bbox"] = [w, s_, e, n]
+    poly = params.get("region_polygon")
+    if poly is not None:
+        if (not isinstance(poly, list) or len(poly) < 3 or len(poly) > 1000
+                or not all(isinstance(p, list) and len(p) == 2
+                           and all(isinstance(c, (int, float)) for c in p)
+                           and -180 <= p[0] <= 180 and -90 <= p[1] <= 90
+                           for p in poly)):
+            raise HTTPException(status_code=400,
+                                detail="region_polygon must be 3-1000 [lon, lat] pairs")
+        if poly[0] != poly[-1]:
+            poly = poly + [poly[0]]
+        params["region_polygon"] = poly
     ids = set(payload.get("source_ids") or [s["id"] for s in DEFAULT_SOURCES])
     sources = [s for s in DEFAULT_SOURCES if s["id"] in ids or s["required"]]
     with get_db() as conn:
@@ -7749,14 +7772,16 @@ async def export_sampling_design(design_id: int, format: str = "geojson",
         raise HTTPException(status_code=404, detail="No features (design still running?)")
     stem = f"sampling_design_{design_id}_{kind}"
     if format == "csv":
+        cov_cols = sorted({k for r in rows for k in (r["props"] or {}) if k.startswith("cov_")})
         buf = io.StringIO()
         wtr = csv.writer(buf)
-        wtr.writerow(["sample_id", "rank", "longitude", "latitude", "psu", "ssu"])
+        wtr.writerow(["sample_id", "rank", "longitude", "latitude", "psu", "ssu"] + cov_cols)
         for r in rows:
             p = r["props"] or {}
             wtr.writerow([r["sample_id"] or "", r["rank"],
                           f"{r['lon']:.6f}", f"{r['lat']:.6f}",
-                          p.get("psu", ""), p.get("ssu", "")])
+                          p.get("psu", ""), p.get("ssu", "")]
+                         + [p.get(c, "") for c in cov_cols])
         return Response(content=buf.getvalue(), media_type="text/csv",
                         headers={"Content-Disposition":
                                  f'attachment; filename="{stem}.csv"'})
@@ -7792,6 +7817,12 @@ async def update_sampling_design(design_id: int, payload: dict,
     by default in the layer panel)."""
     _require_admin(current_user)
     sets, vals = [], []
+    if "name" in payload:
+        name = str(payload["name"] or "").strip()
+        if not name or len(name) > 120:
+            raise HTTPException(status_code=400,
+                                detail="name must be 1-120 characters")
+        sets.append("name = %s"); vals.append(name)
     if "is_published" in payload:
         sets.append("is_published = %s"); vals.append(bool(payload["is_published"]))
     if "active_default" in payload:
@@ -7818,7 +7849,8 @@ async def public_sampling_designs(api_client: dict = Depends(verify_api_key)):
     all features (points with ranked replacements, PSU/SSU cells) inline."""
     with get_db() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""SELECT design_id, name, abstract, active_default, symbology
+            cur.execute("""SELECT design_id, name, abstract, manifest,
+                                  active_default, symbology
                            FROM api.sampling_design
                            WHERE is_published AND status = 'done'
                            ORDER BY design_id""")
