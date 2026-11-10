@@ -43,6 +43,7 @@
 }
 
 * { box-sizing: border-box; }
+::selection { background: var(--color-primary); color: #fff; }
 html { scroll-behavior: smooth; }
 html, body { margin: 0; padding: 0; }
 body {

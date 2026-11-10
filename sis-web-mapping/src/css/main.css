@@ -1157,7 +1157,7 @@ body { font-family: var(--font-sans); }
 h1, h2, h3, h4, h5 { font-family: var(--font-display); letter-spacing: -0.01em; }
 .mono, code { font-family: var(--font-mono); }
 
-::selection { background: rgba(29, 95, 115, 0.22); }
+::selection { background: var(--color-primary); color: #fff; }
 * { scrollbar-width: thin; scrollbar-color: var(--color-border-strong) transparent; }
 *::-webkit-scrollbar { width: 10px; height: 10px; }
 *::-webkit-scrollbar-thumb {
