@@ -5,6 +5,7 @@
  * stay muted "coming soon" until the published content carries that page,
  * then they become real links.
  */
+import api from './api-client.js';
 import { t, AVAILABLE, currentLang, switchLanguage } from './i18n.js';
 import { initThemeButton } from './theme.js';
 
@@ -67,28 +68,25 @@ export function initHeaderControls(opts = {}) {
   const wrap = document.getElementById('site-controls');
   if (!wrap || wrap.childElementCount) return;
 
-  const themeBtn = document.createElement('button');
-  themeBtn.id = 'theme-btn';
-  themeBtn.type = 'button';
-  themeBtn.className = 'hdr-glyph';
-  initThemeButton(themeBtn);
-  wrap.appendChild(themeBtn);
-
-  let loginEl;
-  if (typeof opts.onLogin === 'function') {
-    loginEl = document.createElement('button');
-    loginEl.type = 'button';
-  } else {
-    loginEl = document.createElement('a');
-    loginEl.href = '/map?login=1';
-  }
+  const loginEl = document.createElement('button');
+  loginEl.type = 'button';
   loginEl.id = 'login-btn';
   loginEl.className = 'hdr-glyph';
   loginEl.innerHTML = USER_GLYPH;
-  loginEl.title = t('auth.login');
-  loginEl.setAttribute('aria-label', t('auth.login'));
+  const authed = api.restoreSession();
+  loginEl.title = authed ? t('auth.adminPanel') : t('auth.login');
+  loginEl.setAttribute('aria-label', loginEl.title);
   wrap.appendChild(loginEl);
-  if (typeof opts.onLogin === 'function') opts.onLogin(loginEl);
+  if (typeof opts.onLogin === 'function') {
+    opts.onLogin(loginEl);
+  } else {
+    // Public pages: sign in right here; the admin panel opens on the map
+    // afterwards (main.js honours the sis_reopen_admin flag on load).
+    loginEl.addEventListener('click', () => {
+      if (api.restoreSession()) location.href = '/admin';
+      else showSiteLogin();
+    });
+  }
 
   const langBtn = document.createElement('button');
   langBtn.id = 'lang-btn';
@@ -98,13 +96,28 @@ export function initHeaderControls(opts = {}) {
   langBtn.title = t('lang.label');
   wrap.appendChild(langBtn);
 
+  const themeBtn = document.createElement('button');
+  themeBtn.id = 'theme-btn';
+  themeBtn.type = 'button';
+  themeBtn.className = 'hdr-glyph';
+  initThemeButton(themeBtn);
+  wrap.appendChild(themeBtn);
+
   const menu = document.createElement('div');
   menu.id = 'lang-menu';
   for (const [code, label] of AVAILABLE) {
     const item = document.createElement('div');
     item.className = 'lang-item' + (code === currentLang() ? ' current' : '');
     item.textContent = label;
-    item.addEventListener('click', () => switchLanguage(code));
+    item.addEventListener('click', () => {
+      // Switching reloads the page; if the admin panel is open, flag it
+      // so main.js reopens it after the reload.
+      const dash = document.getElementById('admin-dashboard');
+      if (dash && dash.classList.contains('active')) {
+        try { sessionStorage.setItem('sis_reopen_admin', '1'); } catch (e) { /* private mode */ }
+      }
+      switchLanguage(code);
+    });
     menu.appendChild(item);
   }
   langBtn.addEventListener('click', (e) => {
@@ -112,7 +125,48 @@ export function initHeaderControls(opts = {}) {
     menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
   });
   document.addEventListener('click', () => { menu.style.display = 'none'; });
-  (document.getElementById('site-header') || wrap).appendChild(menu);
+  wrap.appendChild(menu);
+}
+
+/** In-place sign-in dialogue for the public pages. On success the browser
+ * moves to the map with the admin panel opening automatically. */
+function showSiteLogin() {
+  if (document.getElementById('hdr-login-overlay')) return;
+  const ov = document.createElement('div');
+  ov.id = 'hdr-login-overlay';
+  ov.innerHTML = `
+    <div class="hdr-login-card" role="dialog" aria-modal="true">
+      <h2>${t('auth.adminLogin')}</h2>
+      <div class="hdr-login-error" id="hdr-login-error"></div>
+      <form id="hdr-login-form">
+        <label>${t('auth.username')}
+          <input type="text" id="hdr-login-user" required autocomplete="username"></label>
+        <label>${t('auth.password')}
+          <input type="password" id="hdr-login-pass" required autocomplete="current-password"></label>
+        <div class="hdr-login-actions">
+          <button type="button" id="hdr-login-cancel">${t('a.cancel')}</button>
+          <button type="submit" class="hdr-login-submit">${t('auth.login')}</button>
+        </div>
+      </form>
+    </div>`;
+  const close = () => ov.remove();
+  ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+  ov.querySelector('#hdr-login-cancel').addEventListener('click', close);
+  document.addEventListener('keydown', function esc(e) {
+    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); }
+  });
+  ov.querySelector('#hdr-login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const err = ov.querySelector('#hdr-login-error');
+    err.textContent = '';
+    try {
+      await api.login(ov.querySelector('#hdr-login-user').value.trim(),
+                      ov.querySelector('#hdr-login-pass').value);
+      location.href = '/admin';
+    } catch (ex) { err.textContent = ex.message; }
+  });
+  document.body.appendChild(ov);
+  ov.querySelector('#hdr-login-user').focus();
 }
 
 /**

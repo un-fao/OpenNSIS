@@ -4,8 +4,7 @@
  */
 
 import api from './api-client.js';
-import { AVAILABLE as LANGUAGES, currentLang, switchLanguage, t } from './i18n.js';
-import { initThemeButton } from './theme.js';
+import { AVAILABLE as LANGUAGES, t } from './i18n.js';
 import { mountSiteAdmin } from './site-admin.js';
 import { mountSamplingDesign } from './sampling-design.js';
 import Map from 'ol/Map';
@@ -139,6 +138,9 @@ class AdminDashboard {
     if (dashboard) {
       dashboard.classList.remove('active');
     }
+    // The panel owns the /admin path; leaving it restores the map's URL
+    // (no-op when the back button already changed it).
+    if (location.pathname === '/admin') history.pushState({}, '', '/map');
     
     // Update the map login button back to "Admin Panel"
     const loginBtn = document.getElementById('login-btn');
@@ -209,17 +211,6 @@ class AdminDashboard {
         <div class="dashboard-content">
           <div class="dashboard-header">
             <h2>${t('a.adminPanel')}</h2>
-            <div class="dashboard-header-actions">
-              <button class="close-dashboard" id="close-dashboard">${t('a.backToMap')}</button>
-              <button class="logout-btn" id="logout-dashboard">${t('a.logout')}</button>
-              <button type="button" class="admin-lang-btn" id="admin-theme-btn"></button>
-              <div style="position:relative;display:flex;align-items:center;">
-                <button type="button" class="admin-lang-btn" id="admin-lang-btn" title="${t('lang.label')}" aria-label="${t('lang.label')}">
-                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3.6 8.5h16.8M3.6 15.5h16.8"/></svg>
-                </button>
-                <div id="admin-lang-menu" style="position:absolute;top:calc(100% + 8px);right:0;background:var(--color-surface);color:var(--color-text);border:1px solid var(--color-border-strong);border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:none;min-width:130px;overflow:hidden;z-index:10001;"></div>
-              </div>
-            </div>
           </div>
           
           <ul class="dashboard-tabs">
@@ -855,6 +846,9 @@ class AdminDashboard {
                     <span id="account-status" style="font-size:0.85em;"></span>
                   </div>
                 </form>
+                <div style="margin-top:var(--sp-5);padding-top:var(--sp-4);border-top:1px solid var(--color-border);">
+                  <button type="button" class="logout-btn" id="account-logout">${t('a.logout')}</button>
+                </div>
               </div>
             </div>
           </div>
@@ -870,48 +864,16 @@ class AdminDashboard {
    * Attach all event listeners
    */
   attachEventListeners() {
-    // Language switcher — same globe/dropdown as the map view. Switching
-    // reloads the page; a sessionStorage flag makes main.js reopen the panel.
+    // Theme and language now live in the shared site header, which stays
+    // visible above the panel; the header's language switch sets the
+    // reopen flag so the panel comes back after the reload.
     document.getElementById('lims-add-btn')?.addEventListener('click', () => this.addLimsConnection());
 
-    const themeBtn = document.getElementById('admin-theme-btn');
-    if (themeBtn) initThemeButton(themeBtn);
-
-    const langBtn = document.getElementById('admin-lang-btn');
-    const langMenu = document.getElementById('admin-lang-menu');
-    if (langBtn && langMenu) {
-      for (const [code, label] of LANGUAGES) {
-        const item = document.createElement('div');
-        item.textContent = label;
-        item.style.cssText = 'padding:8px 14px;cursor:pointer;font-size:13px;color:var(--color-text);'
-          + (code === currentLang() ? 'font-weight:700;background:var(--color-primary-light);' : '');
-        item.addEventListener('mouseenter', () => { item.style.background = 'var(--color-surface-hover)'; });
-        item.addEventListener('mouseleave', () => { item.style.background = code === currentLang() ? 'var(--color-primary-light)' : ''; });
-        item.addEventListener('click', () => {
-          try { sessionStorage.setItem('sis_reopen_admin', '1'); } catch (e) { /* private mode */ }
-          switchLanguage(code);
-        });
-        langMenu.appendChild(item);
-      }
-      langBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        langMenu.style.display = langMenu.style.display === 'none' ? 'block' : 'none';
-      });
-      document.addEventListener('click', () => { langMenu.style.display = 'none'; });
-    }
-
-    // Close dashboard
-    document.getElementById('close-dashboard').addEventListener('click', () => {
-      this.hide();
+    // Logout lives in the My account tab; closing the panel is the site
+    // header's back-arrow.
+    document.getElementById('account-logout')?.addEventListener('click', () => {
+      this.logout();
     });
-
-    // Logout button - instant logout (no confirmation)
-    const logoutBtn = document.getElementById('logout-dashboard');
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', () => {
-        this.logout();
-      });
-    }
 
     // Tab switching
     document.querySelectorAll('.tab-btn').forEach(btn => {

@@ -204,12 +204,20 @@ input.no-spinner {
 .admin-dashboard {
     display: none;
     position: fixed;
-    inset: 0;
+    /* Below the shared site header, which stays visible and usable
+       (header: 1300, this panel: 1200, map overlays: <= 1000). */
+    inset: 60px 0 0 0;
     background: var(--color-bg);
-    z-index: 10000;
+    z-index: 1200;
     overflow: auto;
     font-family: var(--font-sans);
     color: var(--color-text);
+}
+
+/* On small screens the wrapped header is taller than 60px; let the panel
+   take the whole viewport there instead of guessing the height. */
+@media (max-width: 760px) {
+    .admin-dashboard { inset: 0; z-index: 1400; }
 }
 
 .admin-dashboard.active { display: block; }

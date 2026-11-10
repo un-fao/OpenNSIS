@@ -2650,10 +2650,29 @@ function addLoginButton() {
     }
   } catch (e) { /* private mode */ }
 
-  // Deep link from the public pages' user glyph (/map?login=1).
-  if (new URLSearchParams(location.search).has('login') && !api.isAuthenticated()) {
+  // /admin is the panel's own address: opening it pushes the path, the
+  // back button or closing returns to /map, and loading /admin directly
+  // opens the panel (or the sign-in dialogue first).
+  if (location.pathname === '/admin') {
+    const open = document.getElementById('admin-dashboard')?.classList.contains('active');
+    if (api.isAuthenticated()) { if (!open) showAdminPanel(); }
+    else showLoginModal();
+  } else if (new URLSearchParams(location.search).has('login') && !api.isAuthenticated()) {
     showLoginModal();
   }
+  window.addEventListener('popstate', () => {
+    const open = document.getElementById('admin-dashboard')?.classList.contains('active');
+    if (location.pathname === '/admin') {
+      if (api.isAuthenticated() && !open) showAdminPanel();
+    } else if (open) {
+      adminDashboard.hide();
+      const loginBtn = document.getElementById('login-btn');
+      if (loginBtn && api.isAuthenticated()) {
+        setAuthButtonIcon(loginBtn, 'user', t('auth.adminPanel'));
+        loginBtn.onclick = showAdminPanel;
+      }
+    }
+  });
 }
 
 // ==================== Admin Functions ====================
@@ -2720,7 +2739,8 @@ window.setAuthButtonIcon = setAuthButtonIcon;
 function showAdminPanel() {
   // Show the admin dashboard
   adminDashboard.show();
-  
+  if (location.pathname !== '/admin') history.pushState({ sisAdmin: 1 }, '', '/admin');
+
   // Update login button to "Back to Map"
   const loginBtn = document.getElementById('login-btn');
   if (!loginBtn) return;

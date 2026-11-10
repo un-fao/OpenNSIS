@@ -7,7 +7,7 @@
     background: var(--color-surface);
     border-bottom: 1px solid var(--color-border);
     position: relative;
-    z-index: 1100;
+    z-index: 1300;   /* above the admin panel (1200) and map overlays */
 }
 
 .site-header-inner {
@@ -69,6 +69,7 @@ a.nav-link:hover { color: var(--color-primary); border-bottom-color: var(--color
     display: flex;
     align-items: center;
     gap: 4px;
+    position: relative;   /* anchors the language menu to the glyphs */
 }
 .hdr-glyph {
     display: inline-flex;
@@ -86,8 +87,8 @@ a.nav-link:hover { color: var(--color-primary); border-bottom-color: var(--color
 
 #lang-menu {
     position: absolute;
-    top: 100%;
-    right: 12px;
+    top: calc(100% + 6px);
+    right: 0;
     background: var(--color-surface);
     color: var(--color-text);
     border: 1px solid var(--color-border);
@@ -101,6 +102,70 @@ a.nav-link:hover { color: var(--color-primary); border-bottom-color: var(--color
 #lang-menu .lang-item { padding: 8px 14px; cursor: pointer; font-size: 13px; }
 #lang-menu .lang-item:hover { background: var(--color-bg-accent, rgba(128, 128, 128, 0.15)); }
 #lang-menu .lang-item.current { font-weight: 700; }
+
+/* Sign-in dialogue on the public pages */
+#hdr-login-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 14, 6, 0.55);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.hdr-login-card {
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    padding: 26px 28px;
+    width: 100%;
+    max-width: 360px;
+}
+.hdr-login-card h2 {
+    margin: 0 0 14px;
+    font-family: var(--font-display, inherit);
+    font-size: 21px;
+}
+.hdr-login-card label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+.hdr-login-card input {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 4px;
+    padding: 9px 11px;
+    font: inherit;
+    color: var(--color-text);
+    background: var(--color-bg, transparent);
+    border: 1px solid var(--color-border);
+    border-radius: 7px;
+}
+.hdr-login-error { color: #c0392b; font-size: 14px; min-height: 18px; margin-bottom: 4px; }
+.hdr-login-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+.hdr-login-actions button {
+    font: inherit;
+    font-weight: 600;
+    padding: 8px 18px;
+    border-radius: 999px;
+    cursor: pointer;
+    border: 1px solid var(--color-border);
+    background: none;
+    color: var(--color-text);
+}
+.hdr-login-actions .hdr-login-submit {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-primary-ink, #fff);
+}
 
 @media (max-width: 760px) {
     .site-header-inner { padding: 8px 14px; gap: 8px; }
