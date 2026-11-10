@@ -225,40 +225,16 @@ class AdminDashboard {
           </ul>
 
           <div class="dashboard-body">
-            <!-- Administration Tab -->
+            <!-- Administration Tab (settings moved to Website > General/Map) -->
             <div id="administration-tab" class="tab-pane active">
-              <div class="admin-section">
-                <h3 class="admin-section-title">${t('a.settings')}</h3>
-
-                <div class="settings-map-layout">
-                  <div class="settings-table-side">
-                    <div id="settings-table-container">
-                      <table class="admin-table" id="settings-table" style="width:auto;">
-                        <thead>
-                          <tr>
-                            <th>${t('a.key')}</th>
-                            <th style="width:350px;">${t('a.value')}</th>
-                          </tr>
-                        </thead>
-                        <tbody id="settings-tbody">
-                          <tr><td colspan="2" class="loading">${t('a.loadingSettings')}</td></tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                  <div class="settings-map-side">
-                    <div id="view-editor-map" style="width:100%;aspect-ratio:21/9;border:1px solid #ccc;border-radius:4px;min-height:180px;"></div>
-                  </div>
-                </div>
-                <!-- hidden form elements kept for compatibility -->
-                <form id="setting-form" style="display:none;">
-                  <input type="text" id="setting-key">
-                  <input type="text" id="setting-value">
-                  <select id="setting-value-select"></select>
-                  <span id="setting-btn-text"></span>
-                  <button id="cancel-setting" type="button"></button>
-                </form>
-              </div>
+              <!-- hidden form elements kept for compatibility -->
+              <form id="setting-form" style="display:none;">
+                <input type="text" id="setting-key">
+                <input type="text" id="setting-value">
+                <select id="setting-value-select"></select>
+                <span id="setting-btn-text"></span>
+                <button id="cancel-setting" type="button"></button>
+              </form>
 
               <div class="admin-section">
                 <h3 class="admin-section-title">${t('a.lims.title')}</h3>
@@ -875,6 +851,12 @@ class AdminDashboard {
       this.logout();
     });
 
+    // The Website tab's Map panel hosts the view editor; the OL map can
+    // only size itself once that panel becomes visible.
+    window.addEventListener('site:subtab', (e) => {
+      if (e.detail === 'map') setTimeout(() => this.initViewEditor(), 60);
+    });
+
     // Tab switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -1162,6 +1144,11 @@ class AdminDashboard {
 
     if (tab === 'website') {
       mountSiteAdmin();
+      // Settings tables live inside the Website tab's General/Map panels.
+      this.loadSettings().then(() => {
+        this.renderSettings();
+        this.initViewEditor();
+      });
     }
 
     if (tab === 'sampling') {
@@ -1173,7 +1160,6 @@ class AdminDashboard {
       // login and go stale (e.g. a user renaming their own account still
       // showed under the old name).
       this.loadUsers().then(() => this.renderUsers());
-      this.loadSettings().then(() => this.renderSettings());
       if (this.admDivInited) {
         this.loadAdminDivisions().then(() => this.renderAdminDivisions());
       }
@@ -2814,18 +2800,21 @@ class AdminDashboard {
   }
 
   renderSettings() {
-    const tbody = document.getElementById('settings-tbody');
+    // Settings live in the Website tab: APP_TITLE / LANGUAGE / ORG_LOGO_URL
+    // on the General sub-tab, everything else on the Map sub-tab. Both
+    // targets exist only once the Website tab has been mounted.
+    const generalKeys = new Set(['APP_TITLE', 'LANGUAGE', 'ORG_LOGO_URL']);
+    const targets = [
+      { tbody: document.getElementById('settings-general-tbody'), pick: (s) => generalKeys.has(s.key) },
+      { tbody: document.getElementById('settings-tbody'), pick: (s) => !generalKeys.has(s.key) },
+    ];
+    if (!targets.some((x) => x.tbody)) return;
     const mapKeys = ['LATITUDE', 'LONGITUDE', 'ZOOM'];
     const keyOrder = ['APP_TITLE', 'LANGUAGE', 'ORG_LOGO_URL', 'BASE_MAP_DEFAULT', 'LAYER_PANEL_COLLAPSED', 'LATITUDE', 'LONGITUDE', 'ZOOM'];
     // Infrastructure settings — kept in DB but hidden from the UI to avoid accidental edits
     const hiddenKeys = new Set(['DOWNLOAD_BASE_URL', 'GLOSIS_FEDERATION_ENABLED', 'GLOSIS_HUB_URL', 'GLOSIS_NODE_URL']);
 
     const visible = this.settings.filter(s => !hiddenKeys.has(s.key));
-
-    if (visible.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="2" class="empty-state">${t('a.emptySettings')}</td></tr>`;
-      return;
-    }
 
     // Sort: known keys first in keyOrder, then remaining alphabetically
     const sorted = [...visible].sort((a, b) => {
@@ -2837,7 +2826,7 @@ class AdminDashboard {
       return a.key.localeCompare(b.key);
     });
 
-    tbody.innerHTML = sorted.map(setting => {
+    const rowHtml = setting => {
       const key = this.escapeHtml(setting.key);
       const isMapKey = mapKeys.includes(setting.key);
       const isBaseMap = setting.key === 'BASE_MAP_DEFAULT';
@@ -2870,33 +2859,41 @@ class AdminDashboard {
           <td><strong>${key}</strong></td>
           <td>${valueCell}</td>
         </tr>`;
-    }).join('');
+    };
 
-    // Attach inline save on blur / change
-    tbody.querySelectorAll('.inline-edit').forEach(el => {
-      const event = el.tagName === 'SELECT' ? 'change' : 'blur';
-      el.addEventListener(event, async () => {
-        const key = el.dataset.key;
-        const value = el.value.trim();
-        if (!value) return;
-        const setting = this.settings.find(s => s.key === key);
-        if (setting && setting.value === value) return;
-        try {
-          await api.updateSetting(key, value);
-          await this.loadSettings();
-          if (['BASE_MAP_DEFAULT', 'LATITUDE', 'LONGITUDE', 'ZOOM'].includes(key)) {
-            this.initViewEditor();
+    targets.forEach(({ tbody, pick }) => {
+      if (!tbody) return;
+      const rows = sorted.filter(pick);
+      tbody.innerHTML = rows.length
+        ? rows.map(rowHtml).join('')
+        : `<tr><td colspan="2" class="empty-state">${t('a.emptySettings')}</td></tr>`;
+
+      // Attach inline save on blur / change
+      tbody.querySelectorAll('.inline-edit').forEach(el => {
+        const event = el.tagName === 'SELECT' ? 'change' : 'blur';
+        el.addEventListener(event, async () => {
+          const key = el.dataset.key;
+          const value = el.value.trim();
+          if (!value) return;
+          const setting = this.settings.find(s => s.key === key);
+          if (setting && setting.value === value) return;
+          try {
+            await api.updateSetting(key, value);
+            await this.loadSettings();
+            if (['BASE_MAP_DEFAULT', 'LATITUDE', 'LONGITUDE', 'ZOOM'].includes(key)) {
+              this.initViewEditor();
+            }
+          } catch (err) {
+            alert(t('a.err.saveFailed') + err.message);
           }
-        } catch (err) {
-          alert(t('a.err.saveFailed') + err.message);
+        });
+        // Save on Enter for text inputs
+        if (el.tagName === 'INPUT') {
+          el.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+          });
         }
       });
-      // Save on Enter for text inputs
-      if (el.tagName === 'INPUT') {
-        el.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
-        });
-      }
     });
   }
 

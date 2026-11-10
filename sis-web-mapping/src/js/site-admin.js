@@ -149,10 +149,34 @@ function markup() {
       <div style="display:flex;gap:6px;margin-bottom:var(--sp-3);flex-wrap:wrap;" id="site-pages-bar"></div>
 
       <div data-sitepage="general" style="display:grid;grid-template-columns:auto 1fr;gap:var(--sp-3);align-items:start;">
+        <div style="grid-column:1 / -1;">
+          <table class="admin-table" style="width:auto;">
+            <thead><tr><th>${t('a.key')}</th><th style="width:350px;">${t('a.value')}</th></tr></thead>
+            <tbody id="settings-general-tbody">
+              <tr><td colspan="2" class="loading">${t('a.loadingSettings')}</td></tr>
+            </tbody>
+          </table>
+        </div>
         <label>${t('a.site.langLbl')}</label>
         <span style="display:flex;gap:4px;" id="site-langs"></span>
         <label>${t('a.site.orderLbl')}</label>
         <div id="site-nav-order" style="display:flex;flex-direction:column;gap:4px;width:fit-content;"></div>
+      </div>
+
+      <div data-sitepage="map" style="display:none;">
+        <div class="settings-map-layout">
+          <div class="settings-table-side">
+            <table class="admin-table" style="width:auto;">
+              <thead><tr><th>${t('a.key')}</th><th style="width:350px;">${t('a.value')}</th></tr></thead>
+              <tbody id="settings-tbody">
+                <tr><td colspan="2" class="loading">${t('a.loadingSettings')}</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="settings-map-side">
+            <div id="view-editor-map" style="width:100%;aspect-ratio:21/9;border:1px solid var(--color-border-strong);border-radius:4px;min-height:180px;"></div>
+          </div>
+        </div>
       </div>
 
       <div data-sitepage="home" style="display:none;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:center;">
@@ -243,9 +267,8 @@ function pageIsPublished(slug) {
   return p.published !== false;
 }
 
-// Website sub-tabs follow the admin-chosen page order (General first;
-// Map is header-only and has no sub-tab).
-const TAB_SLUGS = ['home', 'about', 'people', 'contact', 'catalogue', 'dashboard'];
+// Website sub-tabs follow the admin-chosen page order (General first).
+const TAB_SLUGS = ['home', 'about', 'map', 'people', 'contact', 'catalogue', 'dashboard'];
 
 function renderPagesBar() {
   const bar = document.getElementById('site-pages-bar');
@@ -263,6 +286,8 @@ function renderPagesBar() {
       panel.style.display = mine ? 'grid' : 'none';
     });
     updatePublishBtn();
+    // The Map panel's view editor needs a size pass once visible.
+    window.dispatchEvent(new CustomEvent('site:subtab', { detail: state.page }));
   }));
 }
 
@@ -299,9 +324,10 @@ function updatePublishBtn() {
   const pubBtn = document.getElementById('site-publish');
   const saveBtn = document.getElementById('site-save');
   if (!pubBtn) return;
-  // General: nothing to publish. Catalogue/Dashboard: nothing to save.
-  pubBtn.style.display = state.page === 'general' ? 'none' : '';
-  if (saveBtn) saveBtn.style.display = FEATURE_FLAGS[state.page] ? 'none' : '';
+  // General and Map carry settings, not publishable content; the Map link
+  // always shows in the header. Catalogue/Dashboard have nothing to save.
+  pubBtn.style.display = (state.page === 'general' || state.page === 'map') ? 'none' : '';
+  if (saveBtn) saveBtn.style.display = (FEATURE_FLAGS[state.page] || state.page === 'map') ? 'none' : '';
   pubBtn.textContent = pageIsPublished(state.page) ? t('a.site.unpublish') : t('a.site.publish');
 }
 
@@ -413,9 +439,10 @@ export async function mountSiteAdmin() {
     document.getElementById('site-color-primary').addEventListener('input', checkContrast);
     document.getElementById('site-preview').addEventListener('click', async () => {
       const status = document.getElementById('site-status');
-      // Catalogue and Dashboard have nothing to draft: just open them.
+      // Feature pages have nothing to draft: just open them.
       if (state.page === 'catalogue') { window.open('/collections?f=html', '_blank', 'noopener'); return; }
       if (state.page === 'dashboard') { window.open('/dashboard', '_blank', 'noopener'); return; }
+      if (state.page === 'map') { window.open('/map', '_blank', 'noopener'); return; }
       readForm();
       try {
         await api.saveSiteDraft(state.content);
