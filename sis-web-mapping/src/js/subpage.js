@@ -66,6 +66,21 @@ async function init() {
       });
       return card + '</div>';
     }).join('') + '</div>';
+  } else if (slug === 'contact') {
+    const email = page.email_x ? deobf(page.email_x) : (page.email || '');
+    const phone = page.phone_x ? deobf(page.phone_x) : (page.phone || '');
+    const address = pick(page.address);
+    let block = '';
+    if (address) {
+      block += `<p class="contact-address">${esc(address).replace(/\n/g, '<br>')}</p>`;
+    }
+    [['mailto', email], ['tel', phone]].forEach(([kind, value]) => {
+      if (!value) return;
+      contacts.push([`contact-${contacts.length}`, kind, value]);
+      block += `<a class="person-contact contact-line" id="contact-${contacts.length - 1}" tabindex="0">${esc(value)}</a>`;
+    });
+    if (block) inner += `<div class="contact-block">${block}</div>`;
+    inner += pick(page.body_html);
   } else {
     inner += pick(page.body_html);
   }

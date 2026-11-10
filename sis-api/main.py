@@ -7551,6 +7551,24 @@ def _site_render(content: dict, include_unpublished: bool = False) -> dict:
                                    "members": members}
             continue
         body_html = render_dict(page.get("body_md") or {})
+        if slug == "contact":
+            # Structured contact details beside the free Markdown body.
+            # E-mail and phone leave the server obfuscated, like the
+            # People cards (the public page decodes them client-side).
+            address_src = page.get("address") if isinstance(page.get("address"), dict) else {}
+            address = {lang: str(text).strip()[:500]
+                       for lang, text in address_src.items()
+                       if lang in SITE_LANGS and str(text).strip()}
+            email = str(page.get("email") or "").strip()[:200]
+            phone = str(page.get("phone") or "").strip()[:60]
+            if body_html or address or email or phone:
+                pages_out[slug] = {"title": page.get("title") or {},
+                                   "body_md": page.get("body_md") or {},
+                                   "body_html": body_html,
+                                   "address": address,
+                                   "email_x": obfuscate(email),
+                                   "phone_x": obfuscate(phone)}
+            continue
         if body_html:
             pages_out[slug] = {"title": page.get("title") or {},
                                "body_md": page.get("body_md") or {},

@@ -177,6 +177,15 @@ a { color: var(--color-primary); }
 }
 .person-contact:hover { text-decoration: underline; }
 
+/* ---------- contact page ---------- */
+.contact-block {
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: 12px; padding: 20px 24px; margin: 0 0 26px;
+    max-width: 480px;
+}
+.contact-address { margin: 0 0 12px; line-height: 1.6; }
+.contact-block .contact-line { font-size: 15px; margin-top: 4px; }
+
 /* ---------- footer ---------- */
 .site-footer {
     margin-top: 44px; padding-top: 24px;

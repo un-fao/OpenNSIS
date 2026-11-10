@@ -144,7 +144,6 @@ function markup() {
   return `
     <div class="admin-section" style="max-width:1150px;">
       <h3 class="admin-section-title">${t('a.site.title')}</h3>
-      <p style="color:var(--color-text-muted);font-size:var(--fs-sm);margin:0 0 var(--sp-3);">${t('a.site.intro')}</p>
 
       <div style="display:flex;gap:6px;margin-bottom:var(--sp-3);" id="site-pages-bar">
         ${['general', 'home', 'about', 'people', 'contact'].map((p) =>
@@ -179,15 +178,29 @@ function markup() {
         <textarea id="site-footer-md" rows="4" style="font-family:var(--font-mono,monospace);font-size:var(--fs-sm);"></textarea>
       </div>
 
-      ${['about', 'contact'].map((p) => `
-      <div data-sitepage="${p}" style="display:none;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:start;">
+      <div data-sitepage="about" style="display:none;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:start;">
         <label>${t('a.site.pageTitle')}</label>
-        <input type="text" id="site-page-${p}-title">
+        <input type="text" id="site-page-about-title">
         <label>${t('a.site.pageBody')}</label>
-        <textarea id="site-page-${p}-body" rows="14" style="font-family:var(--font-mono,monospace);font-size:var(--fs-sm);"></textarea>
+        <textarea id="site-page-about-body" rows="14" style="font-family:var(--font-mono,monospace);font-size:var(--fs-sm);"></textarea>
         <span></span>
         <span style="color:var(--color-text-muted);font-size:var(--fs-sm);">${t('a.site.pageHint')}</span>
-      </div>`).join('')}
+      </div>
+
+      <div data-sitepage="contact" style="display:none;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:start;">
+        <label>${t('a.site.pageTitle')}</label>
+        <input type="text" id="site-page-contact-title">
+        <label>${t('a.site.ct.address')}</label>
+        <textarea id="site-contact-address" rows="3"></textarea>
+        <label>${t('a.site.ppl.email')}</label>
+        <input type="email" id="site-contact-email" style="max-width:320px;">
+        <label>${t('a.site.ppl.phone')}</label>
+        <input type="text" id="site-contact-phone" style="max-width:220px;">
+        <label>${t('a.site.pageBody')}</label>
+        <textarea id="site-page-contact-body" rows="10" style="font-family:var(--font-mono,monospace);font-size:var(--fs-sm);"></textarea>
+        <span></span>
+        <span style="color:var(--color-text-muted);font-size:var(--fs-sm);">${t('a.site.pageHint')}</span>
+      </div>
 
       <div data-sitepage="people" style="display:none;">
         <div style="display:grid;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:center;max-width:520px;">
@@ -258,6 +271,9 @@ function readForm() {
     setPageVal(p, 'title', v(`site-page-${p}-title`));
     setPageVal(p, 'body_md', document.getElementById(`site-page-${p}-body`).value);
   });
+  setPageVal('contact', 'address', document.getElementById('site-contact-address').value.trim());
+  state.content.pages.contact.email = v('site-contact-email');
+  state.content.pages.contact.phone = v('site-contact-phone');
   setPageVal('people', 'title', v('site-page-people-title'));
   readMembers();
 }
@@ -278,6 +294,10 @@ function fillForm() {
     document.getElementById(`site-page-${p}-body`).value = pageVal(p, 'body_md');
   });
   set('site-page-people-title', pageVal('people', 'title'));
+  document.getElementById('site-contact-address').value = pageVal('contact', 'address');
+  const contactPage = ((state.content.pages || {}).contact) || {};
+  set('site-contact-email', contactPage.email);
+  set('site-contact-phone', contactPage.phone);
   renderMembers();
   renderLangPills();
   checkContrast();
