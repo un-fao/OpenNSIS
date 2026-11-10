@@ -7,10 +7,13 @@ import api from './api-client.js';
 import { t, currentLang, setInstanceDefault } from './i18n.js';
 import { applyNav, applyBrand, initHeaderControls, applyFooter, deobf, armContact } from './site-nav.js';
 
-function pick(dict) {
-  if (!dict || typeof dict !== 'object') return '';
+function pick(v) {
+  // Content is plain text, shown as entered; legacy per-language dicts
+  // fall back visitor language → English → anything.
+  if (typeof v === 'string') return v;
+  if (!v || typeof v !== 'object') return '';
   const lang = currentLang();
-  return dict[lang] || dict.en || Object.values(dict)[0] || '';
+  return v[lang] || v.en || Object.values(v)[0] || '';
 }
 
 async function init() {

@@ -7,43 +7,39 @@
  * the same fallback the public page uses.
  */
 import api from './api-client.js';
-import { t, AVAILABLE } from './i18n.js';
+import { t, currentLang } from './i18n.js';
 import { normalizeOrder } from './site-nav.js';
 
-let state = { content: {}, lang: 'en', enabled: false, mounted: false, page: 'general' };
+let state = { content: {}, enabled: false, mounted: false, page: 'general' };
 
 const e = (s) => String(s ?? '').replace(/[&<>"']/g,
   (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-function langVal(field) {
-  return ((state.content[field] || {})[state.lang]) || '';
+// Content is entered once and shown as entered — it is not translated.
+// Older drafts stored per-language dicts; flat() reads those by preferring
+// the admin's language, then English, then anything. Saving writes plain
+// values, so legacy content converts itself on the first Save.
+function flat(v) {
+  if (v && typeof v === 'object') {
+    return v[currentLang()] || v.en || Object.values(v).find(Boolean) || '';
+  }
+  return v || '';
 }
-function setLangVal(field, v) {
-  if (!state.content[field] || typeof state.content[field] !== 'object') state.content[field] = {};
-  if (v) state.content[field][state.lang] = v;
-  else delete state.content[field][state.lang];
-}
-function heroVal(field) {
-  return (((state.content.hero || {})[field] || {})[state.lang]) || '';
-}
+function langVal(field) { return flat(state.content[field]); }
+function setLangVal(field, v) { state.content[field] = v || undefined; }
+function heroVal(field) { return flat((state.content.hero || {})[field]); }
 function setHeroVal(field, v) {
   if (!state.content.hero) state.content.hero = {};
-  if (!state.content.hero[field] || typeof state.content.hero[field] !== 'object') state.content.hero[field] = {};
-  if (v) state.content.hero[field][state.lang] = v;
-  else delete state.content.hero[field][state.lang];
+  state.content.hero[field] = v || undefined;
 }
 
 function pageVal(slug, field) {
-  const p = ((state.content.pages || {})[slug]) || {};
-  return ((p[field] || {})[state.lang]) || '';
+  return flat((((state.content.pages || {})[slug]) || {})[field]);
 }
 function setPageVal(slug, field, v) {
   if (!state.content.pages) state.content.pages = {};
   if (!state.content.pages[slug]) state.content.pages[slug] = {};
-  const p = state.content.pages[slug];
-  if (!p[field] || typeof p[field] !== 'object') p[field] = {};
-  if (v) p[field][state.lang] = v;
-  else delete p[field][state.lang];
+  state.content.pages[slug][field] = v || undefined;
 }
 
 function members() {
@@ -75,7 +71,7 @@ function renderMembers() {
       <img src="${e(m.photo || '')}" alt="" style="width:40px;height:40px;flex:none;border-radius:50%;object-fit:cover;background:var(--color-surface-hover);${m.photo ? '' : 'visibility:hidden;'}">
       <button type="button" class="btn btn-sm sm-photo" style="flex:none;">${t('a.upload')}</button>
       <input type="text" class="sm-name" value="${e(m.name || '')}" placeholder="${t('a.site.ppl.name')}" style="flex:1 1 120px;min-width:0;">
-      <input type="text" class="sm-position" value="${e((m.position || {})[state.lang] || '')}" placeholder="${t('a.site.ppl.position')}" style="flex:1 1 140px;min-width:0;">
+      <input type="text" class="sm-position" value="${e(flat(m.position))}" placeholder="${t('a.site.ppl.position')}" style="flex:1 1 140px;min-width:0;">
       <input type="email" class="sm-email" value="${e(m.email || '')}" placeholder="${t('a.site.ppl.email')}" style="flex:1 1 150px;min-width:0;">
       <input type="text" class="sm-phone" value="${e(m.phone || '')}" placeholder="${t('a.site.ppl.phone')}" style="flex:0 1 110px;min-width:0;">
       <span class="badge ${m.publish === false ? 'badge-danger' : 'badge-success'} sm-pub" style="cursor:pointer;flex:none;" title="${t('a.published')}">${m.publish === false ? t('a.no') : t('a.yes')}</span>
@@ -122,10 +118,7 @@ function readMembers() {
     const i = Number(row.dataset.i);
     if (!ms[i]) return;
     ms[i].name = row.querySelector('.sm-name').value.trim();
-    if (!ms[i].position || typeof ms[i].position !== 'object') ms[i].position = {};
-    const pos = row.querySelector('.sm-position').value.trim();
-    if (pos) ms[i].position[state.lang] = pos;
-    else delete ms[i].position[state.lang];
+    ms[i].position = row.querySelector('.sm-position').value.trim();
     ms[i].email = row.querySelector('.sm-email').value.trim();
     ms[i].phone = row.querySelector('.sm-phone').value.trim();
   });
@@ -162,8 +155,6 @@ function markup() {
           <input type="text" id="site-logo-url" style="flex:1;" placeholder="https:// … ${t('a.site.orUpload')}">
           <button type="button" class="btn btn-sm" id="site-logo-upload">${t('a.upload')}</button>
         </div>
-        <label>${t('a.site.langLbl')}</label>
-        <span style="display:flex;gap:4px;" id="site-langs"></span>
         <label>${t('a.site.orderLbl')}</label>
         <div id="site-nav-order" style="display:flex;flex-direction:column;gap:4px;width:fit-content;"></div>
         <label>${t('a.site.colours')}</label>
@@ -381,23 +372,10 @@ function fillForm() {
   set('site-contact-email', contactPage.email);
   set('site-contact-phone', contactPage.phone);
   renderMembers();
-  renderLangPills();
   checkContrast();
   renderPagesBar();
   renderOrderList();
   updatePublishBtn();
-}
-
-function renderLangPills() {
-  const wrap = document.getElementById('site-langs');
-  wrap.innerHTML = AVAILABLE.map(([code]) =>
-    `<button type="button" class="btn btn-sm${code === state.lang ? ' btn-primary' : ''}"
-       data-lang="${code}" style="padding:2px 9px;">${code}</button>`).join('');
-  wrap.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
-    readForm();
-    state.lang = b.dataset.lang;
-    fillForm();
-  }));
 }
 
 function checkContrast() {

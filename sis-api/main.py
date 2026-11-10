@@ -7489,12 +7489,15 @@ def _require_admin(current_user: dict):
         raise HTTPException(status_code=403, detail="Admin only")
 
 
-def _site_render(content: dict, include_unpublished: bool = False) -> dict:
-    """Draft → publishable copy: render about/footer Markdown per
-    language and sanitise the HTML. The Markdown source stays in the
-    copy too, so it can be re-edited. Pages carry a per-page `published`
-    flag (default true once they have content); unpublished pages are left
-    out, except in the admin preview."""
+def _site_render(content: dict, include_unpublished: bool = False,
+                 default_lang: str = "") -> dict:
+    """Draft → publishable copy: render the Markdown fields and sanitise
+    the HTML. The Markdown source stays in the copy too, so it can be
+    re-edited. Content is entered once and shown as entered — it is not
+    translated (legacy per-language dicts are flattened, preferring the
+    instance language). Pages carry a per-page `published` flag (default
+    true once they have content); unpublished pages are left out, except
+    in the admin preview."""
     from markdown_it import MarkdownIt
     import base64
     import nh3
@@ -7509,16 +7512,30 @@ def _site_render(content: dict, include_unpublished: bool = False) -> dict:
             return ""
         return base64.b64encode(text[::-1].encode("utf-8")).decode("ascii")
 
-    def render_dict(src):
-        html = {}
+    def flat(src):
+        # Plain string, or a legacy {lang: text} dict flattened to one
+        # value: the instance language first, then any non-empty one.
         if isinstance(src, dict):
-            for lang, text in src.items():
-                if lang in SITE_LANGS and isinstance(text, str) and text.strip():
-                    html[lang] = nh3.clean(md.render(text))
-        return html
+            v = str(src.get(default_lang) or "").strip()
+            if v:
+                return v
+            return next((str(t).strip() for t in src.values()
+                         if str(t).strip()), "")
+        return str(src or "").strip()
+
+    def render_md(src):
+        text = flat(src)
+        return nh3.clean(md.render(text)) if text else ""
 
     for field in ("about_md", "footer_md"):
-        out[field.replace("_md", "_html")] = render_dict(out.get(field) or {})
+        out[field] = flat(out.get(field))
+        out[field.replace("_md", "_html")] = render_md(out.get(field))
+
+    # Hero texts follow the same rule: one value, shown as entered.
+    if isinstance(out.get("hero"), dict):
+        out["hero"] = dict(out["hero"])
+        for f in ("title", "subtitle"):
+            out["hero"][f] = flat(out["hero"].get(f))
 
     # Standalone pages (About / People / Contact): per-page title + Markdown
     # body, rendered the same way. Only pages with some body survive into
@@ -7538,7 +7555,7 @@ def _site_render(content: dict, include_unpublished: bool = False) -> dict:
                 if not isinstance(m, dict):
                     continue
                 member = {"name": str(m.get("name") or "").strip()[:120],
-                          "position": m.get("position") if isinstance(m.get("position"), dict) else {},
+                          "position": flat(m.get("position"))[:200],
                           "email_x": obfuscate(str(m.get("email") or "").strip()[:200]),
                           "phone_x": obfuscate(str(m.get("phone") or "").strip()[:60]),
                           "photo": str(m.get("photo") or "").strip()[:300]}
@@ -7547,31 +7564,29 @@ def _site_render(content: dict, include_unpublished: bool = False) -> dict:
                 if member["name"] and m.get("publish", True):
                     members.append(member)
             if members:
-                pages_out[slug] = {"title": page.get("title") or {},
+                pages_out[slug] = {"title": flat(page.get("title"))[:200],
                                    "members": members}
             continue
-        body_html = render_dict(page.get("body_md") or {})
+        body_md = flat(page.get("body_md"))
+        body_html = render_md(body_md)
         if slug == "contact":
             # Structured contact details beside the free Markdown body.
             # E-mail and phone leave the server obfuscated, like the
             # People cards (the public page decodes them client-side).
-            address_src = page.get("address") if isinstance(page.get("address"), dict) else {}
-            address = {lang: str(text).strip()[:500]
-                       for lang, text in address_src.items()
-                       if lang in SITE_LANGS and str(text).strip()}
+            address = flat(page.get("address"))[:500]
             email = str(page.get("email") or "").strip()[:200]
             phone = str(page.get("phone") or "").strip()[:60]
             if body_html or address or email or phone:
-                pages_out[slug] = {"title": page.get("title") or {},
-                                   "body_md": page.get("body_md") or {},
+                pages_out[slug] = {"title": flat(page.get("title"))[:200],
+                                   "body_md": body_md,
                                    "body_html": body_html,
                                    "address": address,
                                    "email_x": obfuscate(email),
                                    "phone_x": obfuscate(phone)}
             continue
         if body_html:
-            pages_out[slug] = {"title": page.get("title") or {},
-                               "body_md": page.get("body_md") or {},
+            pages_out[slug] = {"title": flat(page.get("title"))[:200],
+                               "body_md": body_md,
                                "body_html": body_html}
     out["pages"] = pages_out
     return out
@@ -7657,7 +7672,8 @@ async def preview_site(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="The draft is empty")
     return {"enabled": True, "preview": True,
             "app_title": app_title, "org_logo": org_logo, "language": language,
-            "content": _site_render(row["content"], include_unpublished=True),
+            "content": _site_render(row["content"], include_unpublished=True,
+                                    default_lang=language),
             "updated_at": row["updated_at"]}
 
 
@@ -7670,7 +7686,8 @@ async def publish_site(request: Request, current_user: dict = Depends(get_curren
             row = cur.fetchone()
             if not row or not row["content"]:
                 raise HTTPException(status_code=400, detail="Nothing to publish — the draft is empty")
-            rendered = _site_render(row["content"])
+            rendered = _site_render(row["content"],
+                                    default_lang=_setting_value(cur, "LANGUAGE", ""))
             cur.execute("""
                 INSERT INTO api.site_published (id, content, published_at, published_by)
                 VALUES (1, %s, now(), %s)

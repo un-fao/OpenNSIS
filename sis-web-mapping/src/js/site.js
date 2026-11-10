@@ -29,11 +29,13 @@ function icon(name) {
     + `stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
 }
 
-function pick(dict) {
-  // Same fallback order as t(): visitor language → English → anything.
-  if (!dict || typeof dict !== 'object') return '';
+function pick(v) {
+  // Content is plain text, shown as entered. Legacy snapshots stored
+  // per-language dicts — fall back visitor language → English → anything.
+  if (typeof v === 'string') return v;
+  if (!v || typeof v !== 'object') return '';
   const lang = currentLang();
-  return dict[lang] || dict.en || Object.values(dict)[0] || '';
+  return v[lang] || v.en || Object.values(v)[0] || '';
 }
 
 function applyColors(colors) {

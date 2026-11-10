@@ -102,9 +102,10 @@ export function applyFooter(data) {
   const nav = document.getElementById('footer-nav');
   if (nav) nav.innerHTML = `<a href="/">${t('site.nav.home')}</a>` + order.map(linkHtml).join('');
   const fc = document.getElementById('footer-custom');
-  const dict = c.footer_html;
-  const footer = (dict && typeof dict === 'object')
-    ? (dict[currentLang()] || dict.en || Object.values(dict)[0] || '') : '';
+  const src = c.footer_html;
+  const footer = typeof src === 'string' ? src
+    : (src && typeof src === 'object')
+      ? (src[currentLang()] || src.en || Object.values(src)[0] || '') : '';
   if (fc && footer) { fc.innerHTML = footer; fc.hidden = false; }
 }
 
