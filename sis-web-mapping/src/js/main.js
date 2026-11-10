@@ -40,6 +40,11 @@ function closeInfoPopup() {
 async function initializeApp() {
   try {
     console.log('Starting application initialization...');
+    // On /admin the panel is the destination: open it before the map
+    // initialises, so the admin never watches the map load first.
+    if (location.pathname === '/admin' && api.restoreSession()) {
+      showAdminPanel();
+    }
     showLoading(true);
 
     // Load settings from API
@@ -2614,6 +2619,7 @@ function setAuthButtonIcon(btn, kind, label) {
   const icons = {
     user: '<circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-3.5 4.5-5.5 8-5.5s6.5 2 8 5.5"/>',
     back: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
+    logout: '<path d="M12 19H5V5h7M16 17l5-5-5-5M21 12H9"/>',
   };
   btn.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">'
     + icons[kind] + '</svg>';
@@ -2646,7 +2652,10 @@ function addLoginButton() {
   try {
     if (sessionStorage.getItem('sis_reopen_admin') === '1') {
       sessionStorage.removeItem('sis_reopen_admin');
-      if (api.isAuthenticated()) showAdminPanel();
+      if (api.isAuthenticated()
+          && !document.getElementById('admin-dashboard')?.classList.contains('active')) {
+        showAdminPanel();
+      }
     }
   } catch (e) { /* private mode */ }
 
@@ -2655,7 +2664,7 @@ function addLoginButton() {
   // opens the panel (or the sign-in dialogue first).
   if (location.pathname === '/admin') {
     const open = document.getElementById('admin-dashboard')?.classList.contains('active');
-    if (api.isAuthenticated()) { if (!open) showAdminPanel(); }
+    if (api.isAuthenticated()) { if (open) markPanelOpenGlyph(); else showAdminPanel(); }
     else showLoginModal();
   } else if (new URLSearchParams(location.search).has('login') && !api.isAuthenticated()) {
     showLoginModal();
@@ -2741,20 +2750,19 @@ function showAdminPanel() {
   adminDashboard.show();
   if (location.pathname !== '/admin') history.pushState({ sisAdmin: 1 }, '', '/admin');
 
-  // Update login button to "Back to Map"
+  markPanelOpenGlyph();
+}
+
+// While the panel is open the header glyph signs the admin out and
+// returns to Home; leaving the panel without logging out is the nav
+// (Map, Home, ...) or the browser's back button.
+function markPanelOpenGlyph() {
   const loginBtn = document.getElementById('login-btn');
   if (!loginBtn) return;
-  
-  setAuthButtonIcon(loginBtn, 'back', t('auth.backToMap'));
-  
-  // Set click handler for closing dashboard
+  setAuthButtonIcon(loginBtn, 'logout', t('a.logout'));
   loginBtn.onclick = () => {
-    // Close dashboard and return to map
-    adminDashboard.hide();
-    
-    // Reset button to reopen dashboard
-    setAuthButtonIcon(loginBtn, 'user', t('auth.adminPanel'));
-    loginBtn.onclick = showAdminPanel; // This line is critical!
+    api.logout();
+    location.href = '/';
   };
 }
 
@@ -2765,7 +2773,11 @@ window.showAdminPanel = showAdminPanel;
 function showLoading(show) {
   const loader = document.getElementById('loading-overlay');
   if (loader) {
-    loader.style.display = show ? 'flex' : 'none';
+    // The map's loading veil must not cover the admin panel — neither an
+    // open one nor the one about to open on /admin (show() is async).
+    const panelOpen = document.getElementById('admin-dashboard')?.classList.contains('active')
+      || (location.pathname === '/admin' && api.isAuthenticated());
+    loader.style.display = (show && !panelOpen) ? 'flex' : 'none';
   }
 }
 
