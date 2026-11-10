@@ -7516,6 +7516,25 @@ def _site_render(content: dict) -> dict:
     for slug, page in (out.get("pages") or {}).items():
         if slug not in ("about", "people", "contact") or not isinstance(page, dict):
             continue
+        if slug == "people":
+            # Structured page: member cards (photo, name, position, email,
+            # phone) rather than Markdown. Plain-text fields only; the
+            # public page escapes them at render.
+            members = []
+            for m in (page.get("members") or [])[:60]:
+                if not isinstance(m, dict):
+                    continue
+                member = {"name": str(m.get("name") or "").strip()[:120],
+                          "position": m.get("position") if isinstance(m.get("position"), dict) else {},
+                          "email": str(m.get("email") or "").strip()[:200],
+                          "phone": str(m.get("phone") or "").strip()[:60],
+                          "photo": str(m.get("photo") or "").strip()[:300]}
+                if member["name"]:
+                    members.append(member)
+            if members:
+                pages_out[slug] = {"title": page.get("title") or {},
+                                   "members": members}
+            continue
         body_html = render_dict(page.get("body_md") or {})
         if body_html:
             pages_out[slug] = {"title": page.get("title") or {},

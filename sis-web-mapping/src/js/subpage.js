@@ -43,8 +43,23 @@ async function init() {
   const logo = document.getElementById('site-logo');
   if (c.logo_url) { logo.src = c.logo_url; logo.hidden = false; }
   applyNav(slug, c.pages);
+  const esc = (x) => String(x ?? '').replace(/[&<>"']/g,
+    (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const body = document.getElementById('page-body');
-  body.innerHTML = `<h1 style="font-family:var(--font-display);margin-top:0;">${title.replace(/[&<>"']/g, (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}</h1>` + pick(page.body_html);
+  let inner = `<h1 style="font-family:var(--font-display);margin-top:0;">${esc(title)}</h1>`;
+  if (slug === 'people' && Array.isArray(page.members)) {
+    inner += '<div class="people-grid">' + page.members.map((m) => `
+      <div class="person-card">
+        ${m.photo ? `<img src="${esc(m.photo)}" alt="">` : '<div class="person-photo-placeholder"></div>'}
+        <div class="person-name">${esc(m.name)}</div>
+        <div class="person-position">${esc(pick(m.position))}</div>
+        ${m.email ? `<a class="person-contact" href="mailto:${esc(m.email)}">${esc(m.email)}</a>` : ''}
+        ${m.phone ? `<a class="person-contact" href="tel:${esc(m.phone.replace(/[^+\d]/g, ''))}">${esc(m.phone)}</a>` : ''}
+      </div>`).join('') + '</div>';
+  } else {
+    inner += pick(page.body_html);
+  }
+  body.innerHTML = inner;
   body.hidden = false;
   const footer = pick(c.footer_html);
   if (footer) {

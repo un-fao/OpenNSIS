@@ -168,6 +168,31 @@ a.nav-link:hover { color: var(--color-primary); border-bottom-color: var(--color
     color: var(--color-text-muted);
 }
 
+/* ---------- people ---------- */
+.people-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 18px; margin-top: 10px;
+}
+.person-card {
+    text-align: center; padding: 22px 16px 18px;
+    background: var(--color-bg-accent); border: 1px solid var(--color-border);
+    border-radius: 14px;
+}
+.person-card img, .person-photo-placeholder {
+    width: 96px; height: 96px; border-radius: 50%; object-fit: cover;
+    margin: 0 auto 10px; display: block;
+    background: var(--color-surface-hover, var(--color-border));
+    border: 3px solid var(--color-surface);
+    box-shadow: 0 4px 14px -6px rgba(50, 35, 15, 0.4);
+}
+.person-name { font-weight: 700; font-size: 17px; }
+.person-position { color: var(--color-text-muted); font-size: 14px; margin: 2px 0 8px; }
+.person-contact {
+    display: block; font-size: 13.5px; color: var(--color-primary);
+    text-decoration: none; line-height: 1.5; word-break: break-all;
+}
+.person-contact:hover { text-decoration: underline; }
+
 /* ---------- footer ---------- */
 .site-footer {
     margin-top: 44px; padding-top: 24px;

@@ -45,6 +45,71 @@ function setPageVal(slug, field, v) {
   else delete p[field][state.lang];
 }
 
+function members() {
+  if (!state.content.pages) state.content.pages = {};
+  if (!state.content.pages.people) state.content.pages.people = {};
+  if (!Array.isArray(state.content.pages.people.members)) state.content.pages.people.members = [];
+  return state.content.pages.people.members;
+}
+
+function renderMembers() {
+  const list = document.getElementById('site-people-list');
+  if (!list) return;
+  const ms = members();
+  list.innerHTML = ms.map((m, i) => `
+    <div class="site-member-row" data-i="${i}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--color-border);">
+      <img src="${e(m.photo || '')}" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;background:var(--color-surface-hover);${m.photo ? '' : 'visibility:hidden;'}">
+      <button type="button" class="btn btn-sm sm-photo">${t('a.upload')}</button>
+      <input type="text" class="sm-name" value="${e(m.name || '')}" placeholder="${t('a.site.ppl.name')}" style="width:150px;">
+      <input type="text" class="sm-position" value="${e((m.position || {})[state.lang] || '')}" placeholder="${t('a.site.ppl.position')}" style="width:170px;">
+      <input type="email" class="sm-email" value="${e(m.email || '')}" placeholder="${t('a.site.ppl.email')}" style="width:180px;">
+      <input type="text" class="sm-phone" value="${e(m.phone || '')}" placeholder="${t('a.site.ppl.phone')}" style="width:130px;">
+      <button type="button" class="btn btn-sm sm-del" style="color:var(--color-danger);">${t('a.delete')}</button>
+    </div>`).join('');
+  list.querySelectorAll('.site-member-row').forEach((row) => {
+    const i = Number(row.dataset.i);
+    row.querySelector('.sm-del').addEventListener('click', () => {
+      readMembers();
+      members().splice(i, 1);
+      renderMembers();
+    });
+    row.querySelector('.sm-photo').addEventListener('click', () => {
+      const picker = document.createElement('input');
+      picker.type = 'file';
+      picker.accept = 'image/*';
+      picker.addEventListener('change', async () => {
+        if (!picker.files[0]) return;
+        try {
+          const r = await api.uploadSiteMedia(picker.files[0]);
+          readMembers();
+          members()[i].photo = r.url;
+          renderMembers();
+        } catch (err) {
+          document.getElementById('site-status').textContent = err.message;
+        }
+      });
+      picker.click();
+    });
+  });
+}
+
+function readMembers() {
+  const list = document.getElementById('site-people-list');
+  if (!list) return;
+  const ms = members();
+  list.querySelectorAll('.site-member-row').forEach((row) => {
+    const i = Number(row.dataset.i);
+    if (!ms[i]) return;
+    ms[i].name = row.querySelector('.sm-name').value.trim();
+    if (!ms[i].position || typeof ms[i].position !== 'object') ms[i].position = {};
+    const pos = row.querySelector('.sm-position').value.trim();
+    if (pos) ms[i].position[state.lang] = pos;
+    else delete ms[i].position[state.lang];
+    ms[i].email = row.querySelector('.sm-email').value.trim();
+    ms[i].phone = row.querySelector('.sm-phone').value.trim();
+  });
+}
+
 // WCAG relative luminance; warn when white button text would be illegible.
 function contrastWithWhite(hex) {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
@@ -95,7 +160,7 @@ function markup() {
         <textarea id="site-footer-md" rows="4" style="font-family:var(--font-mono,monospace);font-size:var(--fs-sm);"></textarea>
       </div>
 
-      ${['about', 'people', 'contact'].map((p) => `
+      ${['about', 'contact'].map((p) => `
       <div data-sitepage="${p}" style="display:none;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:start;">
         <label>${t('a.site.pageTitle')}</label>
         <input type="text" id="site-page-${p}-title">
@@ -104,6 +169,16 @@ function markup() {
         <span></span>
         <span style="color:var(--color-text-muted);font-size:var(--fs-sm);">${t('a.site.pageHint')}</span>
       </div>`).join('')}
+
+      <div data-sitepage="people" style="display:none;">
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:center;max-width:520px;">
+          <label>${t('a.site.pageTitle')}</label>
+          <input type="text" id="site-page-people-title">
+        </div>
+        <div id="site-people-list" style="margin-top:var(--sp-3);"></div>
+        <button type="button" class="btn btn-sm" id="site-people-add" style="margin-top:var(--sp-2);">${t('a.site.ppl.add')}</button>
+        <p style="color:var(--color-text-muted);font-size:var(--fs-sm);margin-top:var(--sp-2);">${t('a.site.pageHint')}</p>
+      </div>
 
       <div data-sitepage="home" style="display:grid;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:center;margin-top:var(--sp-2);">
         <label>${t('a.site.colours')}</label>
@@ -142,10 +217,12 @@ function readForm() {
     primary: v('site-color-primary'),
     secondary: v('site-color-secondary'),
   };
-  ['about', 'people', 'contact'].forEach((p) => {
+  ['about', 'contact'].forEach((p) => {
     setPageVal(p, 'title', v(`site-page-${p}-title`));
     setPageVal(p, 'body_md', document.getElementById(`site-page-${p}-body`).value);
   });
+  setPageVal('people', 'title', v('site-page-people-title'));
+  readMembers();
 }
 
 function fillForm() {
@@ -159,10 +236,12 @@ function fillForm() {
   const col = state.content.colors || {};
   if (col.primary) set('site-color-primary', col.primary);
   if (col.secondary) set('site-color-secondary', col.secondary);
-  ['about', 'people', 'contact'].forEach((p) => {
+  ['about', 'contact'].forEach((p) => {
     set(`site-page-${p}-title`, pageVal(p, 'title'));
     document.getElementById(`site-page-${p}-body`).value = pageVal(p, 'body_md');
   });
+  set('site-page-people-title', pageVal('people', 'title'));
+  renderMembers();
   document.getElementById('site-enabled').checked = !!state.enabled;
   renderLangPills();
   checkContrast();
@@ -241,6 +320,11 @@ export async function mountSiteAdmin() {
         panel.style.display = mine ? 'grid' : 'none';
       });
     }));
+    document.getElementById('site-people-add').addEventListener('click', () => {
+      readMembers();
+      members().push({ name: '', position: {}, email: '', phone: '', photo: '' });
+      renderMembers();
+    });
     document.getElementById('site-logo-upload').addEventListener('click', () => uploadInto('site-logo-url'));
     document.getElementById('site-hero-upload').addEventListener('click', () => uploadInto('site-hero-image'));
     document.getElementById('site-color-primary').addEventListener('input', checkContrast);
