@@ -5,7 +5,7 @@
  */
 import api from './api-client.js';
 import { t, currentLang } from './i18n.js';
-import { applyNav } from './site-nav.js';
+import { applyNav, deobf, armContact } from './site-nav.js';
 
 function pick(dict) {
   if (!dict || typeof dict !== 'object') return '';
@@ -47,19 +47,30 @@ async function init() {
     (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const body = document.getElementById('page-body');
   let inner = `<h1 style="font-family:var(--font-display);margin-top:0;">${esc(title)}</h1>`;
+  // Contact details arrive obfuscated (email_x/phone_x) from the snapshot;
+  // decoded text goes in, the mailto:/tel: href only on first interaction.
+  const contacts = [];
   if (slug === 'people' && Array.isArray(page.members)) {
-    inner += '<div class="people-grid">' + page.members.map((m) => `
+    inner += '<div class="people-grid">' + page.members.map((m) => {
+      const email = m.email_x ? deobf(m.email_x) : (m.email || '');
+      const phone = m.phone_x ? deobf(m.phone_x) : (m.phone || '');
+      let card = `
       <div class="person-card">
         ${m.photo ? `<img src="${esc(m.photo)}" alt="">` : '<div class="person-photo-placeholder"></div>'}
         <div class="person-name">${esc(m.name)}</div>
-        <div class="person-position">${esc(pick(m.position))}</div>
-        ${m.email ? `<a class="person-contact" href="mailto:${esc(m.email)}">${esc(m.email)}</a>` : ''}
-        ${m.phone ? `<a class="person-contact" href="tel:${esc(m.phone.replace(/[^+\d]/g, ''))}">${esc(m.phone)}</a>` : ''}
-      </div>`).join('') + '</div>';
+        <div class="person-position">${esc(pick(m.position))}</div>`;
+      [['mailto', email], ['tel', phone]].forEach(([kind, value]) => {
+        if (!value) return;
+        contacts.push([`contact-${contacts.length}`, kind, value]);
+        card += `<a class="person-contact" id="contact-${contacts.length - 1}" tabindex="0">${esc(value)}</a>`;
+      });
+      return card + '</div>';
+    }).join('') + '</div>';
   } else {
     inner += pick(page.body_html);
   }
   body.innerHTML = inner;
+  contacts.forEach(([id, kind, value]) => armContact(document.getElementById(id), kind, value));
   body.hidden = false;
   const footer = pick(c.footer_html);
   if (footer) {

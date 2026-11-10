@@ -1,7 +1,7 @@
 /**
  * Website tab (issue #13, v1): edit the public landing page.
  *
- * Draft → Publish → Rollback. The draft is plain Markdown + fields; the
+ * Draft → Publish. The draft is plain Markdown + fields; the
  * server renders and sanitises at publish time. Content text fields are
  * per-language objects ({en: …}), edited through a language switcher with
  * the same fallback the public page uses.
@@ -9,7 +9,7 @@
 import api from './api-client.js';
 import { t, AVAILABLE } from './i18n.js';
 
-let state = { content: {}, lang: 'en', enabled: false, mounted: false, page: 'home' };
+let state = { content: {}, lang: 'en', enabled: false, mounted: false, page: 'general' };
 
 const e = (s) => String(s ?? '').replace(/[&<>"']/g,
   (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -56,7 +56,20 @@ function renderMembers() {
   const list = document.getElementById('site-people-list');
   if (!list) return;
   const ms = members();
-  list.innerHTML = ms.map((m, i) => `
+  // Column headers mirror the row's flex layout; the hidden buttons only
+  // reserve the width of their real counterparts so the labels line up.
+  const header = ms.length ? `
+    <div style="display:flex;gap:8px;align-items:center;padding:0 0 2px;font-size:var(--fs-xs);font-weight:700;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.04em;">
+      <span style="width:40px;flex:none;">${t('a.site.ppl.photo')}</span>
+      <button type="button" class="btn btn-sm" style="flex:none;visibility:hidden;" tabindex="-1" aria-hidden="true">${t('a.upload')}</button>
+      <span style="flex:1 1 120px;min-width:0;">${t('a.site.ppl.name')}</span>
+      <span style="flex:1 1 140px;min-width:0;">${t('a.site.ppl.position')}</span>
+      <span style="flex:1 1 150px;min-width:0;">${t('a.site.ppl.email')}</span>
+      <span style="flex:0 1 110px;min-width:0;">${t('a.site.ppl.phone')}</span>
+      <span style="flex:none;">${t('a.published')}</span>
+      <button type="button" class="btn btn-sm" style="flex:none;visibility:hidden;" tabindex="-1" aria-hidden="true">${t('a.delete')}</button>
+    </div>` : '';
+  list.innerHTML = header + ms.map((m, i) => `
     <div class="site-member-row" data-i="${i}" style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--color-border);">
       <img src="${e(m.photo || '')}" alt="" style="width:40px;height:40px;flex:none;border-radius:50%;object-fit:cover;background:var(--color-surface-hover);${m.photo ? '' : 'visibility:hidden;'}">
       <button type="button" class="btn btn-sm sm-photo" style="flex:none;">${t('a.upload')}</button>
@@ -133,20 +146,23 @@ function markup() {
       <h3 class="admin-section-title">${t('a.site.title')}</h3>
       <p style="color:var(--color-text-muted);font-size:var(--fs-sm);margin:0 0 var(--sp-3);">${t('a.site.intro')}</p>
 
-      <div style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3);">
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+      <div style="display:flex;gap:6px;margin-bottom:var(--sp-3);" id="site-pages-bar">
+        ${['general', 'home', 'about', 'people', 'contact'].map((p) =>
+          `<button type="button" class="btn btn-sm site-page-tab${p === 'general' ? ' btn-primary' : ''}" data-page="${p}">${p === 'general' ? t('a.site.general') : t('site.nav.' + p)}</button>`).join('')}
+      </div>
+
+      <div data-sitepage="general" style="display:grid;grid-template-columns:auto 1fr;gap:var(--sp-3);align-items:center;">
+        <label>${t('a.site.langLbl')}</label>
+        <span style="display:flex;gap:4px;" id="site-langs"></span>
+        <span></span>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;width:fit-content;">
           <input type="checkbox" id="site-enabled"> ${t('a.site.enabled')}
         </label>
-        <a href="/" target="_blank" rel="noopener" style="font-size:var(--fs-sm);">${t('a.site.view')} ↗</a>
-        <span style="margin-left:auto;display:flex;gap:4px;" id="site-langs"></span>
+        <span></span>
+        <a href="/" target="_blank" rel="noopener" style="font-size:var(--fs-sm);width:fit-content;">${t('a.site.view')} ↗</a>
       </div>
 
-      <div style="display:flex;gap:6px;margin-bottom:var(--sp-3);" id="site-pages-bar">
-        ${['home', 'about', 'people', 'contact'].map((p) =>
-          `<button type="button" class="btn btn-sm site-page-tab${p === 'home' ? ' btn-primary' : ''}" data-page="${p}">${t('site.nav.' + p)}</button>`).join('')}
-      </div>
-
-      <div data-sitepage="home" style="display:grid;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:center;">
+      <div data-sitepage="home" style="display:none;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:center;">
         <label>${t('a.site.logo')}</label>
         <div style="display:flex;gap:6px;align-items:center;">
           <input type="text" id="site-logo-url" style="flex:1;" placeholder="https:// … ${t('a.site.orUpload')}">
@@ -183,11 +199,11 @@ function markup() {
           <input type="text" id="site-page-people-title">
         </div>
         <div id="site-people-list" style="margin-top:var(--sp-3);"></div>
-        <button type="button" class="btn btn-sm" id="site-people-add" style="margin-top:var(--sp-2);">${t('a.site.ppl.add')}</button>
+        <button type="button" class="btn btn-sm" id="site-people-add" style="margin-top:var(--sp-2);width:fit-content;justify-self:start;">${t('a.site.ppl.add')}</button>
         <p style="color:var(--color-text-muted);font-size:var(--fs-sm);margin-top:var(--sp-2);">${t('a.site.pageHint')}</p>
       </div>
 
-      <div data-sitepage="home" style="display:grid;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:center;margin-top:var(--sp-2);">
+      <div data-sitepage="home" style="display:none;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:center;margin-top:var(--sp-2);">
         <label>${t('a.site.colours')}</label>
         <div style="display:flex;gap:var(--sp-3);align-items:center;flex-wrap:wrap;">
           <label style="display:flex;align-items:center;gap:5px;">${t('a.site.primary')}
@@ -204,9 +220,6 @@ function markup() {
         <button type="button" class="btn btn-primary" id="site-publish">${t('a.site.publish')}</button>
         <span id="site-status" style="font-size:var(--fs-sm);"></span>
       </div>
-
-      <h4 style="margin:var(--sp-5) 0 var(--sp-2);">${t('a.site.versions')}</h4>
-      <div id="site-snapshots" style="font-size:var(--fs-sm);"></div>
     </div>`;
 }
 
@@ -272,26 +285,6 @@ function checkContrast() {
   warnEl.textContent = (ratio !== null && ratio < 4.5) ? t('a.site.contrastWarn') : '';
 }
 
-async function refreshSnapshots() {
-  const rows = await api.listSiteSnapshots();
-  const el = document.getElementById('site-snapshots');
-  if (!rows.length) { el.textContent = t('a.site.noVersions'); return; }
-  el.innerHTML = rows.map((r) => `
-    <div style="display:flex;gap:var(--sp-3);align-items:center;padding:3px 0;">
-      <span>#${r.snapshot_id} · ${e(String(r.created_at).slice(0, 16).replace('T', ' '))} · ${e(r.created_by || '')}</span>
-      ${r.is_current
-        ? `<span class="badge badge-success">${t('a.site.current')}</span>`
-        : `<button type="button" class="btn btn-sm" data-sid="${r.snapshot_id}">${t('a.site.rollback')}</button>`}
-    </div>`).join('');
-  el.querySelectorAll('button[data-sid]').forEach((b) => b.addEventListener('click', async () => {
-    await api.rollbackSite(Number(b.dataset.sid));
-    const d = await api.getSiteDraft();
-    state.content = d.content || {};
-    fillForm();
-    refreshSnapshots();
-  }));
-}
-
 async function uploadInto(inputId) {
   const picker = document.createElement('input');
   picker.type = 'file';
@@ -345,7 +338,7 @@ export async function mountSiteAdmin() {
       try {
         await api.saveSiteDraft(state.content);
         status.textContent = t('a.site.draftSaved');
-        const path = state.page === 'home' ? '/' : `/${state.page}`;
+        const path = (state.page === 'home' || state.page === 'general') ? '/' : `/${state.page}`;
         window.open(`${path}?preview=1`, '_blank', 'noopener');
       } catch (err) { status.textContent = err.message; }
     });
@@ -362,9 +355,8 @@ export async function mountSiteAdmin() {
       readForm();
       try {
         await api.saveSiteDraft(state.content);
-        const r = await api.publishSite();
-        status.textContent = t('a.site.published', { n: r.snapshot_id });
-        refreshSnapshots();
+        await api.publishSite();
+        status.textContent = t('a.site.published');
       } catch (err) { status.textContent = err.message; }
     });
   }
@@ -372,5 +364,4 @@ export async function mountSiteAdmin() {
   state.content = d.content || {};
   state.enabled = !!d.enabled;
   fillForm();
-  refreshSnapshots();
 }

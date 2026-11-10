@@ -183,12 +183,6 @@ class SISApiClient {
   }
   async getSitePreview() { return this.authenticatedRequest('/api/site/preview'); }
   async publishSite() { return this.authenticatedRequest('/api/site/publish', { method: 'POST' }); }
-  async listSiteSnapshots() { return this.authenticatedRequest('/api/site/snapshots'); }
-  async rollbackSite(snapshotId) {
-    return this.authenticatedRequest('/api/site/rollback', {
-      method: 'POST', body: JSON.stringify({ snapshot_id: snapshotId })
-    });
-  }
   async uploadSiteMedia(file) {
     const fd = new FormData();
     fd.append('file', file);

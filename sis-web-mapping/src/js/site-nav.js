@@ -34,3 +34,27 @@ export function applyNav(current, pages) {
     el.replaceWith(a);
   });
 }
+
+/**
+ * Harvester protection for published contact details. The snapshot carries
+ * e-mail/phone reversed + base64 (never regex-matchable in HTML or JSON);
+ * deobf() restores the text and armContact() only puts the mailto:/tel:
+ * href into the DOM on the first human interaction (hover, touch, focus),
+ * so a headless crawler that merely loads the page never sees it.
+ */
+export function deobf(enc) {
+  if (!enc) return '';
+  try {
+    // atob → UTF-8 bytes of the reversed string; decode, then un-reverse.
+    const reversed = decodeURIComponent(escape(atob(enc)));
+    return reversed.split('').reverse().join('');
+  } catch (e) { return ''; }
+}
+
+export function armContact(el, kind, value) {
+  if (!el || !value) return;
+  const href = kind === 'tel' ? `tel:${value.replace(/[^+\d]/g, '')}` : `mailto:${value}`;
+  const arm = () => { if (!el.getAttribute('href')) el.setAttribute('href', href); };
+  ['pointerenter', 'touchstart', 'focus', 'pointerdown'].forEach((ev) =>
+    el.addEventListener(ev, arm, { once: true, passive: true }));
+}

@@ -7473,7 +7473,7 @@ async def health_check():
 
 
 # ==================== Public landing page — site CMS (issue #13) ====================
-# One admin-edited draft, immutable published snapshots with one current.
+# One admin-edited draft and one published copy (no version history).
 # Markdown is rendered and sanitised HERE, at publish time — the public page
 # never parses Markdown and never receives unsanitised HTML.
 
@@ -7494,9 +7494,18 @@ def _site_render(content: dict) -> dict:
     language and sanitise the HTML. The Markdown source stays in the
     snapshot too, so a rollback can be re-edited."""
     from markdown_it import MarkdownIt
+    import base64
     import nh3
     md = MarkdownIt("commonmark").enable("table")
     out = dict(content or {})
+
+    def obfuscate(text):
+        # Reversed + base64: the public snapshot JSON and the page HTML never
+        # carry an address that matches a harvester's e-mail/phone regex.
+        # The public page decodes it client-side (site-nav.js deobf()).
+        if not text:
+            return ""
+        return base64.b64encode(text[::-1].encode("utf-8")).decode("ascii")
 
     def render_dict(src):
         html = {}
@@ -7526,8 +7535,8 @@ def _site_render(content: dict) -> dict:
                     continue
                 member = {"name": str(m.get("name") or "").strip()[:120],
                           "position": m.get("position") if isinstance(m.get("position"), dict) else {},
-                          "email": str(m.get("email") or "").strip()[:200],
-                          "phone": str(m.get("phone") or "").strip()[:60],
+                          "email_x": obfuscate(str(m.get("email") or "").strip()[:200]),
+                          "phone_x": obfuscate(str(m.get("phone") or "").strip()[:60]),
                           "photo": str(m.get("photo") or "").strip()[:300]}
                 # Per-member publish toggle: unpublished people stay in the
                 # draft but never reach the public snapshot.
@@ -7548,16 +7557,14 @@ def _site_render(content: dict) -> dict:
 
 @app.get("/api/site")
 async def get_site(request: Request, api_client: dict = Depends(verify_api_key)):
-    """The published landing-page content (current snapshot) + enabled flag.
+    """The published landing-page content + enabled flag.
     ETag'd so the landing page is one cheap request."""
     with get_db() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             enabled = _setting_value(cur, "SITE_LANDING_ENABLED", "false") == "true"
-            cur.execute("""SELECT snapshot_id, content, created_at
-                           FROM api.site_snapshot WHERE is_current""")
+            cur.execute("SELECT content, published_at FROM api.site_published WHERE id = 1")
             row = cur.fetchone()
     body = {"enabled": enabled,
-            "snapshot_id": row["snapshot_id"] if row else None,
             "content": row["content"] if row else None}
     etag = hashlib.md5(json.dumps(body, sort_keys=True, default=str).encode()).hexdigest()
     if request.headers.get("if-none-match") == etag:
@@ -7613,7 +7620,7 @@ async def preview_site(current_user: dict = Depends(get_current_user)):
             row = cur.fetchone()
     if not row or not row["content"]:
         raise HTTPException(status_code=404, detail="The draft is empty")
-    return {"enabled": True, "snapshot_id": None, "preview": True,
+    return {"enabled": True, "preview": True,
             "content": _site_render(row["content"]),
             "updated_at": row["updated_at"]}
 
@@ -7628,51 +7635,17 @@ async def publish_site(request: Request, current_user: dict = Depends(get_curren
             if not row or not row["content"]:
                 raise HTTPException(status_code=400, detail="Nothing to publish — the draft is empty")
             rendered = _site_render(row["content"])
-            cur.execute("UPDATE api.site_snapshot SET is_current = false WHERE is_current")
             cur.execute("""
-                INSERT INTO api.site_snapshot (content, created_by, is_current)
-                VALUES (%s, %s, true) RETURNING snapshot_id
-            """, (json.dumps(rendered), current_user["user_id"]))
-            sid = cur.fetchone()["snapshot_id"]
-    log_audit(current_user["user_id"], None, "site_published",
-              {"snapshot_id": sid}, get_client_ip(request))
-    return {"message": "Published", "snapshot_id": sid}
-
-
-@app.get("/api/site/snapshots")
-async def list_site_snapshots(current_user: dict = Depends(get_current_user)):
-    _require_admin(current_user)
-    with get_db() as conn:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""SELECT snapshot_id, created_at, created_by, is_current
-                           FROM api.site_snapshot ORDER BY snapshot_id DESC LIMIT 50""")
-            return cur.fetchall()
-
-
-@app.post("/api/site/rollback")
-async def rollback_site(payload: dict, request: Request,
-                        current_user: dict = Depends(get_current_user)):
-    _require_admin(current_user)
-    sid = (payload or {}).get("snapshot_id")
-    if not isinstance(sid, int):
-        raise HTTPException(status_code=400, detail="snapshot_id required")
-    with get_db() as conn:
-        with conn.cursor() as cur:
-            cur.execute("UPDATE api.site_snapshot SET is_current = false WHERE is_current")
-            cur.execute("UPDATE api.site_snapshot SET is_current = true WHERE snapshot_id = %s", (sid,))
-            if cur.rowcount == 0:
-                raise HTTPException(status_code=404, detail="Snapshot not found")
-            # The rolled-back content becomes the draft again, so the admin
-            # edits what visitors now see (Markdown source is in the snapshot).
-            cur.execute("""
-                INSERT INTO api.site_draft (id, content, updated_at, updated_by)
-                SELECT 1, content, now(), %s FROM api.site_snapshot WHERE snapshot_id = %s
+                INSERT INTO api.site_published (id, content, published_at, published_by)
+                VALUES (1, %s, now(), %s)
                 ON CONFLICT (id) DO UPDATE SET
-                    content = EXCLUDED.content, updated_at = now(), updated_by = EXCLUDED.updated_by
-            """, (current_user["user_id"], sid))
-    log_audit(current_user["user_id"], None, "site_rollback",
-              {"snapshot_id": sid}, get_client_ip(request))
-    return {"message": "Rolled back", "snapshot_id": sid}
+                    content = EXCLUDED.content,
+                    published_at = now(),
+                    published_by = EXCLUDED.published_by
+            """, (json.dumps(rendered), current_user["user_id"]))
+    log_audit(current_user["user_id"], None, "site_published",
+              None, get_client_ip(request))
+    return {"message": "Published"}
 
 
 @app.post("/api/site/media")
