@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soil Information System</title>
+    <script>
+      try {
+        var _t = localStorage.getItem('sis-theme');
+        if (_t !== 'dark' && _t !== 'light') {
+          _t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.dataset.theme = _t;
+      } catch (e) { document.documentElement.dataset.theme = 'light'; }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+    <link rel="stylesheet" href="./css/site.css">
+    <link rel="icon" href="data:,">
+</head>
+<body>
+    <main id="site" hidden>
+        <header class="site-header">
+            <div class="brand">
+                <img id="site-logo" alt="" hidden>
+            </div>
+            <nav class="site-nav" aria-label="Main">
+                <a id="nav-home" href="/" class="nav-link"></a>
+                <span id="nav-about" class="nav-link nav-soon"></span>
+                <a id="nav-map" href="/map" class="nav-link"></a>
+                <a id="nav-catalogue" href="/collections?f=html" class="nav-link" target="_blank" rel="noopener"></a>
+                <a id="nav-dashboard" href="/dashboard" class="nav-link"></a>
+                <span id="nav-people" class="nav-link nav-soon"></span>
+                <span id="nav-contact" class="nav-link nav-soon"></span>
+            </nav>
+        </header>
+        <article class="about page-body" id="page-body" hidden></article>
+        <footer class="site-footer" id="site-footer" hidden></footer>
+    </main>
+    <script type="module" src="./js/subpage.js"></script>
+</body>
+</html>

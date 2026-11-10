@@ -7497,14 +7497,31 @@ def _site_render(content: dict) -> dict:
     import nh3
     md = MarkdownIt("commonmark").enable("table")
     out = dict(content or {})
-    for field in ("about_md", "footer_md"):
-        src = out.get(field) or {}
+
+    def render_dict(src):
         html = {}
         if isinstance(src, dict):
             for lang, text in src.items():
                 if lang in SITE_LANGS and isinstance(text, str) and text.strip():
                     html[lang] = nh3.clean(md.render(text))
-        out[field.replace("_md", "_html")] = html
+        return html
+
+    for field in ("about_md", "footer_md"):
+        out[field.replace("_md", "_html")] = render_dict(out.get(field) or {})
+
+    # Standalone pages (About / People / Contact): per-page title + Markdown
+    # body, rendered the same way. Only pages with some body survive into
+    # the snapshot, which is what activates their navigation links.
+    pages_out = {}
+    for slug, page in (out.get("pages") or {}).items():
+        if slug not in ("about", "people", "contact") or not isinstance(page, dict):
+            continue
+        body_html = render_dict(page.get("body_md") or {})
+        if body_html:
+            pages_out[slug] = {"title": page.get("title") or {},
+                               "body_md": page.get("body_md") or {},
+                               "body_html": body_html}
+    out["pages"] = pages_out
     return out
 
 

@@ -9,7 +9,7 @@
 import api from './api-client.js';
 import { t, AVAILABLE } from './i18n.js';
 
-let state = { content: {}, lang: 'en', enabled: false, mounted: false };
+let state = { content: {}, lang: 'en', enabled: false, mounted: false, page: 'home' };
 
 const e = (s) => String(s ?? '').replace(/[&<>"']/g,
   (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -30,6 +30,19 @@ function setHeroVal(field, v) {
   if (!state.content.hero[field] || typeof state.content.hero[field] !== 'object') state.content.hero[field] = {};
   if (v) state.content.hero[field][state.lang] = v;
   else delete state.content.hero[field][state.lang];
+}
+
+function pageVal(slug, field) {
+  const p = ((state.content.pages || {})[slug]) || {};
+  return ((p[field] || {})[state.lang]) || '';
+}
+function setPageVal(slug, field, v) {
+  if (!state.content.pages) state.content.pages = {};
+  if (!state.content.pages[slug]) state.content.pages[slug] = {};
+  const p = state.content.pages[slug];
+  if (!p[field] || typeof p[field] !== 'object') p[field] = {};
+  if (v) p[field][state.lang] = v;
+  else delete p[field][state.lang];
 }
 
 // WCAG relative luminance; warn when white button text would be illegible.
@@ -56,7 +69,12 @@ function markup() {
         <span style="margin-left:auto;display:flex;gap:4px;" id="site-langs"></span>
       </div>
 
-      <div style="display:grid;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:center;">
+      <div style="display:flex;gap:6px;margin-bottom:var(--sp-3);" id="site-pages-bar">
+        ${['home', 'about', 'people', 'contact'].map((p) =>
+          `<button type="button" class="btn btn-sm site-page-tab${p === 'home' ? ' btn-primary' : ''}" data-page="${p}">${t('site.nav.' + p)}</button>`).join('')}
+      </div>
+
+      <div data-sitepage="home" style="display:grid;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:center;">
         <label>${t('a.site.logo')}</label>
         <div style="display:flex;gap:6px;align-items:center;">
           <input type="text" id="site-logo-url" style="flex:1;" placeholder="https:// … ${t('a.site.orUpload')}">
@@ -75,6 +93,19 @@ function markup() {
         <textarea id="site-about" rows="10" style="font-family:var(--font-mono,monospace);font-size:var(--fs-sm);"></textarea>
         <label style="align-self:start;">${t('a.site.footer')}</label>
         <textarea id="site-footer-md" rows="4" style="font-family:var(--font-mono,monospace);font-size:var(--fs-sm);"></textarea>
+      </div>
+
+      ${['about', 'people', 'contact'].map((p) => `
+      <div data-sitepage="${p}" style="display:none;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:start;">
+        <label>${t('a.site.pageTitle')}</label>
+        <input type="text" id="site-page-${p}-title">
+        <label>${t('a.site.pageBody')}</label>
+        <textarea id="site-page-${p}-body" rows="14" style="font-family:var(--font-mono,monospace);font-size:var(--fs-sm);"></textarea>
+        <span></span>
+        <span style="color:var(--color-text-muted);font-size:var(--fs-sm);">${t('a.site.pageHint')}</span>
+      </div>`).join('')}
+
+      <div data-sitepage="home" style="display:grid;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:center;margin-top:var(--sp-2);">
         <label>${t('a.site.colours')}</label>
         <div style="display:flex;gap:var(--sp-3);align-items:center;flex-wrap:wrap;">
           <label style="display:flex;align-items:center;gap:5px;">${t('a.site.primary')}
@@ -111,6 +142,10 @@ function readForm() {
     primary: v('site-color-primary'),
     secondary: v('site-color-secondary'),
   };
+  ['about', 'people', 'contact'].forEach((p) => {
+    setPageVal(p, 'title', v(`site-page-${p}-title`));
+    setPageVal(p, 'body_md', document.getElementById(`site-page-${p}-body`).value);
+  });
 }
 
 function fillForm() {
@@ -124,6 +159,10 @@ function fillForm() {
   const col = state.content.colors || {};
   if (col.primary) set('site-color-primary', col.primary);
   if (col.secondary) set('site-color-secondary', col.secondary);
+  ['about', 'people', 'contact'].forEach((p) => {
+    set(`site-page-${p}-title`, pageVal(p, 'title'));
+    document.getElementById(`site-page-${p}-body`).value = pageVal(p, 'body_md');
+  });
   document.getElementById('site-enabled').checked = !!state.enabled;
   renderLangPills();
   checkContrast();
@@ -193,6 +232,15 @@ export async function mountSiteAdmin() {
     root.innerHTML = markup();
     state.mounted = true;
 
+    document.querySelectorAll('.site-page-tab').forEach((b) => b.addEventListener('click', () => {
+      state.page = b.dataset.page;
+      document.querySelectorAll('.site-page-tab').forEach((x) =>
+        x.classList.toggle('btn-primary', x === b));
+      document.querySelectorAll('[data-sitepage]').forEach((panel) => {
+        const mine = panel.dataset.sitepage === state.page;
+        panel.style.display = mine ? 'grid' : 'none';
+      });
+    }));
     document.getElementById('site-logo-upload').addEventListener('click', () => uploadInto('site-logo-url'));
     document.getElementById('site-hero-upload').addEventListener('click', () => uploadInto('site-hero-image'));
     document.getElementById('site-color-primary').addEventListener('input', checkContrast);
@@ -206,7 +254,8 @@ export async function mountSiteAdmin() {
       try {
         await api.saveSiteDraft(state.content);
         status.textContent = t('a.site.draftSaved');
-        window.open('/?preview=1', '_blank', 'noopener');
+        const path = state.page === 'home' ? '/' : `/${state.page}`;
+        window.open(`${path}?preview=1`, '_blank', 'noopener');
       } catch (err) { status.textContent = err.message; }
     });
     document.getElementById('site-save').addEventListener('click', async () => {

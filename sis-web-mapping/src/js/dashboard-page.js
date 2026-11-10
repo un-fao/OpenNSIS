@@ -6,6 +6,7 @@
 import Chart from 'chart.js/auto';
 import api from './api-client.js';
 import { t } from './i18n.js';
+import { applyNav } from './site-nav.js';
 
 let _charts = {};
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g,
@@ -229,16 +230,9 @@ function renderDashboardCharts(stats) {
   }
 
 async function init() {
-  const nav = [['nav-home', 'site.nav.home'], ['nav-about', 'site.nav.about'],
-               ['nav-map', 'site.nav.map'], ['nav-catalogue', 'site.nav.catalogue'],
-               ['nav-dashboard', 'site.nav.dashboard'], ['nav-people', 'site.nav.people'],
-               ['nav-contact', 'site.nav.contact']];
-  nav.forEach(([id, key]) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.textContent = t(key);
-    if (el.classList.contains('nav-soon')) el.title = t('site.comingSoon');
-  });
+  let pages = null;
+  try { pages = ((await api.getSite()) || {}).content?.pages; } catch (e) { /* nav stays muted */ }
+  applyNav('dashboard', pages);
   document.getElementById('dash-title').textContent = t('site.nav.dashboard');
 
   const empty = document.getElementById('dashboard-empty');
