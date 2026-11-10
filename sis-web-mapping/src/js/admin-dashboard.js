@@ -857,6 +857,14 @@ class AdminDashboard {
       if (e.detail === 'map') setTimeout(() => this.initViewEditor(), 60);
     });
 
+    // The Map sub-tab's Save button (site-admin.js) writes the settings
+    // itself; afterwards the table and view editor refresh from the DB.
+    window.addEventListener('site:settings-saved', async () => {
+      await this.loadSettings();
+      this.renderSettings();
+      this.initViewEditor();
+    });
+
     // Tab switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {

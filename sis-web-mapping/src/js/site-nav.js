@@ -51,10 +51,11 @@ export function applyNav(current, pages, content) {
     }
     el.style.display = published ? '' : 'none';
   });
-  // Catalogue and Dashboard are features, not CMS pages; their links can
-  // be unpublished from the Website tab (default: shown).
+  // Catalogue, Dashboard and Map are features, not CMS pages; their links
+  // can be unpublished from the Website tab (default: shown).
   if (content) {
-    [['nav-catalogue', 'catalogue_published'], ['nav-dashboard', 'dashboard_published']]
+    [['nav-catalogue', 'catalogue_published'], ['nav-dashboard', 'dashboard_published'],
+     ['nav-map', 'map_published']]
       .forEach(([id, key]) => {
         const el = document.getElementById(id);
         if (el) el.style.display = content[key] === false ? 'none' : '';

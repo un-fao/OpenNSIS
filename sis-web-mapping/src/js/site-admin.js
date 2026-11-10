@@ -161,6 +161,14 @@ function markup() {
         <span style="display:flex;gap:4px;" id="site-langs"></span>
         <label>${t('a.site.orderLbl')}</label>
         <div id="site-nav-order" style="display:flex;flex-direction:column;gap:4px;width:fit-content;"></div>
+        <label>${t('a.site.colours')}</label>
+        <div style="display:flex;gap:var(--sp-3);align-items:center;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:5px;">${t('a.site.primary')}
+            <input type="color" id="site-color-primary" value="#1d5f73"></label>
+          <label style="display:flex;align-items:center;gap:5px;">${t('a.site.secondary')}
+            <input type="color" id="site-color-secondary" value="#8a6844"></label>
+          <span id="site-contrast-warn" style="color:var(--color-danger);font-size:var(--fs-sm);"></span>
+        </div>
       </div>
 
       <div data-sitepage="map" style="display:none;">
@@ -229,17 +237,6 @@ function markup() {
         <button type="button" class="btn btn-sm" id="site-people-add" style="margin-top:var(--sp-2);width:fit-content;justify-self:start;">${t('a.site.ppl.add')}</button>
       </div>
 
-      <div data-sitepage="home" style="display:none;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:center;margin-top:var(--sp-2);">
-        <label>${t('a.site.colours')}</label>
-        <div style="display:flex;gap:var(--sp-3);align-items:center;flex-wrap:wrap;">
-          <label style="display:flex;align-items:center;gap:5px;">${t('a.site.primary')}
-            <input type="color" id="site-color-primary" value="#1d5f73"></label>
-          <label style="display:flex;align-items:center;gap:5px;">${t('a.site.secondary')}
-            <input type="color" id="site-color-secondary" value="#8a6844"></label>
-          <span id="site-contrast-warn" style="color:var(--color-danger);font-size:var(--fs-sm);"></span>
-        </div>
-      </div>
-
       <div style="display:flex;align-items:center;gap:var(--sp-3);margin-top:var(--sp-4);">
         <button type="button" class="btn btn-secondary" id="site-save">${t('a.site.save')}</button>
         <button type="button" class="btn btn-secondary" id="site-preview">${t('a.site.previewBtn')}</button>
@@ -253,9 +250,13 @@ function markup() {
 // was set to false; Home's flag is the landing switch itself (legacy
 // content without the flag follows the old SITE_LANDING_ENABLED setting,
 // surfaced here as state.enabled).
-// Catalogue and Dashboard are features with their own routes, shown as
-// plain pages in the bar; their flags only control the header links.
-const FEATURE_FLAGS = { catalogue: 'catalogue_published', dashboard: 'dashboard_published' };
+// Catalogue, Dashboard and Map are features with their own routes, shown
+// as plain pages in the bar; their flags only control the header links.
+const FEATURE_FLAGS = {
+  catalogue: 'catalogue_published',
+  dashboard: 'dashboard_published',
+  map: 'map_published',
+};
 
 function pageIsPublished(slug) {
   if (slug === 'home') {
@@ -324,10 +325,13 @@ function updatePublishBtn() {
   const pubBtn = document.getElementById('site-publish');
   const saveBtn = document.getElementById('site-save');
   if (!pubBtn) return;
-  // General and Map carry settings, not publishable content; the Map link
-  // always shows in the header. Catalogue/Dashboard have nothing to save.
-  pubBtn.style.display = (state.page === 'general' || state.page === 'map') ? 'none' : '';
-  if (saveBtn) saveBtn.style.display = (FEATURE_FLAGS[state.page] || state.page === 'map') ? 'none' : '';
+  // General carries settings only; Catalogue/Dashboard have nothing to
+  // save. On Map, Save writes the settings table and Publish toggles the
+  // header link.
+  pubBtn.style.display = state.page === 'general' ? 'none' : '';
+  if (saveBtn) {
+    saveBtn.style.display = (state.page === 'catalogue' || state.page === 'dashboard') ? 'none' : '';
+  }
   pubBtn.textContent = pageIsPublished(state.page) ? t('a.site.unpublish') : t('a.site.publish');
 }
 
@@ -453,6 +457,20 @@ export async function mountSiteAdmin() {
     });
     document.getElementById('site-save').addEventListener('click', async () => {
       const status = document.getElementById('site-status');
+      if (state.page === 'map') {
+        // The Map panel edits instance settings, not CMS content: write
+        // every field in the table, then let the dashboard refresh it.
+        try {
+          const els = document.querySelectorAll('#settings-tbody .inline-edit');
+          for (const el of els) {
+            const value = el.value.trim();
+            if (value) await api.updateSetting(el.dataset.key, value);
+          }
+          status.textContent = t('a.site.draftSaved');
+          window.dispatchEvent(new CustomEvent('site:settings-saved'));
+        } catch (err) { status.textContent = err.message; }
+        return;
+      }
       readForm();
       try {
         await api.saveSiteDraft(state.content);
