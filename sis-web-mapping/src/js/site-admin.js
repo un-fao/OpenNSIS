@@ -157,6 +157,11 @@ function markup() {
             </tbody>
           </table>
         </div>
+        <label>${t('a.site.logo')}</label>
+        <div style="display:flex;gap:6px;align-items:center;max-width:520px;">
+          <input type="text" id="site-logo-url" style="flex:1;" placeholder="https:// … ${t('a.site.orUpload')}">
+          <button type="button" class="btn btn-sm" id="site-logo-upload">${t('a.upload')}</button>
+        </div>
         <label>${t('a.site.langLbl')}</label>
         <span style="display:flex;gap:4px;" id="site-langs"></span>
         <label>${t('a.site.orderLbl')}</label>
@@ -188,11 +193,6 @@ function markup() {
       </div>
 
       <div data-sitepage="home" style="display:none;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:center;">
-        <label>${t('a.site.logo')}</label>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <input type="text" id="site-logo-url" style="flex:1;" placeholder="https:// … ${t('a.site.orUpload')}">
-          <button type="button" class="btn btn-sm" id="site-logo-upload">${t('a.upload')}</button>
-        </div>
         <label>${t('a.site.heroTitle')}</label>
         <input type="text" id="site-hero-title">
         <label>${t('a.site.heroSubtitle')}</label>

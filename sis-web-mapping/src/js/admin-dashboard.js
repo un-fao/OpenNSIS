@@ -2811,7 +2811,7 @@ class AdminDashboard {
     // Settings live in the Website tab: APP_TITLE / LANGUAGE / ORG_LOGO_URL
     // on the General sub-tab, everything else on the Map sub-tab. Both
     // targets exist only once the Website tab has been mounted.
-    const generalKeys = new Set(['APP_TITLE', 'LANGUAGE', 'ORG_LOGO_URL']);
+    const generalKeys = new Set(['APP_TITLE', 'LANGUAGE']);
     const targets = [
       { tbody: document.getElementById('settings-general-tbody'), pick: (s) => generalKeys.has(s.key) },
       { tbody: document.getElementById('settings-tbody'), pick: (s) => !generalKeys.has(s.key) },
@@ -2819,8 +2819,10 @@ class AdminDashboard {
     if (!targets.some((x) => x.tbody)) return;
     const mapKeys = ['LATITUDE', 'LONGITUDE', 'ZOOM'];
     const keyOrder = ['APP_TITLE', 'LANGUAGE', 'ORG_LOGO_URL', 'BASE_MAP_DEFAULT', 'LAYER_PANEL_COLLAPSED', 'LATITUDE', 'LONGITUDE', 'ZOOM'];
-    // Infrastructure settings — kept in DB but hidden from the UI to avoid accidental edits
-    const hiddenKeys = new Set(['DOWNLOAD_BASE_URL', 'GLOSIS_FEDERATION_ENABLED', 'GLOSIS_HUB_URL', 'GLOSIS_NODE_URL']);
+    // Infrastructure settings — kept in DB but hidden from the UI to avoid
+    // accidental edits. ORG_LOGO_URL is only a fallback behind the Website
+    // tab's Logo field (content.logo_url wins), so it is not shown either.
+    const hiddenKeys = new Set(['DOWNLOAD_BASE_URL', 'GLOSIS_FEDERATION_ENABLED', 'GLOSIS_HUB_URL', 'GLOSIS_NODE_URL', 'ORG_LOGO_URL']);
 
     const visible = this.settings.filter(s => !hiddenKeys.has(s.key));
 
