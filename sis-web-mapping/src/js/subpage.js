@@ -4,7 +4,7 @@
  * ?preview mode). Body HTML was rendered and sanitised server-side.
  */
 import api from './api-client.js';
-import { t, currentLang } from './i18n.js';
+import { t, currentLang, setInstanceDefault } from './i18n.js';
 import { applyNav, applyBrand, initHeaderControls, applyFooter, deobf, armContact } from './site-nav.js';
 
 function pick(dict) {
@@ -29,6 +29,8 @@ async function init() {
     location.replace('/');
     return;
   }
+  // Instance default language before any t() output.
+  setInstanceDefault((data.language || '').trim().toLowerCase());
   if (isPreview) {
     const bar = document.createElement('div');
     bar.textContent = t('site.previewBanner');

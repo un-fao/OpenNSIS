@@ -7586,6 +7586,7 @@ async def get_site(request: Request, api_client: dict = Depends(verify_api_key))
             enabled = _setting_value(cur, "SITE_LANDING_ENABLED", "false") == "true"
             app_title = _setting_value(cur, "APP_TITLE", "")
             org_logo = _setting_value(cur, "ORG_LOGO_URL", "")
+            language = _setting_value(cur, "LANGUAGE", "")
             cur.execute("SELECT content, published_at FROM api.site_published WHERE id = 1")
             row = cur.fetchone()
     content = row["content"] if row else None
@@ -7595,7 +7596,7 @@ async def get_site(request: Request, api_client: dict = Depends(verify_api_key))
     if isinstance(home_published, bool):
         enabled = home_published
     body = {"enabled": enabled,
-            "app_title": app_title, "org_logo": org_logo,
+            "app_title": app_title, "org_logo": org_logo, "language": language,
             "content": content}
     etag = hashlib.md5(json.dumps(body, sort_keys=True, default=str).encode()).hexdigest()
     if request.headers.get("if-none-match") == etag:
@@ -7651,10 +7652,11 @@ async def preview_site(current_user: dict = Depends(get_current_user)):
             row = cur.fetchone()
             app_title = _setting_value(cur, "APP_TITLE", "")
             org_logo = _setting_value(cur, "ORG_LOGO_URL", "")
+            language = _setting_value(cur, "LANGUAGE", "")
     if not row or not row["content"]:
         raise HTTPException(status_code=404, detail="The draft is empty")
     return {"enabled": True, "preview": True,
-            "app_title": app_title, "org_logo": org_logo,
+            "app_title": app_title, "org_logo": org_logo, "language": language,
             "content": _site_render(row["content"], include_unpublished=True),
             "updated_at": row["updated_at"]}
 

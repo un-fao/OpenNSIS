@@ -5,7 +5,7 @@
  */
 import Chart from 'chart.js/auto';
 import api from './api-client.js';
-import { t } from './i18n.js';
+import { t, setInstanceDefault } from './i18n.js';
 import { applyNav, applyBrand, initHeaderControls, applyFooter } from './site-nav.js';
 
 let _charts = {};
@@ -236,6 +236,8 @@ async function init() {
     const site = (await api.getSite()) || {};
     siteContent = site.content;
     pages = siteContent?.pages;
+    // Instance default language before any t() output (nav, title, cards).
+    setInstanceDefault((site.language || '').trim().toLowerCase());
     applyBrand(site);
     applyFooter(site);
   } catch (e) { /* nav stays muted */ }

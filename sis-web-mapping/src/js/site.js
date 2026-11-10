@@ -12,7 +12,7 @@
  * this script only places it, it never parses Markdown or cleans HTML.
  */
 import api from './api-client.js';
-import { t, currentLang } from './i18n.js';
+import { t, currentLang, setInstanceDefault } from './i18n.js';
 import { applyNav, applyBrand, initHeaderControls, applyFooter } from './site-nav.js';
 
 // Bundled by Parcel into a hashed, long-cached URL.
@@ -67,6 +67,9 @@ async function init() {
     location.replace('/map');
     return;
   }
+  // A visitor without a chosen language gets the instance's LANGUAGE
+  // setting (carried on /api/site), not English — must run before any t().
+  setInstanceDefault((data.language || '').trim().toLowerCase());
   if (isPreview) {
     const bar = document.createElement('div');
     bar.textContent = t('site.previewBanner');
