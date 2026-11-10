@@ -5792,8 +5792,9 @@ async def delete_soil_profile_data(
 
 
 @app.get("/api/stats/dashboard")
-async def dashboard_stats(current_user: dict = Depends(get_current_user)):
-    """Aggregated stats across soil_data for the dashboard tab."""
+async def dashboard_stats(api_client: dict = Depends(verify_api_key)):
+    """Aggregated stats across soil_data for the public dashboard page
+    (counts and distributions only — no record-level data)."""
     out = {}
     with get_db() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:

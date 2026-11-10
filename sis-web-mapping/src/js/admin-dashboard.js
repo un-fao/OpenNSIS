@@ -13,7 +13,6 @@ import View from 'ol/View';
 import { Tile as TileLayer } from 'ol/layer';
 import { OSM, XYZ } from 'ol/source';
 import { fromLonLat, toLonLat } from 'ol/proj';
-import Chart from 'chart.js/auto';
 
 const BASE_MAP_OPTIONS = {
   'esri-imagery': {
@@ -232,7 +231,6 @@ class AdminDashboard {
             <li><button class="tab-btn" data-tab="add-raster">${t('a.tab.rasters')}</button></li>
             <li><button class="tab-btn" data-tab="dst">${t('a.tab.dst')}</button></li>
             <li><button class="tab-btn" data-tab="sampling">${t('a.tab.sampling')}</button></li>
-            <li><button class="tab-btn" data-tab="dashboard">${t('a.tab.dashboard')}</button></li>
           </ul>
 
           <div class="dashboard-body">
@@ -394,40 +392,6 @@ class AdminDashboard {
                   <button type="button" class="btn btn-primary btn-sm" id="glosis-hub-connect-btn">${t('a.glosis.hub.connect')}</button>
                   <button type="button" class="btn btn-sm" id="glosis-hub-disconnect-btn" style="background:var(--color-danger);color:#fff;border:none;">${t('a.glosis.hub.disconnect')}</button>
                   <span id="glosis-hub-status" style="font-size:var(--fs-sm);color:var(--color-text-muted);"></span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Dashboard Tab -->
-            <div id="dashboard-tab" class="tab-pane">
-              <div id="dashboard-empty" style="padding:var(--sp-5,24px);color:var(--color-text-muted);">${t('a.dash.loading')}</div>
-              <div id="dashboard-content" style="display:none;">
-                <div class="stat-card-grid" id="stat-card-grid"></div>
-                <div class="chart-grid">
-                  <div class="chart-card">
-                    <h4 class="chart-title">${t('a.dash.profilesPerProject')}</h4>
-                    <div class="chart-wrap"><canvas id="chart-profiles-per-project"></canvas></div>
-                  </div>
-                  <div class="chart-card">
-                    <h4 class="chart-title">${t('a.dash.rastersPerProject')}</h4>
-                    <div class="chart-wrap"><canvas id="chart-rasters-per-project"></canvas></div>
-                  </div>
-                  <div class="chart-card">
-                    <h4 class="chart-title">${t('a.dash.topProperties')}</h4>
-                    <div class="chart-wrap"><canvas id="chart-top-properties"></canvas></div>
-                  </div>
-                  <div class="chart-card chart-card-wide">
-                    <h4 class="chart-title">${t('a.dash.profilesPerYear')}</h4>
-                    <div class="chart-wrap"><canvas id="chart-profiles-per-year"></canvas></div>
-                  </div>
-                  <div class="chart-card">
-                    <h4 class="chart-title">${t('a.dash.depthDist')}</h4>
-                    <div class="chart-wrap"><canvas id="chart-depth-distribution"></canvas></div>
-                  </div>
-                  <div class="chart-card">
-                    <h4 class="chart-title">${t('a.dash.valueRange')}</h4>
-                    <div class="chart-wrap"><canvas id="chart-value-summary"></canvas></div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -1205,10 +1169,6 @@ class AdminDashboard {
       pane.classList.remove('active');
     });
     document.getElementById(`${tab}-tab`).classList.add('active');
-
-    if (tab === 'dashboard') {
-      this.loadDashboard();
-    }
 
     // Soil profiles tab now hosts the ETL "Upload profiles" section too.
     // Load ETL codelists lazily on first open, and refresh profile counts
@@ -4092,212 +4052,6 @@ class AdminDashboard {
   }
 
   // ==================== Dashboard (stats) ====================
-
-  async loadDashboard() {
-    const empty = document.getElementById('dashboard-empty');
-    const content = document.getElementById('dashboard-content');
-    if (!empty || !content) return;
-
-    if (this.dashboardLoaded) return; // one-shot; user can reload page to refresh
-    try {
-      empty.textContent = t('a.dash.loading');
-      const stats = await api.getDashboardStats();
-      this.renderDashboardCards(stats.totals || {});
-      this.renderDashboardCharts(stats);
-      empty.style.display = 'none';
-      content.style.display = '';
-      this.dashboardLoaded = true;
-    } catch (e) {
-      console.error('Dashboard load failed:', e);
-      empty.textContent = t('a.dash.loadFailed') + (e.message || e);
-    }
-  }
-
-  renderDashboardCards(t) {
-    const grid = document.getElementById('stat-card-grid');
-    if (!grid) return;
-    const fmt = (n) => Number(n || 0).toLocaleString();
-    const cards = [
-      { label: 'Projects', value: fmt(t.project_count), accent: 'c' },
-      { label: 'Profiles', value: fmt(t.profile_count), accent: 'a' },
-      { label: 'Properties', value: fmt(t.property_count), accent: 'd' },
-      { label: 'Measurements', value: fmt(t.observation_count), accent: 'b' },
-      { label: 'Rasters', value: fmt(t.raster_count), accent: 'c' },
-    ];
-    grid.innerHTML = cards.map(c => `
-      <div class="stat-card stat-card-${c.accent}">
-        <div class="stat-card-value">${this.escapeHtml(c.value)}</div>
-        <div class="stat-card-label">${this.escapeHtml(c.label)}</div>
-      </div>
-    `).join('');
-  }
-
-  renderDashboardCharts(stats) {
-    if (this._dashboardCharts) {
-      Object.values(this._dashboardCharts).forEach(c => c && c.destroy && c.destroy());
-    }
-    this._dashboardCharts = {};
-
-    const palette = [
-      '#2e7d32', '#1976d2', '#ef6c00', '#8e24aa',
-      '#c62828', '#00838f', '#6d4c41', '#455a64',
-      '#558b2f', '#ad1457'
-    ];
-    const paletteFor = (n) => Array.from({ length: n }, (_, i) => palette[i % palette.length]);
-
-    const baseOpts = {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: { duration: 700, easing: 'easeOutQuart' },
-      plugins: { legend: { display: false } },
-    };
-
-    // Profiles per project (horizontal bar)
-    const pp = stats.profiles_per_project || [];
-    this._dashboardCharts.profilesPerProject = new Chart(
-      document.getElementById('chart-profiles-per-project'),
-      {
-        type: 'bar',
-        data: {
-          labels: pp.map(r => r.project_name),
-          datasets: [{
-            data: pp.map(r => r.profile_count),
-            backgroundColor: paletteFor(pp.length),
-            borderRadius: 4,
-          }],
-        },
-        options: { ...baseOpts, indexAxis: 'y', scales: { x: { beginAtZero: true } } },
-      }
-    );
-
-    // Rasters per project (horizontal bar)
-    const rp = stats.rasters_per_project || [];
-    this._dashboardCharts.rastersPerProject = new Chart(
-      document.getElementById('chart-rasters-per-project'),
-      {
-        type: 'bar',
-        data: {
-          labels: rp.map(r => r.project_name),
-          datasets: [{
-            data: rp.map(r => r.raster_count),
-            backgroundColor: paletteFor(rp.length),
-            borderRadius: 4,
-          }],
-        },
-        options: { ...baseOpts, indexAxis: 'y', scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } },
-      }
-    );
-
-    // Top properties (horizontal bar)
-    const tp = stats.top_properties || [];
-    this._dashboardCharts.topProperties = new Chart(
-      document.getElementById('chart-top-properties'),
-      {
-        type: 'bar',
-        data: {
-          labels: tp.map(r => r.property),
-          datasets: [{
-            data: tp.map(r => r.observation_count),
-            backgroundColor: paletteFor(tp.length),
-            borderRadius: 4,
-          }],
-        },
-        options: { ...baseOpts, indexAxis: 'y', scales: { x: { beginAtZero: true } } },
-      }
-    );
-
-    // Profiles per year (line, filled)
-    const py = stats.profiles_per_year || [];
-    this._dashboardCharts.profilesPerYear = new Chart(
-      document.getElementById('chart-profiles-per-year'),
-      {
-        type: 'line',
-        data: {
-          labels: py.map(r => String(r.year)),
-          datasets: [{
-            data: py.map(r => r.profile_count),
-            borderColor: '#2e7d32',
-            backgroundColor: 'rgba(46,125,50,0.15)',
-            fill: true,
-            tension: 0.35,
-            pointRadius: 3,
-            pointHoverRadius: 5,
-            borderWidth: 2,
-          }],
-        },
-        options: { ...baseOpts, scales: { y: { beginAtZero: true } } },
-      }
-    );
-
-    // Depth distribution (vertical bar)
-    const dd = stats.depth_distribution || [];
-    this._dashboardCharts.depthDistribution = new Chart(
-      document.getElementById('chart-depth-distribution'),
-      {
-        type: 'bar',
-        data: {
-          labels: dd.map(r => r.depth_range + ' cm'),
-          datasets: [{
-            data: dd.map(r => r.element_count),
-            backgroundColor: paletteFor(dd.length),
-            borderRadius: 4,
-          }],
-        },
-        options: { ...baseOpts, scales: { y: { beginAtZero: true } } },
-      }
-    );
-
-    // Value summary — floating bars for Q1-Q3, with whiskers from min/max
-    const vs = stats.value_summary || [];
-    this._dashboardCharts.valueSummary = new Chart(
-      document.getElementById('chart-value-summary'),
-      {
-        type: 'bar',
-        data: {
-          labels: vs.map(r => r.property),
-          datasets: [
-            {
-              label: 'min–max',
-              data: vs.map(r => [r.vmin, r.vmax]),
-              backgroundColor: 'rgba(25,118,210,0.12)',
-              borderColor: 'rgba(25,118,210,0.4)',
-              borderWidth: 1,
-              borderRadius: 2,
-            },
-            {
-              label: 'Q1–Q3',
-              data: vs.map(r => [r.q1, r.q3]),
-              backgroundColor: paletteFor(vs.length),
-              borderRadius: 4,
-            },
-          ],
-        },
-        options: {
-          ...baseOpts,
-          indexAxis: 'y',
-          plugins: {
-            legend: { display: true, position: 'bottom', labels: { boxWidth: 12 } },
-            tooltip: {
-              callbacks: {
-                label: (ctx) => {
-                  const r = vs[ctx.dataIndex] || {};
-                  return [
-                    `n: ${Number(r.n).toLocaleString()}`,
-                    `min: ${r.vmin}`,
-                    `Q1: ${r.q1}`,
-                    `median: ${r.median}`,
-                    `Q3: ${r.q3}`,
-                    `max: ${r.vmax}`,
-                  ];
-                },
-              },
-            },
-          },
-          scales: { x: { beginAtZero: false } },
-        },
-      }
-    );
-  }
 
   // ==================== ETL ====================
 

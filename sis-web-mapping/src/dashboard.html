@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — Soil Information System</title>
+    <script>
+      try {
+        var _t = localStorage.getItem('sis-theme');
+        if (_t !== 'dark' && _t !== 'light') {
+          _t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.dataset.theme = _t;
+      } catch (e) { document.documentElement.dataset.theme = 'light'; }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+    <link rel="stylesheet" href="./css/site.css">
+    <link rel="stylesheet" href="./css/admin-dashboard.css">
+    <link rel="icon" href="data:,">
+    <style>
+      /* The admin stylesheet assumes the dashboard sits inside the admin
+         shell; on the public page the cards/charts live in a plain main. */
+      .chart-grid { margin-top: 18px; }
+    </style>
+</head>
+<body>
+    <main id="site">
+        <header class="site-header">
+            <div class="brand"></div>
+            <nav class="site-nav" aria-label="Main">
+                <a id="nav-home" href="/" class="nav-link"></a>
+                <span id="nav-about" class="nav-link nav-soon"></span>
+                <a id="nav-map" href="/map" class="nav-link"></a>
+                <a id="nav-catalogue" href="/collections?f=html" class="nav-link" target="_blank" rel="noopener"></a>
+                <a id="nav-dashboard" href="/dashboard" class="nav-link nav-current"></a>
+                <span id="nav-people" class="nav-link nav-soon"></span>
+                <span id="nav-contact" class="nav-link nav-soon"></span>
+            </nav>
+        </header>
+        <h1 id="dash-title" style="font-family:var(--font-display);margin:10px 0 18px;"></h1>
+        <div id="dashboard-empty" style="padding:24px;color:var(--color-text-muted);">…</div>
+        <div id="dashboard-content" style="display:none;"></div>
+    </main>
+    <script type="module" src="./js/dashboard-page.js"></script>
+</body>
+</html>

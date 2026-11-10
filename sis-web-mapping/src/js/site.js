@@ -61,7 +61,15 @@ async function init() {
   const logo = document.getElementById('site-logo');
   if (c.logo_url) { logo.src = c.logo_url; logo.hidden = false; }
 
-  document.getElementById('site-map-link').textContent = t('site.openMap');
+  const nav = [['nav-home', 'site.nav.home'], ['nav-about', 'site.nav.about'],
+               ['nav-map', 'site.nav.map'], ['nav-catalogue', 'site.nav.catalogue'],
+               ['nav-dashboard', 'site.nav.dashboard'], ['nav-people', 'site.nav.people'],
+               ['nav-contact', 'site.nav.contact']];
+  nav.forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    el.textContent = t(key);
+    if (el.classList.contains('nav-soon')) el.title = t('site.comingSoon');
+  });
   document.getElementById('hero-cta').textContent = t('site.openMap');
   document.getElementById('hero-catalogue').textContent = t('site.catalogue');
   document.getElementById('hero-title').textContent = pick((c.hero || {}).title);

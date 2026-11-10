@@ -369,7 +369,7 @@ class SISApiClient {
 
   // Dashboard
   async getDashboardStats() {
-    return this.authenticatedRequest('/api/stats/dashboard');
+    return this.request('/api/stats/dashboard');
   }
 
   // ==================== User Management (Admin JWT) ====================
