@@ -996,6 +996,22 @@ class AdminDashboard {
 
     setTimeout(() => this.viewEditorMap && this.viewEditorMap.updateSize(), 100);
 
+    // Mirror the view into the LATITUDE/LONGITUDE/ZOOM fields live while
+    // the map is being dragged or zoomed (the save still happens on
+    // moveend below).
+    const view = this.viewEditorMap.getView();
+    const reflect = () => {
+      const [lonNow, latNow] = toLonLat(view.getCenter());
+      const zoomNow = view.getZoom() + (this.viewZoomOffset || 0);
+      [['LATITUDE', latNow.toFixed(6)], ['LONGITUDE', lonNow.toFixed(6)],
+       ['ZOOM', String(Math.round(zoomNow))]].forEach(([key, val]) => {
+        const el = document.querySelector(`#settings-tbody .inline-edit[data-key="${key}"]`);
+        if (el) el.value = val;
+      });
+    };
+    view.on('change:center', reflect);
+    view.on('change:resolution', reflect);
+
     // Auto-save lat/lon/zoom on map move
     let saveTimeout = null;
     this.viewEditorMap.on('moveend', () => {
