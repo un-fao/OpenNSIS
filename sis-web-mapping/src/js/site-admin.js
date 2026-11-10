@@ -57,20 +57,27 @@ function renderMembers() {
   if (!list) return;
   const ms = members();
   list.innerHTML = ms.map((m, i) => `
-    <div class="site-member-row" data-i="${i}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--color-border);">
-      <img src="${e(m.photo || '')}" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;background:var(--color-surface-hover);${m.photo ? '' : 'visibility:hidden;'}">
-      <button type="button" class="btn btn-sm sm-photo">${t('a.upload')}</button>
-      <input type="text" class="sm-name" value="${e(m.name || '')}" placeholder="${t('a.site.ppl.name')}" style="width:150px;">
-      <input type="text" class="sm-position" value="${e((m.position || {})[state.lang] || '')}" placeholder="${t('a.site.ppl.position')}" style="width:170px;">
-      <input type="email" class="sm-email" value="${e(m.email || '')}" placeholder="${t('a.site.ppl.email')}" style="width:180px;">
-      <input type="text" class="sm-phone" value="${e(m.phone || '')}" placeholder="${t('a.site.ppl.phone')}" style="width:130px;">
-      <button type="button" class="btn btn-sm sm-del" style="color:var(--color-danger);">${t('a.delete')}</button>
+    <div class="site-member-row" data-i="${i}" style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--color-border);">
+      <img src="${e(m.photo || '')}" alt="" style="width:40px;height:40px;flex:none;border-radius:50%;object-fit:cover;background:var(--color-surface-hover);${m.photo ? '' : 'visibility:hidden;'}">
+      <button type="button" class="btn btn-sm sm-photo" style="flex:none;">${t('a.upload')}</button>
+      <input type="text" class="sm-name" value="${e(m.name || '')}" placeholder="${t('a.site.ppl.name')}" style="flex:1 1 120px;min-width:0;">
+      <input type="text" class="sm-position" value="${e((m.position || {})[state.lang] || '')}" placeholder="${t('a.site.ppl.position')}" style="flex:1 1 140px;min-width:0;">
+      <input type="email" class="sm-email" value="${e(m.email || '')}" placeholder="${t('a.site.ppl.email')}" style="flex:1 1 150px;min-width:0;">
+      <input type="text" class="sm-phone" value="${e(m.phone || '')}" placeholder="${t('a.site.ppl.phone')}" style="flex:0 1 110px;min-width:0;">
+      <span class="badge ${m.publish === false ? 'badge-danger' : 'badge-success'} sm-pub" style="cursor:pointer;flex:none;" title="${t('a.published')}">${m.publish === false ? t('a.no') : t('a.yes')}</span>
+      <button type="button" class="btn btn-sm sm-del" style="color:var(--color-danger);flex:none;">${t('a.delete')}</button>
     </div>`).join('');
   list.querySelectorAll('.site-member-row').forEach((row) => {
     const i = Number(row.dataset.i);
     row.querySelector('.sm-del').addEventListener('click', () => {
       readMembers();
       members().splice(i, 1);
+      renderMembers();
+    });
+    row.querySelector('.sm-pub').addEventListener('click', () => {
+      readMembers();
+      const m = members()[i];
+      m.publish = m.publish === false;
       renderMembers();
     });
     row.querySelector('.sm-photo').addEventListener('click', () => {
@@ -122,7 +129,7 @@ function contrastWithWhite(hex) {
 
 function markup() {
   return `
-    <div class="admin-section" style="max-width:860px;">
+    <div class="admin-section" style="max-width:1150px;">
       <h3 class="admin-section-title">${t('a.site.title')}</h3>
       <p style="color:var(--color-text-muted);font-size:var(--fs-sm);margin:0 0 var(--sp-3);">${t('a.site.intro')}</p>
 

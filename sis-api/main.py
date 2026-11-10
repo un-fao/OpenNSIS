@@ -7529,7 +7529,9 @@ def _site_render(content: dict) -> dict:
                           "email": str(m.get("email") or "").strip()[:200],
                           "phone": str(m.get("phone") or "").strip()[:60],
                           "photo": str(m.get("photo") or "").strip()[:300]}
-                if member["name"]:
+                # Per-member publish toggle: unpublished people stay in the
+                # draft but never reach the public snapshot.
+                if member["name"] and m.get("publish", True):
                     members.append(member)
             if members:
                 pages_out[slug] = {"title": page.get("title") or {},

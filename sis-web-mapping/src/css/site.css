@@ -170,16 +170,18 @@ a.nav-link:hover { color: var(--color-primary); border-bottom-color: var(--color
 
 /* ---------- people ---------- */
 .people-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-    gap: 18px; margin-top: 10px;
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 22px; margin-top: 10px;
 }
+@media (max-width: 900px) { .people-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .people-grid { grid-template-columns: 1fr; } }
 .person-card {
     text-align: center; padding: 22px 16px 18px;
     background: var(--color-bg-accent); border: 1px solid var(--color-border);
     border-radius: 14px;
 }
 .person-card img, .person-photo-placeholder {
-    width: 96px; height: 96px; border-radius: 50%; object-fit: cover;
+    width: 150px; height: 150px; border-radius: 50%; object-fit: cover;
     margin: 0 auto 10px; display: block;
     background: var(--color-surface-hover, var(--color-border));
     border: 3px solid var(--color-surface);
