@@ -7562,9 +7562,12 @@ async def get_site(request: Request, api_client: dict = Depends(verify_api_key))
     with get_db() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             enabled = _setting_value(cur, "SITE_LANDING_ENABLED", "false") == "true"
+            app_title = _setting_value(cur, "APP_TITLE", "")
+            org_logo = _setting_value(cur, "ORG_LOGO_URL", "")
             cur.execute("SELECT content, published_at FROM api.site_published WHERE id = 1")
             row = cur.fetchone()
     body = {"enabled": enabled,
+            "app_title": app_title, "org_logo": org_logo,
             "content": row["content"] if row else None}
     etag = hashlib.md5(json.dumps(body, sort_keys=True, default=str).encode()).hexdigest()
     if request.headers.get("if-none-match") == etag:
@@ -7618,9 +7621,12 @@ async def preview_site(current_user: dict = Depends(get_current_user)):
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("SELECT content, updated_at FROM api.site_draft WHERE id = 1")
             row = cur.fetchone()
+            app_title = _setting_value(cur, "APP_TITLE", "")
+            org_logo = _setting_value(cur, "ORG_LOGO_URL", "")
     if not row or not row["content"]:
         raise HTTPException(status_code=404, detail="The draft is empty")
     return {"enabled": True, "preview": True,
+            "app_title": app_title, "org_logo": org_logo,
             "content": _site_render(row["content"]),
             "updated_at": row["updated_at"]}
 

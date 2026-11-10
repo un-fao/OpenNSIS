@@ -5,7 +5,7 @@
  */
 import api from './api-client.js';
 import { t, currentLang } from './i18n.js';
-import { applyNav, deobf, armContact } from './site-nav.js';
+import { applyNav, applyBrand, initHeaderControls, deobf, armContact } from './site-nav.js';
 
 function pick(dict) {
   if (!dict || typeof dict !== 'object') return '';
@@ -40,8 +40,8 @@ async function init() {
   const c = data.content;
   const title = pick(page.title) || t(`site.nav.${slug}`);
   document.title = title;
-  const logo = document.getElementById('site-logo');
-  if (c.logo_url) { logo.src = c.logo_url; logo.hidden = false; }
+  applyBrand(data);
+  initHeaderControls();
   applyNav(slug, c.pages);
   const esc = (x) => String(x ?? '').replace(/[&<>"']/g,
     (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -78,6 +78,7 @@ async function init() {
     el.innerHTML = footer;
     el.hidden = false;
   }
+  document.getElementById('site-header').hidden = false;
   document.getElementById('site').hidden = false;
 }
 

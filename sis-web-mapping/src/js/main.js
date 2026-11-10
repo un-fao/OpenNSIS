@@ -11,8 +11,8 @@ import { GeoJSON } from 'ol/format';
 import { getCenter } from 'ol/extent';
 import api, { MAPSERVER_URL } from './api-client.js';
 import adminDashboard from './admin-dashboard.js';
-import { t, AVAILABLE, currentLang, setInstanceDefault, switchLanguage } from './i18n.js';
-import { initThemeButton } from './theme.js';
+import { t, setInstanceDefault } from './i18n.js';
+import { applyNav, initHeaderControls } from './site-nav.js';
 import { formatSamplingMeta } from './sampling-meta.js';
 
 // Global variables
@@ -52,6 +52,7 @@ async function initializeApp() {
 
     // Apply settings to UI
     applySettings();
+    applySiteNav();
 
     // Initialize map
     console.log('Initializing map...');
@@ -99,14 +100,27 @@ function settingsArrayToObject(settingsArray) {
 function applySettings() {
   // Update logo
   if (appConfig.ORG_LOGO_URL) {
-    document.querySelector('.header .logo').src = appConfig.ORG_LOGO_URL;
+    document.getElementById('site-logo').src = appConfig.ORG_LOGO_URL;
   }
 
   // Update title
   if (appConfig.APP_TITLE) {
-    document.querySelector('.header h1').textContent = appConfig.APP_TITLE;
+    document.getElementById('site-name').textContent = appConfig.APP_TITLE;
     document.title = appConfig.APP_TITLE;
   }
+}
+
+// Shared header navigation: link the public pages when the landing is
+// enabled; with the landing off the map stays a lone full-screen app and
+// the nav never appears.
+async function applySiteNav() {
+  try {
+    const site = await api.getSite();
+    if (site && site.enabled && site.content) {
+      applyNav('map', site.content.pages);
+      document.getElementById('site-nav').hidden = false;
+    }
+  } catch (e) { /* nav stays hidden */ }
 }
 
 // ==================== Map Initialization ====================
@@ -703,14 +717,8 @@ function updateBottomOverlays() {
   }
   if (scale) scale.style.bottom = bottomOffset ? `${bottomOffset + 8}px` : '';
   if (controls) controls.style.right = rightOffset ? `${rightOffset + 14}px` : '';
-  ['theme-btn', 'login-btn', 'lang-btn'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    // The entrance animation's fill:both would override an inline transform
-    // forever, so drop it once we need to shift the button.
-    if (rightOffset) el.style.animation = 'none';
-    el.style.transform = rightOffset ? `translateX(-${rightOffset}px)` : '';
-  });
+  // Theme/login/language live in the fixed header bar now — panels never
+  // overlap them, so no shifting needed.
 }
 
 function switchBasemap(basemapId) {
@@ -2614,66 +2622,24 @@ function setAuthButtonIcon(btn, kind, label) {
 }
 
 function addLoginButton() {
-  const loginBtn = document.createElement('button');
-  loginBtn.id = 'login-btn';
-  loginBtn.className = 'map-glyph';
-  loginBtn.style.cssText = 'position: absolute; top: 20px; right: 58px; padding: 6px; background: none; border: none; cursor: pointer; z-index: 1001; line-height: 0;';
-  
-  // Check if user is already logged in (restore session)
-  if (api.restoreSession()) {
-    setAuthButtonIcon(loginBtn, 'user', t('auth.adminPanel'));
-    loginBtn.onclick = showAdminPanel;  // CHANGED: Use .onclick instead of addEventListener
-  } else {
-    setAuthButtonIcon(loginBtn, 'user', t('auth.login'));
-    loginBtn.onclick = showLoginModal;  // CHANGED: Use .onclick instead of addEventListener
-  }
-
-  document.body.appendChild(loginBtn);
-
-  // Theme toggle — sun/moon, same glyph family, left of the login button.
-  const themeBtn = document.createElement('button');
-  themeBtn.id = 'theme-btn';
-  themeBtn.type = 'button';
-  themeBtn.className = 'map-glyph';
-  themeBtn.style.cssText = 'position: absolute; top: 20px; right: 96px; padding: 6px; background: none; border: none; cursor: pointer; z-index: 1001; line-height: 0;';
-  initThemeButton(themeBtn);
-  document.body.appendChild(themeBtn);
-
-  // Language button — globe only, at the right of the Login button. The
-  // visitor's choice persists in localStorage and overrides the instance
-  // default (LANGUAGE setting).
-  const langBtn = document.createElement('button');
-  langBtn.id = 'lang-btn';
-  langBtn.type = 'button';
-  // Stroke-drawn globe (no background) — same icon as grimoire.at's selector.
-  langBtn.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">'
-    + '<circle cx="12" cy="12" r="9"/>'
-    + '<ellipse cx="12" cy="12" rx="4" ry="9"/>'
-    + '<path d="M3.6 8.5h16.8M3.6 15.5h16.8"/></svg>';
-  langBtn.title = t('lang.label');
-  langBtn.className = 'map-glyph';
-  langBtn.style.cssText = 'position: absolute; top: 20px; right: 20px; padding: 6px; background: none; border: none; cursor: pointer; z-index: 1001; line-height: 0;';
-
-  const langMenu = document.createElement('div');
-  langMenu.id = 'lang-menu';
-  langMenu.style.cssText = 'position: absolute; top: 56px; right: 20px; background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border-strong); border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1002; display: none; min-width: 130px; overflow: hidden;';
-  for (const [code, label] of AVAILABLE) {
-    const item = document.createElement('div');
-    item.textContent = label;
-    item.style.cssText = 'padding: 8px 14px; cursor: pointer; font-size: 13px;'
-      + (code === currentLang() ? 'font-weight: 700; background: var(--color-primary-light);' : '');
-    item.addEventListener('mouseenter', () => { item.style.background = 'var(--color-surface-hover)'; });
-    item.addEventListener('mouseleave', () => { item.style.background = code === currentLang() ? 'var(--color-primary-light)' : ''; });
-    item.addEventListener('click', () => switchLanguage(code));
-    langMenu.appendChild(item);
-  }
-  langBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    langMenu.style.display = langMenu.style.display === 'none' ? 'block' : 'none';
+  // Shared header controls (theme / sign-in / language) — same component
+  // as the public pages; only the sign-in behaviour is map-specific.
+  initHeaderControls({
+    onLogin: (loginBtn) => {
+      if (api.restoreSession()) {
+        setAuthButtonIcon(loginBtn, 'user', t('auth.adminPanel'));
+        loginBtn.onclick = showAdminPanel;
+      } else {
+        setAuthButtonIcon(loginBtn, 'user', t('auth.login'));
+        loginBtn.onclick = showLoginModal;
+      }
+      window.addEventListener('auth:expired', () => {
+        if (adminDashboard && typeof adminDashboard.hide === 'function') adminDashboard.hide();
+        setAuthButtonIcon(loginBtn, 'user', t('auth.login'));
+        loginBtn.onclick = showLoginModal;
+      });
+    },
   });
-  document.addEventListener('click', () => { langMenu.style.display = 'none'; });
-  document.body.appendChild(langBtn);
-  document.body.appendChild(langMenu);
 
   // A language switch made from inside the admin panel reloads the page;
   // reopen the panel so the user lands back where they were.
@@ -2684,11 +2650,10 @@ function addLoginButton() {
     }
   } catch (e) { /* private mode */ }
 
-  window.addEventListener('auth:expired', () => {
-    if (adminDashboard && typeof adminDashboard.hide === 'function') adminDashboard.hide();
-    setAuthButtonIcon(loginBtn, 'user', t('auth.login'));
-    loginBtn.onclick = showLoginModal;
-  });
+  // Deep link from the public pages' user glyph (/map?login=1).
+  if (new URLSearchParams(location.search).has('login') && !api.isAuthenticated()) {
+    showLoginModal();
+  }
 }
 
 // ==================== Admin Functions ====================

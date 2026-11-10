@@ -19,16 +19,31 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
     <link rel="stylesheet" href="./css/main.css">
+    <link rel="stylesheet" href="./css/header.css">
     <link rel="stylesheet" href="./css/admin-dashboard.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v7.5.1/ol.css">
     <!-- Favicon and header logo are set at runtime from api.setting ORG_LOGO_URL -->
     <link rel="icon" href="data:,">
 </head>
 <body>
-    <div class="header">
-        <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Soil Information System" class="logo">
-        <h1>Soil Information System</h1>
-    </div>
+    <header class="site-header" id="site-header">
+        <div class="site-header-inner">
+            <div class="brand">
+                <img id="site-logo" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="">
+                <h1 class="site-name" id="site-name">Soil Information System</h1>
+            </div>
+            <nav class="site-nav" aria-label="Main" id="site-nav" hidden>
+                <a id="nav-home" href="/" class="nav-link"></a>
+                <span id="nav-about" class="nav-link nav-soon"></span>
+                <a id="nav-map" href="/map" class="nav-link nav-current"></a>
+                <a id="nav-catalogue" href="/collections?f=html" class="nav-link" target="_blank" rel="noopener"></a>
+                <a id="nav-dashboard" href="/dashboard" class="nav-link"></a>
+                <span id="nav-people" class="nav-link nav-soon"></span>
+                <span id="nav-contact" class="nav-link nav-soon"></span>
+            </nav>
+            <div class="site-controls" id="site-controls"></div>
+        </div>
+    </header>
 
     <div id="map" class="map"></div>
     

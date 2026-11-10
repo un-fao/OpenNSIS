@@ -9,7 +9,7 @@
  */
 import api from './api-client.js';
 import { t, currentLang } from './i18n.js';
-import { applyNav } from './site-nav.js';
+import { applyNav, applyBrand, initHeaderControls } from './site-nav.js';
 
 function pick(dict) {
   // Same fallback order as t(): visitor language → English → anything.
@@ -56,11 +56,11 @@ async function init() {
     document.body.prepend(bar);
   }
   const c = data.content;
-  document.title = pick((c.hero || {}).title) || 'Soil Information System';
+  document.title = pick((c.hero || {}).title) || data.app_title || 'Soil Information System';
   applyColors(c.colors);
 
-  const logo = document.getElementById('site-logo');
-  if (c.logo_url) { logo.src = c.logo_url; logo.hidden = false; }
+  applyBrand(data);
+  initHeaderControls();
 
   applyNav('home', c.pages);
   document.getElementById('hero-cta').textContent = t('site.openMap');
@@ -86,6 +86,7 @@ async function init() {
     el.innerHTML = footer;         // sanitised server-side at publish time
     el.hidden = false;
   }
+  document.getElementById('site-header').hidden = false;
   document.getElementById('site').hidden = false;
 }
 

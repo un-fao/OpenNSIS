@@ -159,51 +159,12 @@ textarea {
 }
 
 /* =====================================================================
-   Header
+   Header — the shared bar (css/header.css) sits above the map; only the
+   map-specific sizing lives here.
    ===================================================================== */
-.header {
-    position: absolute;
-    top: var(--sp-5);
-    left: var(--sp-5);
-    /* Hug the title text — instance names vary in length. The max-width
-       stops it running under the layer switcher; only then does the h1's
-       ellipsis kick in. */
-    width: fit-content;
-    max-width: min(calc(100vw - 120px), 820px);
-    display: flex;
-    align-items: center;
-    gap: var(--sp-4);
-    z-index: 1000;
-    /* Floats bare on the map like the rest of the controls; the title text
-       follows the basemap theme below. */
-    color: #fff;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
-}
-
-body.light-basemap .header {
-    color: #2b2b2b;
-    filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.9));
-}
-
-.header .logo {
-    height: 40px;
-    width: auto;
-}
-
-.header h1 {
-    margin: 0;
-    font-size: var(--fs-xl);
-    font-weight: 600;
-    color: inherit;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    letter-spacing: -0.01em;
-}
-
 .map {
     width: 100%;
-    height: 100vh;
+    height: calc(100vh - 60px);
 }
 
 /* =====================================================================
@@ -1106,16 +1067,6 @@ body.light-basemap .scale-line .ol-scale-line-inner::after { background: #2b2b2b
    Responsive
    ===================================================================== */
 @media (max-width: 768px) {
-    .header {
-        padding: var(--sp-2) var(--sp-3);
-        width: fit-content;
-        max-width: calc(100% - 40px);
-    }
-
-    .header .logo { height: 30px; }
-
-    .header h1 { font-size: var(--fs-lg); }
-
     .map-controls { top: 60px; }
 
     .layer-item { flex-wrap: wrap; }
@@ -1215,7 +1166,6 @@ h1, h2, h3, h4, h5 { font-family: var(--font-display); letter-spacing: -0.01em; 
 }
 *::-webkit-scrollbar-track { background: transparent; }
 
-.header h1 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.015em; }
 
 /* Floating panels: warm glass */
 .layer-switcher {
@@ -1266,18 +1216,13 @@ h1, h2, h3, h4, h5 { font-family: var(--font-display); letter-spacing: -0.01em; 
     @keyframes tr-pop  { 0% { opacity: 0; transform: scale(.92); } 60% { opacity: 1; transform: scale(1.02); } 100% { transform: scale(1); } }
     @keyframes tr-slideup { from { transform: translateY(100%); } to { transform: none; } }
 
-    .header         { animation: tr-drop .7s cubic-bezier(.2,.8,.2,1) both; }
     .layer-switcher { animation: tr-rise .7s .12s cubic-bezier(.2,.8,.2,1) both; }
     .map-controls   { animation: tr-drop .7s .22s cubic-bezier(.2,.8,.2,1) both; }
-    #theme-btn, #login-btn, #lang-btn { animation: tr-drop .7s .3s cubic-bezier(.2,.8,.2,1) both; }
     .legend-container { animation: tr-rise .5s both; }
     .popup          { animation: tr-pop .32s cubic-bezier(.2,.9,.3,1.35) both; }
     #profiles-data-modal { animation: tr-slideup .45s cubic-bezier(.2,.8,.2,1) both; }
 }
 
-/* Oversized, confident title */
-.header { gap: var(--sp-3); }
-.header h1 { font-size: 27px; font-weight: 700; letter-spacing: -0.02em; }
 
 /* Layer panel: deep frosted glass with an inner light edge */
 .layer-switcher {

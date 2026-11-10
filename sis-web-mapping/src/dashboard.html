@@ -17,6 +17,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap">
     <link rel="stylesheet" href="./css/site.css">
+    <link rel="stylesheet" href="./css/header.css">
     <link rel="stylesheet" href="./css/admin-dashboard.css">
     <link rel="icon" href="data:,">
     <style>
@@ -26,9 +27,12 @@
     </style>
 </head>
 <body>
-    <main id="site">
-        <header class="site-header">
-            <div class="brand"></div>
+    <header class="site-header" id="site-header">
+        <div class="site-header-inner">
+            <div class="brand">
+                <img id="site-logo" alt="" hidden>
+                <span class="site-name" id="site-name"></span>
+            </div>
             <nav class="site-nav" aria-label="Main">
                 <a id="nav-home" href="/" class="nav-link"></a>
                 <span id="nav-about" class="nav-link nav-soon"></span>
@@ -38,7 +42,10 @@
                 <span id="nav-people" class="nav-link nav-soon"></span>
                 <span id="nav-contact" class="nav-link nav-soon"></span>
             </nav>
-        </header>
+            <div class="site-controls" id="site-controls"></div>
+        </div>
+    </header>
+    <main id="site">
         <h1 id="dash-title" style="font-family:var(--font-display);margin:10px 0 18px;"></h1>
         <div id="dashboard-empty" style="padding:24px;color:var(--color-text-muted);">…</div>
         <div id="dashboard-content" style="display:none;"></div>

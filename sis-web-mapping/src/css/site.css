@@ -58,25 +58,7 @@ a { color: var(--color-primary); }
 
 #site { max-width: 1120px; margin: 0 auto; padding: 0 24px 56px; }
 
-/* ---------- header ---------- */
-.site-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 20px 0 10px; gap: 16px;
-}
-#site-logo { height: 46px; max-width: 230px; object-fit: contain; }
-
-.site-nav { display: flex; align-items: center; gap: clamp(10px, 2vw, 22px); flex-wrap: wrap; }
-.nav-link {
-    font-size: 15px; font-weight: 600; text-decoration: none;
-    color: var(--color-text); padding: 4px 2px;
-    border-bottom: 2px solid transparent;
-}
-a.nav-link:hover { color: var(--color-primary); border-bottom-color: var(--color-primary); }
-.nav-current { border-bottom-color: var(--color-secondary); }
-.nav-soon { color: var(--color-text-muted); opacity: 0.55; cursor: default; }
-@media (max-width: 760px) {
-    .site-nav { gap: 10px; font-size: 14px; }
-}
+/* ---------- header: shared bar in css/header.css ---------- */
 
 .btn-pill {
     display: inline-block; padding: 10px 22px; border-radius: 999px;
@@ -207,5 +189,4 @@ a.nav-link:hover { color: var(--color-primary); border-bottom-color: var(--color
 @media (max-width: 760px) {
     .hero { grid-template-columns: 1fr; padding-top: 18px; }
     .hero-visual { min-height: 230px; order: -1; }
-    .site-header { padding-top: 14px; }
 }

@@ -17,13 +17,15 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap">
     <link rel="stylesheet" href="./css/site.css">
+    <link rel="stylesheet" href="./css/header.css">
     <link rel="icon" href="data:,">
 </head>
 <body>
-    <main id="site" hidden>
-        <header class="site-header">
+    <header class="site-header" id="site-header" hidden>
+        <div class="site-header-inner">
             <div class="brand">
                 <img id="site-logo" alt="" hidden>
+                <span class="site-name" id="site-name"></span>
             </div>
             <nav class="site-nav" aria-label="Main">
                 <a id="nav-home" href="/" class="nav-link"></a>
@@ -34,7 +36,10 @@
                 <span id="nav-people" class="nav-link nav-soon"></span>
                 <span id="nav-contact" class="nav-link nav-soon"></span>
             </nav>
-        </header>
+            <div class="site-controls" id="site-controls"></div>
+        </div>
+    </header>
+    <main id="site" hidden>
         <article class="about page-body" id="page-body" hidden></article>
         <footer class="site-footer" id="site-footer" hidden></footer>
     </main>

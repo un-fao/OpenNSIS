@@ -6,7 +6,7 @@
 import Chart from 'chart.js/auto';
 import api from './api-client.js';
 import { t } from './i18n.js';
-import { applyNav } from './site-nav.js';
+import { applyNav, applyBrand, initHeaderControls } from './site-nav.js';
 
 let _charts = {};
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g,
@@ -231,7 +231,12 @@ function renderDashboardCharts(stats) {
 
 async function init() {
   let pages = null;
-  try { pages = ((await api.getSite()) || {}).content?.pages; } catch (e) { /* nav stays muted */ }
+  try {
+    const site = (await api.getSite()) || {};
+    pages = site.content?.pages;
+    applyBrand(site);
+  } catch (e) { /* nav stays muted */ }
+  initHeaderControls();
   applyNav('dashboard', pages);
   document.getElementById('dash-title').textContent = t('site.nav.dashboard');
 
