@@ -598,7 +598,6 @@
   "a.site.ppl.email": "E-mail",
   "a.site.ppl.phone": "Phone",
   "a.site.draftSaved": "Saved.",
-  "a.site.published": "The page is live.",
   "a.sd.title": "Sampling design",
   "a.sd.intro": "Generate a soil sampling design with the SoilFER three-stage method: covariate space coverage selects primary units over the country, then secondary units inside them, and random points with ranked replacements inside those. Covariates are fetched from the sources below at run time and discarded afterwards; the design and its full manifest (sources, licences, parameters, seed, quality) are kept.",
   "a.sd.sources": "Data sources",

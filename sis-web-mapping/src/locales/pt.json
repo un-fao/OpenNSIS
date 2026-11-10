@@ -598,7 +598,6 @@
   "a.site.ppl.email": "Correio",
   "a.site.ppl.phone": "Telefone",
   "a.site.draftSaved": "Guardado.",
-  "a.site.published": "A página está em linha.",
   "a.sd.title": "Desenho de amostragem",
   "a.sd.intro": "Gere um desenho de amostragem de solos com o método SoilFER de três etapas: a cobertura do espaço de covariáveis selecciona unidades primárias no país, depois unidades secundárias dentro delas, e pontos aleatórios com substituições ordenadas dentro destas. As covariáveis são descarregadas das fontes indicadas durante a execução e descartadas depois; conservam-se o desenho e o seu manifesto completo (fontes, licenças, parâmetros, semente, qualidade).",
   "a.sd.sources": "Fontes de dados",

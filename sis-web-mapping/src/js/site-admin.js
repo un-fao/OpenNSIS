@@ -146,17 +146,13 @@ function markup() {
       <h3 class="admin-section-title">${t('a.site.title')}</h3>
 
       <div style="display:flex;gap:6px;margin-bottom:var(--sp-3);" id="site-pages-bar">
-        ${['general', 'home', 'about', 'people', 'contact'].map((p) =>
+        ${['general', 'home', 'about', 'people', 'contact', 'catalogue', 'dashboard'].map((p) =>
           `<button type="button" class="btn btn-sm site-page-tab${p === 'general' ? ' btn-primary' : ''}" data-page="${p}">${p === 'general' ? t('a.site.general') : t('site.nav.' + p)}</button>`).join('')}
       </div>
 
       <div data-sitepage="general" style="display:grid;grid-template-columns:auto 1fr;gap:var(--sp-3);align-items:center;">
         <label>${t('a.site.langLbl')}</label>
         <span style="display:flex;gap:4px;" id="site-langs"></span>
-        <label>${t('site.nav.catalogue')}</label>
-        <button type="button" class="btn btn-sm" id="site-pub-catalogue" style="width:fit-content;"></button>
-        <label>${t('site.nav.dashboard')}</label>
-        <button type="button" class="btn btn-sm" id="site-pub-dashboard" style="width:fit-content;"></button>
       </div>
 
       <div data-sitepage="home" style="display:none;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:center;">
@@ -233,32 +229,28 @@ function markup() {
 // was set to false; Home's flag is the landing switch itself (legacy
 // content without the flag follows the old SITE_LANDING_ENABLED setting,
 // surfaced here as state.enabled).
+// Catalogue and Dashboard are features with their own routes, shown as
+// plain pages in the bar; their flags only control the header links.
+const FEATURE_FLAGS = { catalogue: 'catalogue_published', dashboard: 'dashboard_published' };
+
 function pageIsPublished(slug) {
   if (slug === 'home') {
     const hp = state.content.home_published;
     return typeof hp === 'boolean' ? hp : !!state.enabled;
   }
+  if (FEATURE_FLAGS[slug]) return state.content[FEATURE_FLAGS[slug]] !== false;
   const p = ((state.content.pages || {})[slug]) || {};
   return p.published !== false;
 }
 
-// Catalogue and Dashboard are features with their own routes; these flags
-// only control whether their links appear in the shared header.
-const FEATURE_FLAGS = { catalogue: 'catalogue_published', dashboard: 'dashboard_published' };
-
-function updateFeatureBtns() {
-  Object.entries(FEATURE_FLAGS).forEach(([name, key]) => {
-    const btn = document.getElementById(`site-pub-${name}`);
-    if (btn) btn.textContent = state.content[key] === false ? t('a.site.publish') : t('a.site.unpublish');
-  });
-}
-
 function updatePublishBtn() {
-  const btn = document.getElementById('site-publish');
-  if (!btn) return;
-  if (state.page === 'general') { btn.style.display = 'none'; return; }
-  btn.style.display = '';
-  btn.textContent = pageIsPublished(state.page) ? t('a.site.unpublish') : t('a.site.publish');
+  const pubBtn = document.getElementById('site-publish');
+  const saveBtn = document.getElementById('site-save');
+  if (!pubBtn) return;
+  // General: nothing to publish. Catalogue/Dashboard: nothing to save.
+  pubBtn.style.display = state.page === 'general' ? 'none' : '';
+  if (saveBtn) saveBtn.style.display = FEATURE_FLAGS[state.page] ? 'none' : '';
+  pubBtn.textContent = pageIsPublished(state.page) ? t('a.site.unpublish') : t('a.site.publish');
 }
 
 function readForm() {
@@ -310,7 +302,6 @@ function fillForm() {
   renderLangPills();
   checkContrast();
   updatePublishBtn();
-  updateFeatureBtns();
 }
 
 function renderLangPills() {
@@ -375,23 +366,11 @@ export async function mountSiteAdmin() {
     document.getElementById('site-logo-upload').addEventListener('click', () => uploadInto('site-logo-url'));
     document.getElementById('site-hero-upload').addEventListener('click', () => uploadInto('site-hero-image'));
     document.getElementById('site-color-primary').addEventListener('input', checkContrast);
-    Object.entries(FEATURE_FLAGS).forEach(([name, key]) => {
-      document.getElementById(`site-pub-${name}`).addEventListener('click', async () => {
-        const status = document.getElementById('site-status');
-        readForm();
-        const makePublic = state.content[key] === false;
-        state.content[key] = makePublic;
-        try {
-          await api.saveSiteDraft(state.content);
-          await api.publishSite();
-          status.textContent = makePublic ? t('a.site.published') : '';
-          updateFeatureBtns();
-          window.dispatchEvent(new CustomEvent('site:published'));
-        } catch (err) { status.textContent = err.message; }
-      });
-    });
     document.getElementById('site-preview').addEventListener('click', async () => {
       const status = document.getElementById('site-status');
+      // Catalogue and Dashboard have nothing to draft: just open them.
+      if (state.page === 'catalogue') { window.open('/collections?f=html', '_blank', 'noopener'); return; }
+      if (state.page === 'dashboard') { window.open('/dashboard', '_blank', 'noopener'); return; }
       readForm();
       try {
         await api.saveSiteDraft(state.content);
@@ -414,6 +393,8 @@ export async function mountSiteAdmin() {
       const makePublic = !pageIsPublished(state.page);
       if (state.page === 'home') {
         state.content.home_published = makePublic;
+      } else if (FEATURE_FLAGS[state.page]) {
+        state.content[FEATURE_FLAGS[state.page]] = makePublic;
       } else {
         if (!state.content.pages) state.content.pages = {};
         if (!state.content.pages[state.page]) state.content.pages[state.page] = {};
@@ -422,7 +403,7 @@ export async function mountSiteAdmin() {
       try {
         await api.saveSiteDraft(state.content);
         await api.publishSite();
-        status.textContent = makePublic ? t('a.site.published') : '';
+        status.textContent = '';
         updatePublishBtn();
         window.dispatchEvent(new CustomEvent('site:published'));
       } catch (err) { status.textContent = err.message; }
