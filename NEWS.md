@@ -7,6 +7,23 @@ the change landed on `main`.
 
 ## November 2026
 
+### 2026-11-11 — Catalogue page
+The metadata catalogue became a proper public page at `/catalogue`, replacing
+the link out to pyCSW's bare records UI. Every record of the instance is
+listed as a card — thumbnail, title, resource type, theme, licence, year and
+keyword chips, with the GeoTIFF download and WMS links attached — in the
+site's own design and all six interface languages, fed live from the pyCSW
+OGC API Records endpoint (the same ISO records held in `soil_data.mapset`).
+A search box plus multi-select **Year** and **Keyword** filter pills narrow
+the list (choices within a row combine as OR, rows and search as AND), and
+the keyword chips on each card toggle the same selection. Clicking a record
+opens the map view's metadata popup — abstract, preview, identification,
+spatial details, statistics, contacts, online resources and the XML
+download — now shared between the two pages; records without a raster
+behind them render from the catalogue record itself. The header, footer,
+landing quick-card and hero button all point at the new page, and its
+visibility stays controlled from Website → Catalogue.
+
 ### 2026-11-10 → 11-11 — Landing page redesign and single-language content
 The public landing page was rebuilt: a full-width hero over the uploaded
 image, quick-link cards (map, catalogue, statistics), an About band, and a
