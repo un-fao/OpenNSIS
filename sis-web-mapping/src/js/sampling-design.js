@@ -37,7 +37,8 @@ function markup(sources) {
   return `
     <div class="admin-section" style="max-width:1150px;">
       <h3 class="admin-section-title">${t('a.sd.title')}</h3>
-      <p style="color:var(--color-text-muted);font-size:var(--fs-sm);margin:0 0 var(--sp-3);">${t('a.sd.intro')}</p>
+      <p style="color:var(--color-text-muted);font-size:var(--fs-sm);margin:0 0 var(--sp-3);">${t('a.sd.intro')}
+        <a href="https://github.com/un-fao/SoilFER/tree/main/sampling%20design" target="_blank" rel="noopener">un-fao/SoilFER · sampling design</a></p>
 
       <h4 style="margin:0 0 var(--sp-2);">${t('a.sd.sources')}</h4>
       <div style="margin-bottom:var(--sp-3);">${srcRows}</div>
