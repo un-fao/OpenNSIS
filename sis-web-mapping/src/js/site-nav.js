@@ -86,7 +86,7 @@ export function applyFooter(data) {
   if (name) name.textContent = data.app_title || '';
   const entries = {
     map: c.map_published !== false && { href: '/map' },
-    catalogue: c.catalogue_published !== false && { href: '/collections?f=html', blank: true },
+    catalogue: c.catalogue_published !== false && { href: '/catalogue' },
     dashboard: c.dashboard_published !== false && { href: '/dashboard' },
     about: pages.about && { href: '/about' },
     people: pages.people && { href: '/people' },

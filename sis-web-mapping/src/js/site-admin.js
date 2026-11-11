@@ -422,7 +422,7 @@ export async function mountSiteAdmin() {
     document.getElementById('site-preview').addEventListener('click', async () => {
       const status = document.getElementById('site-status');
       // Feature pages have nothing to draft: just open them.
-      if (state.page === 'catalogue') { window.open('/collections?f=html', '_blank', 'noopener'); return; }
+      if (state.page === 'catalogue') { window.open('/catalogue', '_blank', 'noopener'); return; }
       if (state.page === 'dashboard') { window.open('/dashboard', '_blank', 'noopener'); return; }
       if (state.page === 'map') { window.open('/map', '_blank', 'noopener'); return; }
       readForm();

@@ -110,7 +110,7 @@ async function init() {
   set('quick-lede', t('site.landing.toolsLede'));
   const quick = [
     showMap && { icon: 'map', n: 2, href: '/map' },
-    showCatalogue && { icon: 'file', n: 3, href: '/collections?f=html', blank: true },
+    showCatalogue && { icon: 'file', n: 3, href: '/catalogue' },
     showDashboard && { icon: 'chart', n: 4, href: '/dashboard' },
   ].filter(Boolean);
   document.getElementById('quick-grid').innerHTML = quick.map((q) => `
