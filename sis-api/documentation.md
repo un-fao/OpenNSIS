@@ -318,7 +318,7 @@ record, pyCSW load) and the legend editors.
 | ------ | ---------------------------------------------- | --------- | ------------------------------------------------ |
 | POST   | `/api/raster/inspect`                          | JWT       | Inspect a GeoTIFF — multipart `file` or a `path` inside the sis-web-services volume |
 | POST   | `/api/raster/register`                         | JWT       | Register the raster end to end (COG, mapfile, catalogue record) |
-| GET    | `/api/raster/metadata/{layer_id}`              | JWT       | Registered metadata for one layer                |
+| GET    | `/api/raster/metadata/{layer_id}`              | API key   | Rich metadata for one layer (map and catalogue popups); the id may be a `layer_id` or a record's `file_identifier` |
 | GET    | `/api/raster/file_exists`                      | JWT       | Duplicate-filename check                         |
 | GET/POST | `/api/raster/projects`, `/properties`, `/mapped_soil_properties`, `/individuals`, `/organisations`, `/countries` | JWT | Catalogue look-ups (and creates) for the metadata form |
 | GET    | `/api/raster/observation_limits/{property}/{unit}` | JWT   | Value bounds used to seed the legend             |

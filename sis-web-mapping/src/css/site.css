@@ -194,6 +194,16 @@ a { color: var(--color-primary); }
     }
 }
 /* ---------- catalogue page ---------- */
+/* Tokens the shared metadata popup (metadata-popup.js) uses; the map app
+   defines them in main.css, the public pages derive them from the theme
+   tokens here so light and dark both follow. */
+:root {
+    --color-surface-alt:   var(--color-bg-accent);
+    --color-border-strong: var(--color-border);
+    --color-primary-light: color-mix(in srgb, var(--color-primary) 14%, transparent);
+    --color-danger:  #c62828;
+    --color-success: #2e7d32;
+}
 .cat-toolbar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin: 0 0 18px; }
 #cat-search {
     flex: 1 1 260px; max-width: 420px; padding: 10px 14px;

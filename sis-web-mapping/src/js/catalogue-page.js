@@ -8,6 +8,7 @@
 import api from './api-client.js';
 import { t, setInstanceDefault } from './i18n.js';
 import { applyNav, applyBrand, initHeaderControls, applyFooter } from './site-nav.js';
+import { showMetadataPopup } from './metadata-popup.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g,
   (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -41,6 +42,7 @@ function parseRecord(f) {
   }));
   const formats = (p.formats || []).map((x) => x.name)
     .filter((n) => n && !n.startsWith('WWW:'));
+  const thumbUrl = thumb && ownUrl(thumb.href);
   return {
     id: f.id,
     title: p.title || f.id,
@@ -50,11 +52,29 @@ function parseRecord(f) {
     themes,
     keywords: p.keywords || [],
     licence: p.license || '',
-    thumb: thumb && ownUrl(thumb.href),
+    thumb: thumbUrl,
     download: download && { href: ownUrl(download.href), name: download.name || 'download' },
     wms: wms && ownUrl(wms.href),
     record: `${COLLECTION}/${encodeURIComponent(f.id)}?f=html`,
     text: '',
+    // What the popup renders when /api/raster/metadata has no row for this
+    // record (non-raster datasets): the pyCSW record itself, reshaped to
+    // the fields formatMetadata() expects.
+    meta: {
+      title: p.title || f.id,
+      abstract: p.description,
+      md_browse_graphic: thumbUrl,
+      other_constraints: p.license,
+      publication_date: p.created,
+      revision_date: p.updated !== p.created ? p.updated : null,
+      topic_category: themes,
+      keyword_theme: p.keywords,
+      file_identifier: f.id,
+      online_resources: links
+        .filter((l) => l.href && !['self', 'collection', 'preview'].includes(l.rel))
+        .map((l) => ({ protocol: l.protocol || l.rel, url: ownUrl(l.href),
+                       url_name: l.name || l.title, url_description: l.description })),
+    },
   };
 }
 
@@ -67,15 +87,15 @@ function card(r) {
   const attach = [
     r.download && `<a href="${esc(r.download.href)}">${FILE_GLYPH} ${esc(r.download.name)}</a>`,
     r.wms && `<a href="${esc(r.wms)}" target="_blank" rel="noopener">${t('site.cat.wms')}</a>`,
-    `<a href="${esc(r.record)}" target="_blank" rel="noopener">${t('site.cat.fullRecord')} →</a>`,
+    `<a class="cat-open" data-id="${esc(r.id)}" href="${esc(r.record)}">${t('site.cat.fullRecord')} →</a>`,
   ].filter(Boolean).join('');
   return `
   <article class="cat-card">
-    <a class="cat-thumb" href="${esc(r.record)}" target="_blank" rel="noopener">
+    <a class="cat-thumb cat-open" data-id="${esc(r.id)}" href="${esc(r.record)}">
       ${r.thumb ? `<img src="${esc(r.thumb)}" alt="" loading="lazy" onerror="this.remove()">` : ''}
     </a>
     <div class="cat-body">
-      <h3 class="cat-title"><a href="${esc(r.record)}" target="_blank" rel="noopener">${esc(r.title)}</a></h3>
+      <h3 class="cat-title"><a class="cat-open" data-id="${esc(r.id)}" href="${esc(r.record)}">${esc(r.title)}</a></h3>
       <div class="cat-cols">
         <div>
           <p class="cat-field"><strong>${t('site.cat.resourceType')}:</strong></p>
@@ -121,6 +141,17 @@ async function init() {
   const search = document.getElementById('cat-search');
   search.placeholder = t('site.cat.search');
   search.addEventListener('input', () => render(search.value));
+
+  // Record clicks open the same metadata popup as the map view's metadata
+  // icon; the href (the raw pyCSW record) stays for middle-click / no JS.
+  document.getElementById('cat-list').addEventListener('click', (ev) => {
+    const a = ev.target.closest('a.cat-open');
+    if (!a) return;
+    ev.preventDefault();
+    const r = records.find((x) => x.id === a.dataset.id);
+    if (!r) return;
+    showMetadataPopup(`/api/raster/metadata/${encodeURIComponent(r.id)}`, r.meta);
+  });
 
   const empty = document.getElementById('cat-empty');
   try {

@@ -7085,8 +7085,10 @@ async def get_raster_metadata(
                 LEFT JOIN soil_data.project p ON p.country_id = m.country_id AND p.project_id = m.project_id
                 LEFT JOIN soil_data.mapped_property mp ON mp.mapped_property_id = m.mapped_property_id
                 LEFT JOIN soil_data.property_num pn ON pn.property_num_id = mp.property_num_id
-                WHERE l.layer_id = %s
-            """, (layer_id,))
+                WHERE l.layer_id = %s OR m.file_identifier::text = %s
+                ORDER BY (l.layer_id = %s) DESC, l.layer_id
+                LIMIT 1
+            """, (layer_id, layer_id, layer_id))
             row = cur.fetchone()
             if not row:
                 raise HTTPException(status_code=404, detail="Layer not found")
