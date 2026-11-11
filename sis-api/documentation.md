@@ -15,6 +15,14 @@
    - [ETL pipeline](#etl-pipeline)
    - [Metadata sync](#metadata-sync)
    - [Stats](#stats)
+   - [Projects](#projects)
+   - [Raster upload and legends](#raster-upload-and-legends)
+   - [DST — raster calculator](#dst--raster-calculator)
+   - [Administrative divisions](#administrative-divisions)
+   - [LIMS connections](#lims-connections)
+   - [Sampling design](#sampling-design)
+   - [Website (public site CMS)](#website-public-site-cms)
+   - [Software updates](#software-updates)
    - [GloSIS Federation](#glosis-federation)
 4. [Validation rules](#validation-rules)
 5. [Database schema](#database-schema)
@@ -73,9 +81,10 @@ After **5 consecutive failed logins** the account is locked for **15 minutes**. 
 
 | Section                                                | Required auth          | Notes                                          |
 | ------------------------------------------------------ | ---------------------- | ---------------------------------------------- |
-| Administration tab (users, API clients, settings, GloSIS) | **JWT (admin)**     | `is_admin = true` enforced server-side         |
+| Administration tab (users, API clients, GloSIS, update check) | **JWT (admin)**  | `is_admin = true` enforced server-side         |
+| Website tab (settings, site content, media, sampling designs), administrative divisions, legend colour edits, project delete, LIMS connection management | **JWT (admin)** | |
 | ETL Delete dataset (`DELETE /api/etl/datasets/{table}`)| **JWT (admin)**        | Destructive — drops the staging table          |
-| Everything else mutating (layers, ETL upload/ingest/prune, codelist creates, soil-profile publish/limit/blur, sync)  | **JWT (any user)**     | Login required                                  |
+| Everything else mutating (layers, ETL upload/ingest/prune, codelist creates, raster registration, DST recipes, LIMS fetch, soil-profile publish/limit/blur, sync) | **JWT (any user)** | Login required |
 | Read endpoints under `/api/*`                          | **API key**            | Header `X-API-Key`                              |
 | `/health`, `/`                                         | **Public**             |                                                |
 
@@ -166,18 +175,27 @@ Admin-only mutations.
 | GET    | `/api/setting/all`            | JWT    | All settings (admin view, includes infra keys) |
 | GET    | `/api/setting`                | API key| Settings exposed to applications             |
 
+Settings are edited from the admin **Website** tab: `APP_TITLE` and
+`LANGUAGE` (plus logo and theme colours, which live in the site content)
+on the **General** sub-tab; the map keys (`LATITUDE`, `LONGITUDE`, `ZOOM`,
+`BASE_MAP_DEFAULT`, …) on the **Map** sub-tab, which also offers a visual
+view editor.
+
 Default settings seeded by `deploy.sh`:
 
 | Key                          | Example value                              | Notes                                          |
 | ---------------------------- | ------------------------------------------ | ---------------------------------------------- |
 | `APP_TITLE`                  | `Soil Information System of Bhutan`        | Built from `spatial_metadata.country.en`       |
-| `ORG_LOGO_URL`               | `https://…/logo.png`                       |                                                |
+| `LANGUAGE`                   | `en`                                       | Instance language — applied to all public pages |
+| `ORG_LOGO_URL`               | `https://…/logo.png`                       | Hidden from the settings table — set via the Logo field on Website → General |
 | `LATITUDE` / `LONGITUDE`     | from `country.geom_centroid`               |                                                |
 | `ZOOM`                       | `9`                                        |                                                |
 | `BASE_MAP_DEFAULT`           | `esri-imagery`                             |                                                |
+| `LAYER_PANEL_COLLAPSED`      | `false`                                    |                                                |
 | `COUNTRY_CODE`               | `BT`                                       | ISO 3166-1 alpha-2                              |
-| `DOWNLOAD_BASE_URL`          | `/downloads/`                              | Infrastructure — hidden from the Settings UI    |
-| `GLOSIS_FEDERATION_ENABLED`  | `false` until admin enables                 | Infrastructure — hidden from the Settings UI    |
+| `WMS_PUBLIC_URL`             | `https://…/wms`                            |                                                |
+| `DOWNLOAD_BASE_URL`          | `/downloads/`                              | Infrastructure — hidden from the settings UI    |
+| `GLOSIS_FEDERATION_ENABLED` / `GLOSIS_HUB_URL` / `GLOSIS_NODE_URL` | managed by the GloSIS panel | Infrastructure — hidden from the settings UI |
 
 ### Public data (API key)
 
@@ -192,6 +210,14 @@ These are the data endpoints `sis-web-mapping` consumes.
 | GET    | `/api/observation_bounds`                     | `(prop, proc, unit, value_min/max, typical_min/max)` from `observation_num` — used by the SPA to draw inline value bars in the Show-data panel |
 | GET    | `/api/layer`                                  | Published layers only                              |
 | GET    | `/api/setting`                                | App settings                                       |
+| GET    | `/api/profile/blur`                           | Per-layer privacy flags (blur / locations-only) so the map can indicate them |
+| GET    | `/api/profile/symbology`                      | Per-project marker symbology for the map view      |
+| GET    | `/api/admin-divisions`                        | Published administrative division layers + symbology |
+| GET    | `/api/admin-divisions/{id}/geojson`           | FeatureCollection of one published division layer  |
+| GET    | `/api/sampling/public`                        | Published sampling-design layers for the map viewer |
+| GET    | `/api/dst/pixel/{layer_id}?lon=&lat=`         | Per-pixel breakdown of a DST output raster (map popup) |
+| GET    | `/api/stats/dashboard`                        | Aggregates for the public Statistics page (`/dashboard`) |
+| GET    | `/api/site`                                   | Published website content + instance language — consumed by every public page |
 
 ### Codelists
 
@@ -269,9 +295,114 @@ Result values are stored in the **canonical unit** for the (property, procedure)
 
 ### Stats
 
-| Method | Path                  | Auth | Description                                 |
-| ------ | --------------------- | ---- | ------------------------------------------- |
-| GET    | `/api/stats/dashboard`| JWT  | Aggregates used by the Dashboard tab (profiles per project, value summaries per property, etc.) |
+| Method | Path                  | Auth    | Description                                 |
+| ------ | --------------------- | ------- | ------------------------------------------- |
+| GET    | `/api/stats/dashboard`| API key | Aggregates (profiles per project, value summaries per property, etc.) for the public **Statistics** page at `/dashboard` |
+
+### Projects
+
+The Projects tab. Listing needs any login; deleting is admin-only.
+
+| Method | Path                                   | Auth      | Description                                     |
+| ------ | -------------------------------------- | --------- | ----------------------------------------------- |
+| GET    | `/api/projects`                        | JWT       | Projects with dependent counts                  |
+| GET    | `/api/projects/{project_id}/dependents`| JWT       | Dependent objects, to drive the delete dialog   |
+| DELETE | `/api/projects/{project_id}`           | JWT-admin | Delete; per dependent type the body chooses `delete` or `reassign` to another project |
+
+### Raster upload and legends
+
+The Upload GeoTIFF flow (COG conversion, mapfile generation, ISO 19139
+record, pyCSW load) and the legend editors.
+
+| Method | Path                                           | Auth      | Description                                      |
+| ------ | ---------------------------------------------- | --------- | ------------------------------------------------ |
+| POST   | `/api/raster/inspect`                          | JWT       | Inspect a GeoTIFF — multipart `file` or a `path` inside the sis-web-services volume |
+| POST   | `/api/raster/register`                         | JWT       | Register the raster end to end (COG, mapfile, catalogue record) |
+| GET    | `/api/raster/metadata/{layer_id}`              | JWT       | Registered metadata for one layer                |
+| GET    | `/api/raster/file_exists`                      | JWT       | Duplicate-filename check                         |
+| GET/POST | `/api/raster/projects`, `/properties`, `/mapped_soil_properties`, `/individuals`, `/organisations`, `/countries` | JWT | Catalogue look-ups (and creates) for the metadata form |
+| GET    | `/api/raster/observation_limits/{property}/{unit}` | JWT   | Value bounds used to seed the legend             |
+| GET    | `/api/raster/units_for_property/{property_num_id}` | JWT   | Unit choices for a property                      |
+| PUT    | `/api/mapped-property/{property_id}/colours`   | JWT-admin | Colour ramp for every raster of a property — regenerates classes, SLDs and on-disk mapfiles |
+| PUT    | `/api/mapset/{mapset_id}/class-colours`        | JWT-admin | Categorical legend classes: colour / label / pixel value, add and remove |
+
+### DST — raster calculator
+
+Decision-support recipes that compute new rasters from registered inputs.
+
+| Method | Path                                         | Auth    | Description                                   |
+| ------ | -------------------------------------------- | ------- | --------------------------------------------- |
+| GET    | `/api/dst/inputs`                            | JWT     | Candidate input rasters for the recipe builder |
+| GET/POST | `/api/dst/recipes`                         | JWT     | List / create recipes                          |
+| GET/PUT/DELETE | `/api/dst/recipes/{recipe_id}`       | JWT     | Read / update / delete (delete also removes the produced raster + layer) |
+| POST   | `/api/dst/recipes/{recipe_id}/validate`      | JWT     | Validate the expression and inputs             |
+| POST   | `/api/dst/recipes/{recipe_id}/run`           | JWT     | `202` — compute the output raster and register it as a layer |
+| POST   | `/api/dst/recipes/{recipe_id}/regenerate_metadata` | JWT | Refresh the catalogue record                 |
+| GET    | `/api/dst/pixel/{layer_id}?lon=&lat=`        | API key | Per-pixel input breakdown for the public map popup |
+
+### Administrative divisions
+
+Boundary layers: GeoJSON, zipped Shapefile, GeoPackage or KML/KMZ,
+reprojected to WGS 84 on upload (upload capped at 1 GB).
+
+| Method | Path                                    | Auth      | Description                                  |
+| ------ | --------------------------------------- | --------- | -------------------------------------------- |
+| GET    | `/api/admin-divisions`                  | API key   | Published division layers + symbology (map view) |
+| GET    | `/api/admin-divisions/{id}/geojson`     | API key   | FeatureCollection of one published layer     |
+| GET    | `/api/admin-divisions/manage`           | JWT-admin | All layers, for the admin panel              |
+| POST   | `/api/admin-divisions/upload`           | JWT-admin | Upload a polygon layer                       |
+| PATCH  | `/api/admin-divisions/{division_id}`    | JWT-admin | Rename / reorder / restyle / publish-toggle  |
+| DELETE | `/api/admin-divisions/{division_id}`    | JWT-admin | Delete the layer and its features            |
+
+### LIMS connections
+
+Laboratory information systems feeding the ETL. Managing connections is
+admin-only; any signed-in user can fetch.
+
+| Method | Path                                        | Auth      | Description                                 |
+| ------ | ------------------------------------------- | --------- | -------------------------------------------- |
+| GET    | `/api/lims/connections`                     | JWT       | List connections                             |
+| POST / PUT / DELETE | `/api/lims/connections[/{id}]`  | JWT-admin | Create / update / delete                     |
+| POST   | `/api/lims/connections/{id}/test`           | JWT-admin | Connectivity test                            |
+| POST   | `/api/lims/connections/{id}/fetch`          | JWT       | Fetch released samples into an ETL staging dataset |
+
+### Sampling design
+
+SoilFER three-stage cell-stratified sampling designs, generated in the
+background with a live run log. All admin-only except the public listing.
+
+| Method | Path                                          | Auth      | Description                                   |
+| ------ | --------------------------------------------- | --------- | ---------------------------------------------- |
+| GET    | `/api/sampling/sources`                       | JWT-admin | Available covariate sources                    |
+| POST   | `/api/sampling/designs`                       | JWT-admin | `202` — create a design and run it in the background |
+| GET    | `/api/sampling/designs[/{design_id}]`         | JWT-admin | List / detail (status, log, features)          |
+| GET    | `/api/sampling/designs/{id}/export?format=&kind=` | JWT-admin | Export `point`, `psu` or `ssu` features     |
+| PATCH  | `/api/sampling/designs/{design_id}`           | JWT-admin | Publish / Active / symbology — same semantics as other layer tables |
+| DELETE | `/api/sampling/designs/{design_id}`           | JWT-admin | Delete                                         |
+| GET    | `/api/sampling/public`                        | API key   | Published designs for the map viewer           |
+
+### Website (public site CMS)
+
+Content of the public pages — landing, About, People, Contact, the
+Statistics and Catalogue switches, header/footer and the map view — edited
+from the Website tab. Content is **single-language**: it is shown exactly
+as entered. Flow is draft → publish, with **one published copy** (no
+version history); saving a page that is already live republishes it.
+
+| Method | Path                | Auth      | Description                                     |
+| ------ | ------------------- | --------- | ------------------------------------------------ |
+| GET    | `/api/site`         | API key   | Published content + enabled flags + instance language |
+| GET    | `/api/site/preview` | JWT-admin | The draft rendered exactly as publish would render it |
+| GET/PUT| `/api/site/draft`   | JWT-admin | Read / save the draft                            |
+| POST   | `/api/site/publish` | JWT-admin | Render (Markdown → sanitised HTML) and set live  |
+| POST   | `/api/site/media`   | JWT-admin | Image upload — re-encoded with Pillow, size and dimension caps, content-hash filename |
+
+### Software updates
+
+| Method | Path                      | Auth      | Description                                        |
+| ------ | ------------------------- | --------- | --------------------------------------------------- |
+| GET    | `/api/admin/version`      | JWT-admin | The running build's version stamp (no network)      |
+| GET    | `/api/admin/update-check` | JWT-admin | Compare the running build against the repo branch on GitHub (read-only) |
 
 ### GloSIS Federation
 
@@ -285,6 +416,12 @@ Admin-only configuration in `sis-api`; the federation data itself lives on `sis-
 | POST   | `/api/glosis/enable`                | Set `GLOSIS_FEDERATION_ENABLED=true`; mint a singleton token if none exists, reactivate if inactive |
 | POST   | `/api/glosis/disable`               | Set the setting to false — token row kept so re-enabling reuses it |
 | POST   | `/api/glosis/disable_and_delete`    | Disable AND delete the token (audit rows referencing it have their `api_client_id` nulled) |
+| POST   | `/api/glosis/hub/connect`           | One-click **Connect**: enable federation, mint the token and register this node with the GloSIS Discovery Hub (address in the `GLOSIS_HUB_URL` setting) |
+| GET    | `/api/glosis/hub/status`            | Live hub-side status (pending / connected, record and property counts) |
+
+The panel's **Connect** / **Disconnect** buttons drive the hub endpoints;
+the manual enable-and-copy-the-token flow they replaced remains available
+through the first four endpoints.
 
 #### Data endpoints (sis-api-glosis)
 
@@ -333,7 +470,17 @@ Run by `POST /api/etl/datasets/{table_name}/validate`. Per CSV column:
 
 ## Database schema
 
-Major tables touched by the API. Full schema lives in `sis-database/sis-database_latest_with_codelist.sql`.
+Major tables touched by the API. The full schema is the seed dump
+`sis-database/sis-database_latest_with_codelist.sql` **plus** the numbered
+migrations in `sis-database/migrations/` (applied in order by `deploy.sh`
+and `update.sh`; `api.schema_migration` is the ledger). The entity–
+relationship diagram (`sis-database/Entity_Relationship_Diagram.png`) shows
+the ISO 28258 core; tables added since are defined in the migrations:
+
+- `api.admin_division` / `api.admin_division_feature` — boundary layers
+- `api.lims_connection` — laboratory (LIMS) connections
+- `api.sampling_design` / `api.sampling_design_feature` — sampling designs
+- `api.site_draft` / `api.site_published` — website CMS (draft + the single published copy)
 
 ### `api.user`
 
@@ -464,4 +611,4 @@ Still **open by design** (parked):
 
 ---
 
-**Document version**: 2.0 — matches current code.
+**Document version**: 2.1 (2026-11-11) — matches current code.

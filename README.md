@@ -4,13 +4,19 @@ A spatial data infrastructure for soils, designed to be deployed as a node of
 the **GloSIS Federation**. Each instance hosts the soil data of one country or
 organisation and exposes:
 
-- a public **Web Mapping** application (OpenLayers) for viewing rasters,
-  soil profiles and administrative division boundaries on a map;
-- an **Admin Panel** for settings, users, projects, soil-profile ETL
-  (CSV upload → validate → ingest → prune), raster upload, a raster
-  calculator (DST) and administrative division boundary layers
-  (GeoJSON / zipped Shapefile / GeoPackage, reprojected to WGS 84 on
-  the fly);
+- a public **website** (landing page, About / People / Contact pages,
+  a Statistics page and the metadata catalogue), edited from the admin
+  **Website** tab and published page by page — content is shown exactly
+  as entered, in the instance's configured language;
+- a public **Web Mapping** application (OpenLayers, at `/map`) for viewing
+  rasters, soil profiles, sampling designs and administrative division
+  boundaries on a map;
+- an **Admin Panel** (at `/admin`) for users, projects, soil-profile ETL
+  (CSV upload → validate → ingest → prune), laboratory (LIMS) imports,
+  raster upload, a raster calculator (DST), administrative division
+  boundary layers (GeoJSON / zipped Shapefile / GeoPackage / KML,
+  reprojected to WGS 84 on the fly), SoilFER three-stage sampling designs,
+  and the website content and settings;
 - a **REST API** (FastAPI) for soil profiles, observations, layers, settings
   and admin operations;
 - an **OGC API Records / CSW** metadata catalogue (pyCSW) for the rasters;
@@ -166,7 +172,8 @@ When the script finishes you'll see a banner like:
 ============================================================
 ```
 
-Visit `http://localhost/` to see the SPA.
+Visit `http://localhost/` to see the public site — the map lives at
+`/map`, the admin panel at `/admin`.
 
 ### Subsequent deploys (same node)
 
@@ -300,8 +307,9 @@ export ORG_LOGO_URL=https://example.org/logo.png
 ./deploy.sh
 ```
 
-Everything else (title, map position, zoom, base map, logo) can be changed
-later from **Administration → Settings**.
+Everything else (title, language, logo, theme colours, map position, zoom,
+base map) can be changed later from the **Website** tab — **General** and
+**Map** sub-tabs.
 
 ---
 

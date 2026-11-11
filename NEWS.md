@@ -5,6 +5,53 @@ first. Entries describe what changed for people using or administering an
 instance; implementation detail stays in the git history. Dates are the day
 the change landed on `main`.
 
+## November 2026
+
+### 2026-11-10 → 11-11 — Landing page redesign and single-language content
+The public landing page was rebuilt: a full-width hero over the uploaded
+image, quick-link cards (map, catalogue, statistics), an About band, and a
+shared footer that now closes every public page. The header shows the
+current language code on the globe button, with a consistent control order
+(sign-in, theme, language). The public Dashboard page was renamed
+**Statistics** in all six interface languages (the `/dashboard` address is
+unchanged), and the Sampling design tab reads **Pontos de amostragem** in
+Portuguese and **Puntos de muestreo** in Spanish. Website content became
+**single-language**: text is published exactly as entered — an address or
+a phone number is content, not something to translate — and existing
+per-language values are flattened to the instance language on the next
+publish. Public pages now open in the instance's configured language
+rather than defaulting to English, and selected text is readable in dark
+mode.
+
+### 2026-11-10 — Website tab: pages, per-page publishing, unified header
+The Website admin tab grew into a full site editor with a sub-tab per
+page: Home, About, People (team cards with photos and per-person publish),
+Contact (structured address / e-mail / phone with obfuscation, plus a
+Markdown body), Catalogue, Statistics and Map — each with its own Preview
+and Publish/Unpublish (the Map page's publish toggles its header link).
+Saving a page that is already live republishes it immediately; page order
+is configurable and the top navigation follows it, with unpublished pages
+simply absent. Version history was replaced by a single published copy
+(migration 036). The admin panel moved to `/admin` (no map flash,
+back-button support), and instance settings — title, language, logo,
+colours, map position / zoom / base map — moved from Administration to the
+Website tab's General and Map sub-tabs, where a view editor frames exactly
+the extent the public map will show and mirrors latitude / longitude /
+zoom live as the map moves. One shared header now spans the landing page,
+sub-pages, Statistics and the map.
+
+### 2026-11-09 → 11-10 — Sampling design (SoilFER three-stage CSC)
+A new admin tab generates SoilFER three-stage cell-stratified sampling
+designs (migrations 034–035): draw the region of interest as polygons on
+the map (with erase; an equal-area LAEA projection replaces UTM), covariates
+are fetched ephemerally — nothing is stored beyond a per-unit snapshot
+shown in map popups — and a live run log reports progress and failures.
+Finished designs are publishable map layers with a per-layer symbology
+editor (targets, replacements, PSU and SSU cells), clickable features,
+editable names, an auto-generated abstract, and point / cell export. The
+method follows the SoilFER sampling-design implementation
+(github.com/un-fao/SoilFER), linked from the tab.
+
 ## October 2026
 
 ### 2026-10-28 — Public landing page (issue #13, v1)
