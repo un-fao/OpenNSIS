@@ -107,7 +107,7 @@
   "a.tab.dst": "Calculadora de rasters",
   "a.tab.dashboard": "Resumo",
   "a.tab.website": "Sítio web",
-  "a.tab.sampling": "Desenho de amostragem",
+  "a.tab.sampling": "Pontos de amostragem",
   "a.settings": "Definições",
   "a.key": "Chave",
   "a.value": "Valor",
@@ -617,7 +617,7 @@
   "a.site.ppl.email": "Correio",
   "a.site.ppl.phone": "Telefone",
   "a.site.draftSaved": "Guardado.",
-  "a.sd.title": "Desenho de amostragem",
+  "a.sd.title": "Pontos de amostragem",
   "a.sd.intro": "Gere um desenho de amostragem de solos com o método SoilFER de três etapas: a cobertura do espaço de covariáveis selecciona unidades primárias no país, depois unidades secundárias dentro delas, e pontos aleatórios com substituições ordenadas dentro destas. As covariáveis são descarregadas das fontes indicadas durante a execução e descartadas depois; conservam-se o desenho e o seu manifesto completo (fontes, licenças, parâmetros, semente, qualidade).",
   "a.sd.sources": "Fontes de dados",
   "a.sd.required": "obrigatória",
@@ -671,7 +671,7 @@
   "a.sd.renameTip": "Clique para renomear",
   "a.sd.log": "Registo",
   "a.sd.deleteConfirm": "Eliminar este desenho e todos os seus pontos?",
-  "groups.sampling": "Desenhos de amostragem",
+  "groups.sampling": "Pontos de amostragem",
   "sd.target": "Ponto alvo",
   "sd.replacement": "Substituição"
 }
