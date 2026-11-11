@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpenNSIS — Open National Soil Information System</title>
-<meta name="description" content="OpenNSIS is an open-source national soil information system: web mapping, soil-profile ETL, a metadata catalogue and GloSIS federation endpoints, deployed with one command.">
+<meta name="description" content="OpenNSIS is an open-source national soil information system: a public website with web mapping, catalogue and statistics, soil-profile ETL, sampling designs and GloSIS federation endpoints, deployed with one command.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌱</text></svg>">
 <style>
   :root {
@@ -108,8 +108,9 @@
   <div class="wrap hero-inner">
     <h1>🌱 OpenNSIS</h1>
     <p class="sub">The <strong>Open National Soil Information System</strong> — open-source
-    infrastructure for a country's soil data: maps, profiles, metadata and
-    federation, deployed with one command.</p>
+    infrastructure for a country's soil data: a public website with maps,
+    profiles, catalogue and statistics, plus metadata and federation,
+    deployed with one command.</p>
     <div class="cta">
       <a class="btn primary" href="https://github.com/un-fao/OpenNSIS">View on GitHub</a>
       <a class="btn ghost" href="#quick-start">Quick start</a>
@@ -130,13 +131,24 @@
       <div class="card"><span class="ic">🗺️</span>
         <h3>Web mapping</h3>
         <p>A public OpenLayers viewer for soil property rasters (Cloud-Optimised
-        GeoTIFFs via MapServer WMS), soil profiles with their observations, and
-        administrative boundary layers.</p></div>
+        GeoTIFFs via MapServer WMS), soil profiles with their observations,
+        sampling designs and administrative boundary layers.</p></div>
+      <div class="card"><span class="ic">🏠</span>
+        <h3>Public website</h3>
+        <p>Each instance is a small national site: an editable landing page,
+        About / People / Contact pages and a statistics page with live charts —
+        published page by page from the admin Website tab, content shown
+        exactly as entered.</p></div>
       <div class="card"><span class="ic">📥</span>
         <h3>Soil-profile ETL</h3>
         <p>Upload field CSVs, map columns to the standard model, validate against
         rules and country bounds, then ingest — with a full validation report and
         one-click prune.</p></div>
+      <div class="card"><span class="ic">🧪</span>
+        <h3>Laboratory (LIMS) imports</h3>
+        <p>Fetch released samples straight from a laboratory information system
+        into the ETL — re-fetching updates rather than fails, and measurement
+        quality (uncertainty, LOD/LOQ) carries through.</p></div>
       <div class="card"><span class="ic">🧮</span>
         <h3>Raster calculator</h3>
         <p>Build suitability maps from published rasters with threshold-based
@@ -144,7 +156,14 @@
       <div class="card"><span class="ic">📚</span>
         <h3>Metadata catalogue</h3>
         <p>Every published map is catalogued automatically as ISO 19115/19139
-        metadata, served by pyCSW — harvestable by any standard catalogue.</p></div>
+        metadata in pyCSW — harvestable by any standard catalogue, and browsable
+        on a public catalogue page with search, year and keyword filters and
+        full-record popups.</p></div>
+      <div class="card"><span class="ic">🎯</span>
+        <h3>Sampling designs</h3>
+        <p>SoilFER three-stage cell-stratified designs: draw the region on the
+        map, covariates are fetched on the fly, and the finished design publishes
+        as a map layer with symbology and point exports.</p></div>
       <div class="card"><span class="ic">🌐</span>
         <h3>GloSIS federation</h3>
         <p>Purpose-built endpoints connect the instance to the Global Soil
