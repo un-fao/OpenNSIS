@@ -83,7 +83,7 @@ function card(r) {
   const bullets = [typeLabel, ...r.formats].filter(Boolean)
     .map((x) => `<li>${esc(x)}</li>`).join('');
   const chips = r.keywords.slice(0, 8)
-    .map((k) => `<span class="cat-chip">${esc(k)}</span>`).join('');
+    .map((k) => `<span class="cat-chip${selKws.has(k) ? ' on' : ''}">${esc(k)}</span>`).join('');
   const attach = [
     r.download && `<a href="${esc(r.download.href)}">${FILE_GLYPH} ${esc(r.download.name)}</a>`,
     r.wms && `<a href="${esc(r.wms)}" target="_blank" rel="noopener">${t('site.cat.wms')}</a>`,
@@ -113,36 +113,53 @@ function card(r) {
   </article>`;
 }
 
+// Multi-select filters: lit pills within a row combine as OR, the two rows
+// and the text search combine as AND.
+const selYears = new Set();
+const selKws = new Set();
+
 function render() {
   const list = document.getElementById('cat-list');
   const empty = document.getElementById('cat-empty');
   const q = document.getElementById('cat-search').value.trim().toLowerCase();
-  const year = document.getElementById('cat-year').value;
-  const kw = document.getElementById('cat-kw').value;
   const shown = records.filter((r) =>
     (!q || r.text.includes(q))
-    && (!year || r.year === year)
-    && (!kw || r.keywords.includes(kw)));
+    && (!selYears.size || selYears.has(r.year))
+    && (!selKws.size || r.keywords.some((k) => selKws.has(k))));
   document.getElementById('cat-count').textContent = t('site.cat.count', { n: shown.length });
   list.innerHTML = shown.map(card).join('');
   empty.style.display = shown.length ? 'none' : '';
   empty.textContent = t('site.cat.empty');
 }
 
-/** Year and keyword dropdowns, built from what the records actually carry. */
+function syncKwPills() {
+  document.querySelectorAll('#cat-filter-kws .cat-pill')
+    .forEach((b) => b.classList.toggle('on', selKws.has(b.dataset.v)));
+}
+
+/** Year and keyword pill rows, built from what the records actually carry. */
 function fillFilters() {
   const years = [...new Set(records.map((r) => r.year).filter(Boolean))]
     .sort((a, b) => b.localeCompare(a));
   const kws = [...new Set(records.flatMap((r) => r.keywords))]
     .sort((a, b) => a.localeCompare(b));
-  const fill = (id, label, values) => {
-    const sel = document.getElementById(id);
-    sel.innerHTML = `<option value="">${esc(label)}</option>`
-      + values.map((v) => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
-    sel.addEventListener('change', render);
+  const fill = (id, label, values, set) => {
+    const row = document.getElementById(id);
+    row.innerHTML = `<span class="cat-filter-lbl">${esc(label)}:</span>`
+      + values.map((v) =>
+        `<button type="button" class="cat-pill" data-v="${esc(v)}" aria-pressed="false">${esc(v)}</button>`).join('');
+    row.addEventListener('click', (ev) => {
+      const b = ev.target.closest('.cat-pill');
+      if (!b) return;
+      const v = b.dataset.v;
+      if (set.has(v)) set.delete(v); else set.add(v);
+      b.classList.toggle('on', set.has(v));
+      b.setAttribute('aria-pressed', String(set.has(v)));
+      render();
+    });
   };
-  fill('cat-year', t('site.cat.anyYear'), years);
-  fill('cat-kw', t('site.cat.anyKeyword'), kws);
+  fill('cat-filter-years', t('site.cat.year'), years, selYears);
+  fill('cat-filter-kws', t('site.cat.keywords'), kws, selKws);
 }
 
 async function init() {
@@ -174,11 +191,12 @@ async function init() {
       if (r) showMetadataPopup(`/api/raster/metadata/${encodeURIComponent(r.id)}`, r.meta);
       return;
     }
-    // A keyword chip sets the keyword filter.
+    // A keyword chip toggles that keyword in the filter selection.
     const chip = ev.target.closest('.cat-chip');
     if (chip) {
-      const sel = document.getElementById('cat-kw');
-      sel.value = sel.value === chip.textContent ? '' : chip.textContent;
+      const v = chip.textContent;
+      if (selKws.has(v)) selKws.delete(v); else selKws.add(v);
+      syncKwPills();
       render();
     }
   });

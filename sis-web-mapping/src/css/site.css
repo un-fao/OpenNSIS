@@ -205,14 +205,25 @@ a { color: var(--color-primary); }
     --color-success: #2e7d32;
 }
 .cat-toolbar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin: 0 0 18px; }
-#cat-search, .cat-toolbar select {
-    padding: 10px 14px;
+#cat-search {
+    flex: 1 1 260px; max-width: 420px; padding: 10px 14px;
     border: 1px solid var(--color-border); border-radius: 10px;
     background: var(--color-surface); color: var(--color-text); font: inherit;
 }
-#cat-search { flex: 1 1 240px; max-width: 420px; }
-.cat-toolbar select { max-width: 230px; cursor: pointer; }
-#cat-search:focus, .cat-toolbar select:focus { outline: 2px solid var(--color-primary); outline-offset: -1px; }
+#cat-search:focus { outline: 2px solid var(--color-primary); outline-offset: -1px; }
+/* Filter pill rows (multi-select; lit = active). Card keyword chips share
+   the look and toggle the same selection. */
+.cat-filterrow { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 0 0 10px; }
+.cat-filterrow:last-of-type { margin-bottom: 20px; }
+.cat-filter-lbl { font-weight: 700; font-size: 13.5px; color: var(--color-text-muted); margin-right: 3px; }
+.cat-pill {
+    border: none; padding: 4px 13px; border-radius: 999px; font: inherit;
+    font-size: 12.5px; font-weight: 600; cursor: pointer;
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    color: var(--color-primary);
+}
+.cat-pill:hover { background: color-mix(in srgb, var(--color-primary) 22%, transparent); }
+.cat-pill.on, .cat-chip.on { background: var(--color-primary); color: #fff; }
 .cat-count { color: var(--color-text-muted); font-size: 14px; }
 .cat-list { display: flex; flex-direction: column; gap: 14px; }
 .cat-card {
