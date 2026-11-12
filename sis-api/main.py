@@ -7738,6 +7738,155 @@ async def upload_site_media(file: UploadFile = File(...),
     return {"url": f"/media/{name}"}
 
 
+# ==================== News (blog posts on the public website) ====================
+# Posts are rows, not part of the site draft: saving a post takes effect
+# immediately (per-post published flag). The /news header link is toggled
+# separately via the news_published site-content flag.
+
+NEWS_TITLE_MAX = 300
+NEWS_BODY_MAX = 100_000
+NEWS_IMAGES_MAX = 20
+
+
+def _news_render_md(body_md: str) -> str:
+    from markdown_it import MarkdownIt
+    import nh3
+    md = MarkdownIt("commonmark").enable("table")
+    return nh3.clean(md.render(body_md)) if body_md else ""
+
+
+def _news_clean(payload: dict, fallback_author: str) -> dict:
+    title = str(payload.get("title") or "").strip()[:NEWS_TITLE_MAX]
+    if not title:
+        raise HTTPException(status_code=400, detail="Title is required")
+    body_md = str(payload.get("body_md") or "")[:NEWS_BODY_MAX]
+    author = str(payload.get("author") or "").strip()[:120] or fallback_author
+    images = []
+    for u in (payload.get("images") or [])[:NEWS_IMAGES_MAX]:
+        u = str(u or "").strip()[:300]
+        # Only images from this instance's own media store.
+        if u.startswith("/media/") and "/" not in u[len("/media/"):]:
+            images.append(u)
+    post_date = str(payload.get("date") or "").strip()
+    if post_date:
+        from datetime import date as _date
+        try:
+            _date.fromisoformat(post_date)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Date must be YYYY-MM-DD")
+    tags = []
+    for tag in (payload.get("tags") or [])[:10]:
+        tag = str(tag or "").strip().lower()[:40]
+        if tag and tag not in tags:
+            tags.append(tag)
+    return {"title": title, "body_md": body_md,
+            "body_html": _news_render_md(body_md),
+            "images": images, "author": author,
+            "published": bool(payload.get("published")),
+            "date": post_date or None, "tags": tags}
+
+
+def _news_row(row: dict) -> dict:
+    for k in ("created_at", "updated_at", "published_at"):
+        if row.get(k):
+            row[k] = row[k].isoformat()
+    return row
+
+
+@app.get("/api/news")
+async def list_news(api_client: dict = Depends(verify_api_key)):
+    """Published posts, newest first — the public /news page."""
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT post_id, title, body_html, images, author, tags,
+                       COALESCE(published_at, created_at) AS date
+                FROM api.news_post WHERE published
+                ORDER BY COALESCE(published_at, created_at) DESC, post_id DESC
+            """)
+            rows = cur.fetchall()
+    for r in rows:
+        r["date"] = r["date"].isoformat()
+    return {"posts": rows}
+
+
+@app.get("/api/news/manage")
+async def list_news_manage(current_user: dict = Depends(get_current_user)):
+    _require_admin(current_user)
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT post_id, title, body_md, body_html, images, author,
+                       tags, published, created_at, updated_at, published_at
+                FROM api.news_post
+                ORDER BY COALESCE(published_at, created_at) DESC, post_id DESC
+            """)
+            rows = cur.fetchall()
+    return {"posts": [_news_row(r) for r in rows]}
+
+
+@app.post("/api/news", status_code=status.HTTP_201_CREATED)
+async def create_news_post(payload: dict, request: Request,
+                           current_user: dict = Depends(get_current_user)):
+    _require_admin(current_user)
+    p = _news_clean(payload, current_user["user_id"])
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                INSERT INTO api.news_post
+                    (title, body_md, body_html, images, author, tags, published, published_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s,
+                        COALESCE(%s::timestamptz, CASE WHEN %s THEN now() END))
+                RETURNING post_id
+            """, (p["title"], p["body_md"], p["body_html"], json.dumps(p["images"]),
+                  p["author"], json.dumps(p["tags"]), p["published"], p["date"], p["published"]))
+            post_id = cur.fetchone()["post_id"]
+    log_audit(current_user["user_id"], None, "news_post_created",
+              {"post_id": post_id, "title": p["title"]}, get_client_ip(request))
+    return {"post_id": post_id}
+
+
+@app.put("/api/news/{post_id}")
+async def update_news_post(post_id: int, payload: dict, request: Request,
+                           current_user: dict = Depends(get_current_user)):
+    _require_admin(current_user)
+    p = _news_clean(payload, current_user["user_id"])
+    with get_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                UPDATE api.news_post SET
+                    title = %s, body_md = %s, body_html = %s, images = %s,
+                    author = %s, tags = %s, published = %s, updated_at = now(),
+                    published_at = COALESCE(%s::timestamptz,
+                                            CASE WHEN %s THEN COALESCE(published_at, now())
+                                                 ELSE published_at END)
+                WHERE post_id = %s
+                RETURNING post_id
+            """, (p["title"], p["body_md"], p["body_html"], json.dumps(p["images"]),
+                  p["author"], json.dumps(p["tags"]), p["published"], p["date"],
+                  p["published"], post_id))
+            if not cur.fetchone():
+                raise HTTPException(status_code=404, detail="Post not found")
+    log_audit(current_user["user_id"], None, "news_post_updated",
+              {"post_id": post_id, "title": p["title"]}, get_client_ip(request))
+    return {"message": "Saved"}
+
+
+@app.delete("/api/news/{post_id}")
+async def delete_news_post(post_id: int, request: Request,
+                           current_user: dict = Depends(get_current_user)):
+    _require_admin(current_user)
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM api.news_post WHERE post_id = %s RETURNING post_id",
+                        (post_id,))
+            if not cur.fetchone():
+                raise HTTPException(status_code=404, detail="Post not found")
+    log_audit(current_user["user_id"], None, "news_post_deleted",
+              {"post_id": post_id}, get_client_ip(request))
+    return {"message": "Deleted"}
+
+
 # ==================== Sampling design (SoilFER three-stage CSC) ====================
 # Engine in sampling_design.py; covariates are fetched ephemerally at run
 # time and discarded — only the design and its manifest persist.

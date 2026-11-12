@@ -228,6 +228,51 @@ function markup() {
         <button type="button" class="btn btn-sm" id="site-people-add" style="margin-top:var(--sp-2);width:fit-content;justify-self:start;">${t('a.site.ppl.add')}</button>
       </div>
 
+      <div data-sitepage="news" style="display:none;">
+        <div id="news-admin-list" style="display:flex;flex-direction:column;gap:var(--sp-2);max-width:760px;"></div>
+        <button type="button" class="btn btn-sm" id="news-add" style="margin-top:var(--sp-2);width:fit-content;">${t('a.news.add')}</button>
+        <div id="news-editor"
+             style="margin-top:var(--sp-3);display:none;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-3);align-items:start;max-width:760px;border:1px solid var(--color-border);border-radius:8px;padding:var(--sp-3);">
+          <label>${t('a.news.title')}</label>
+          <input type="text" id="news-f-title">
+          <label>${t('a.news.author')}</label>
+          <input type="text" id="news-f-author" style="max-width:320px;">
+          <label>${t('a.news.date')}</label>
+          <input type="text" id="news-f-date" placeholder="YYYY-MM-DD" maxlength="10"
+                 style="max-width:190px;font-family:var(--font-mono,monospace);">
+          <label style="align-self:start;">${t('a.news.tags')}</label>
+          <div>
+            <div id="news-f-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
+            <input type="text" id="news-tag-input" list="news-tags-dl" maxlength="40"
+                   placeholder="${t('a.news.addTag')}" style="max-width:230px;">
+            <datalist id="news-tags-dl"></datalist>
+          </div>
+          <label style="align-self:start;">${t('a.news.body')}</label>
+          <div>
+            <div id="news-toolbar" style="display:flex;gap:6px;margin-bottom:6px;">
+              <button type="button" class="btn btn-sm" data-md="bold" title="**bold**"><b>B</b></button>
+              <button type="button" class="btn btn-sm" data-md="italic" title="*italic*"><i>I</i></button>
+              <button type="button" class="btn btn-sm" data-md="heading" title="## heading">H</button>
+              <button type="button" class="btn btn-sm" data-md="list" title="- list">&bull;</button>
+              <button type="button" class="btn btn-sm" data-md="link" title="[text](url)">&#128279;</button>
+              <button type="button" class="btn btn-sm" data-md="image" title="![image](url)">&#128444;</button>
+              <button type="button" class="btn btn-sm" data-md="image-left" title='![image](url "left")'>
+                <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><rect x="1" y="3" width="7" height="6" rx="1" fill="currentColor"/><g stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="10.5" y1="4.5" x2="15" y2="4.5"/><line x1="10.5" y1="8" x2="15" y2="8"/><line x1="1" y1="12" x2="15" y2="12"/><line x1="1" y1="15" x2="15" y2="15"/></g></svg>
+              </button>
+              <button type="button" class="btn btn-sm" data-md="image-right" title='![image](url "right")'>
+                <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><rect x="8" y="3" width="7" height="6" rx="1" fill="currentColor"/><g stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="1" y1="4.5" x2="5.5" y2="4.5"/><line x1="1" y1="8" x2="5.5" y2="8"/><line x1="1" y1="12" x2="15" y2="12"/><line x1="1" y1="15" x2="15" y2="15"/></g></svg>
+              </button>
+            </div>
+            <textarea id="news-f-body" rows="12" style="width:100%;font-family:var(--font-mono,monospace);font-size:var(--fs-sm);"></textarea>
+          </div>
+          <span></span>
+          <div style="display:flex;gap:var(--sp-2);">
+            <button type="button" class="btn btn-primary btn-sm" id="news-post-save">${t('a.news.save')}</button>
+            <button type="button" class="btn btn-sm" id="news-post-cancel">${t('a.news.cancel')}</button>
+          </div>
+        </div>
+      </div>
+
       <div style="display:flex;align-items:center;gap:var(--sp-3);margin-top:var(--sp-4);">
         <button type="button" class="btn btn-secondary" id="site-save">${t('a.site.save')}</button>
         <button type="button" class="btn btn-secondary" id="site-preview">${t('a.site.previewBtn')}</button>
@@ -247,6 +292,7 @@ const FEATURE_FLAGS = {
   catalogue: 'catalogue_published',
   dashboard: 'dashboard_published',
   map: 'map_published',
+  news: 'news_published',
 };
 
 function pageIsPublished(slug) {
@@ -254,13 +300,15 @@ function pageIsPublished(slug) {
     const hp = state.content.home_published;
     return typeof hp === 'boolean' ? hp : !!state.enabled;
   }
+  // News is opt-in: its header link only appears once explicitly published.
+  if (slug === 'news') return state.content.news_published === true;
   if (FEATURE_FLAGS[slug]) return state.content[FEATURE_FLAGS[slug]] !== false;
   const p = ((state.content.pages || {})[slug]) || {};
   return p.published !== false;
 }
 
 // Website sub-tabs follow the admin-chosen page order (General first).
-const TAB_SLUGS = ['home', 'about', 'map', 'people', 'contact', 'catalogue', 'dashboard'];
+const TAB_SLUGS = ['home', 'about', 'map', 'people', 'contact', 'catalogue', 'dashboard', 'news'];
 
 function renderPagesBar() {
   const bar = document.getElementById('site-pages-bar');
@@ -321,7 +369,8 @@ function updatePublishBtn() {
   // header link.
   pubBtn.style.display = state.page === 'general' ? 'none' : '';
   if (saveBtn) {
-    saveBtn.style.display = (state.page === 'catalogue' || state.page === 'dashboard') ? 'none' : '';
+    saveBtn.style.display = (state.page === 'catalogue' || state.page === 'dashboard'
+      || state.page === 'news') ? 'none' : '';
   }
   pubBtn.textContent = pageIsPublished(state.page) ? t('a.site.unpublish') : t('a.site.publish');
 }
@@ -403,6 +452,230 @@ async function uploadInto(inputId) {
   picker.click();
 }
 
+// ---------- News posts (blog) ----------
+// Posts are independent of the site draft: saving one takes effect
+// immediately (its own published flag). The sub-tab's Publish button only
+// toggles the /news header link (news_published).
+const news = { posts: [], editing: null, images: [], tags: [] };
+
+async function loadNewsPosts() {
+  try {
+    news.posts = ((await api.getNewsManage()) || {}).posts || [];
+  } catch (err) { news.posts = []; }
+  renderNewsList();
+}
+
+function renderNewsList() {
+  const list = document.getElementById('news-admin-list');
+  if (!list) return;
+  if (!news.posts.length) {
+    list.innerHTML = `<span style="color:var(--color-text-muted);font-size:var(--fs-sm);">${t('a.news.empty')}</span>`;
+    return;
+  }
+  list.innerHTML = news.posts.map((p) => `
+    <div class="news-admin-row" data-id="${p.post_id}" style="border:1px solid var(--color-border);border-radius:6px;padding:8px 12px;">
+      <div class="news-row-head" style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer;">
+        <div style="flex:1;min-width:0;">
+          <strong>${e(p.title)}</strong>
+          <div style="font-size:var(--fs-sm);color:var(--color-text-muted);">
+            ${e(p.author)} · ${e((p.published_at || p.created_at || '').slice(0, 10))} ·
+            ${p.published ? t('a.news.published') : t('a.news.draft')}${(p.tags || []).length ? ' · ' + (p.tags || []).map(e).join(', ') : ''}</div>
+        </div>
+        <button type="button" class="btn btn-sm news-edit" data-id="${p.post_id}">${t('a.news.edit')}</button>
+        <button type="button" class="btn btn-sm news-pub" data-id="${p.post_id}">${p.published ? t('a.site.unpublish') : t('a.site.publish')}</button>
+        <button type="button" class="btn btn-sm news-del" data-id="${p.post_id}">${t('a.news.delete')}</button>
+      </div>
+      <div class="news-row-body" hidden
+           style="margin-top:8px;border-top:1px solid var(--color-border);padding-top:10px;font-size:var(--fs-sm);line-height:1.55;">
+        ${p.body_html || ''}
+        ${(p.images || []).length ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">${(p.images || []).map((u) => `<img src="${e(u)}" alt="" style="width:92px;height:68px;object-fit:cover;border-radius:4px;border:1px solid var(--color-border);">`).join('')}</div>` : ''}
+      </div>
+    </div>`).join('');
+  // Pressing a row expands its content; pressing again collapses it.
+  list.querySelectorAll('.news-row-head').forEach((h) => h.addEventListener('click', (ev) => {
+    if (ev.target.closest('button')) return;
+    const body = h.parentElement.querySelector('.news-row-body');
+    body.hidden = !body.hidden;
+  }));
+  list.querySelectorAll('.news-edit').forEach((b) => b.addEventListener('click', () => {
+    openNewsEditor(news.posts.find((p) => p.post_id === Number(b.dataset.id)));
+  }));
+  list.querySelectorAll('.news-pub').forEach((b) => b.addEventListener('click', async () => {
+    const p = news.posts.find((x) => x.post_id === Number(b.dataset.id));
+    if (!p) return;
+    try {
+      // Flip only the published flag; the explicit date keeps the post's
+      // display date stable across unpublish/republish.
+      await api.updateNewsPost(p.post_id, {
+        title: p.title,
+        author: p.author,
+        date: (p.published_at || p.created_at || '').slice(0, 10) || null,
+        body_md: p.body_md,
+        images: p.images || [],
+        published: !p.published,
+      });
+      await loadNewsPosts();
+    } catch (err) { document.getElementById('site-status').textContent = err.message; }
+  }));
+  list.querySelectorAll('.news-del').forEach((b) => b.addEventListener('click', async () => {
+    if (!window.confirm(t('a.news.confirmDelete'))) return;
+    try {
+      await api.deleteNewsPost(Number(b.dataset.id));
+      await loadNewsPosts();
+    } catch (err) { document.getElementById('site-status').textContent = err.message; }
+  }));
+  markNewsEditing();
+}
+
+// Highlight the row whose post is open in the editor; cleared whenever the
+// editor is hidden (Cancel, Save, or toggling it closed).
+function newsEditorOpen() {
+  const ed = document.getElementById('news-editor');
+  return !!ed && ed.style.display !== 'none';
+}
+
+function closeNewsEditor() {
+  const ed = document.getElementById('news-editor');
+  if (ed) ed.style.display = 'none';
+  news.openKey = null;
+  markNewsEditing();
+}
+
+function markNewsEditing() {
+  const active = newsEditorOpen() ? news.openKey : null;
+  document.querySelectorAll('#news-admin-list .news-admin-row').forEach((row) => {
+    const on = Number(row.dataset.id) === active;
+    row.style.borderColor = on ? 'var(--color-primary)' : '';
+    const btn = row.querySelector('.news-edit');
+    if (btn) btn.classList.toggle('btn-primary', on);
+  });
+}
+
+// ---------- tags: lowercase chips with suggestions from existing posts ----
+function renderNewsTags() {
+  const wrap = document.getElementById('news-f-tags');
+  if (!wrap) return;
+  wrap.innerHTML = news.tags.map((tag, i) => `
+    <span class="btn btn-sm" style="display:inline-flex;align-items:center;gap:6px;cursor:default;">
+      ${e(tag)}<button type="button" class="news-tag-rm" data-i="${i}"
+        style="border:none;background:none;cursor:pointer;color:inherit;padding:0;line-height:1;">&times;</button>
+    </span>`).join('');
+  wrap.querySelectorAll('.news-tag-rm').forEach((b) => b.addEventListener('click', () => {
+    news.tags.splice(Number(b.dataset.i), 1);
+    renderNewsTags();
+    fillTagSuggestions();
+  }));
+}
+
+function fillTagSuggestions() {
+  const dl = document.getElementById('news-tags-dl');
+  if (!dl) return;
+  const all = [...new Set(news.posts.flatMap((p) => p.tags || []))]
+    .filter((tag) => !news.tags.includes(tag)).sort();
+  dl.innerHTML = all.map((tag) => `<option value="${e(tag)}">`).join('');
+}
+
+function addNewsTag(raw) {
+  const tag = String(raw || '').trim().toLowerCase().replace(/,+$/, '').trim();
+  if (!tag || news.tags.includes(tag) || news.tags.length >= 10) return;
+  news.tags.push(tag);
+  renderNewsTags();
+  fillTagSuggestions();
+}
+
+function openNewsEditor(p) {
+  const ed = document.getElementById('news-editor');
+  const key = p ? p.post_id : 'new';
+  // Pressing the same Edit (or New post) again collapses the editor.
+  if (newsEditorOpen() && news.openKey === key) {
+    closeNewsEditor();
+    return;
+  }
+  news.openKey = key;
+  news.editing = p ? p.post_id : null;
+  // Legacy gallery images (posts made before inline images became the
+  // norm) are carried through saves untouched; pictures are added inline
+  // from the body toolbar.
+  news.images = p ? [...(p.images || [])] : [];
+  news.tags = p ? [...(p.tags || [])] : [];
+  document.getElementById('news-tag-input').value = '';
+  renderNewsTags();
+  fillTagSuggestions();
+  document.getElementById('news-f-title').value = p ? p.title : '';
+  document.getElementById('news-f-author').value = p ? p.author : '';
+  document.getElementById('news-f-date').value = p
+    ? (p.published_at || p.created_at || '').slice(0, 10)
+    : new Date().toISOString().slice(0, 10);
+  document.getElementById('news-f-body').value = p ? p.body_md : '';
+  // Publish state is driven by the row's Publish/Unpublish button; Save
+  // keeps the current state (new posts go live on save).
+  news.published = p ? !!p.published : true;
+  ed.style.display = 'grid';
+  markNewsEditing();
+  ed.scrollIntoView({ block: 'nearest' });
+}
+
+// Minimal Markdown toolbar: wraps the textarea selection.
+function mdWrap(kind) {
+  const ta = document.getElementById('news-f-body');
+  const s = ta.selectionStart;
+  const sel = ta.value.slice(s, ta.selectionEnd);
+  const rep = {
+    bold: `**${sel || 'text'}**`,
+    italic: `*${sel || 'text'}*`,
+    heading: `\n## ${sel || 'Heading'}\n`,
+    list: `\n${(sel || 'item').split('\n').map((l) => `- ${l}`).join('\n')}\n`,
+    link: `[${sel || 'text'}](https://)`,
+  }[kind];
+  ta.setRangeText(rep, s, ta.selectionEnd, 'end');
+  ta.focus();
+}
+
+// Toolbar image buttons: upload a picture and insert it inline at the
+// cursor. Full width by default; "left"/"right" become one-third floated
+// figures with the text wrapping around them (via the Markdown title).
+function insertInlineImage(align) {
+  const picker = document.createElement('input');
+  picker.type = 'file';
+  picker.accept = 'image/*';
+  picker.addEventListener('change', async () => {
+    if (!picker.files[0]) return;
+    const status = document.getElementById('site-status');
+    status.textContent = t('a.st.uploading');
+    try {
+      const r = await api.uploadSiteMedia(picker.files[0]);
+      status.textContent = '';
+      const ta = document.getElementById('news-f-body');
+      const title = align ? ` "${align}"` : '';
+      ta.setRangeText(`\n![](${r.url}${title})\n`, ta.selectionStart, ta.selectionEnd, 'end');
+      ta.focus();
+    } catch (err) { status.textContent = err.message; }
+  });
+  picker.click();
+}
+
+async function saveNewsPost() {
+  const status = document.getElementById('site-status');
+  addNewsTag(document.getElementById('news-tag-input').value);
+  document.getElementById('news-tag-input').value = '';
+  const post = {
+    title: document.getElementById('news-f-title').value.trim(),
+    author: document.getElementById('news-f-author').value.trim(),
+    date: document.getElementById('news-f-date').value || null,
+    body_md: document.getElementById('news-f-body').value,
+    images: news.images,
+    tags: news.tags,
+    published: news.published,
+  };
+  try {
+    if (news.editing) await api.updateNewsPost(news.editing, post);
+    else await api.createNewsPost(post);
+    closeNewsEditor();
+    status.textContent = t('a.news.saved');
+    await loadNewsPosts();
+  } catch (err) { status.textContent = err.message; }
+}
+
 export async function mountSiteAdmin() {
   const root = document.getElementById('site-admin-root');
   if (!root) return;
@@ -418,6 +691,30 @@ export async function mountSiteAdmin() {
     });
     document.getElementById('site-logo-upload').addEventListener('click', () => uploadInto('site-logo-url'));
     document.getElementById('site-hero-upload').addEventListener('click', () => uploadInto('site-hero-image'));
+    document.getElementById('news-add').addEventListener('click', () => openNewsEditor(null));
+    document.getElementById('news-post-save').addEventListener('click', saveNewsPost);
+    document.getElementById('news-post-cancel').addEventListener('click', closeNewsEditor);
+    const tagInput = document.getElementById('news-tag-input');
+    tagInput.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === ',') {
+        ev.preventDefault();
+        addNewsTag(tagInput.value);
+        tagInput.value = '';
+      }
+    });
+    tagInput.addEventListener('change', () => {
+      // Fires when a datalist suggestion is picked.
+      addNewsTag(tagInput.value);
+      tagInput.value = '';
+    });
+    document.querySelectorAll('#news-toolbar [data-md]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const kind = b.dataset.md;
+        if (kind === 'image') insertInlineImage('');
+        else if (kind === 'image-left') insertInlineImage('left');
+        else if (kind === 'image-right') insertInlineImage('right');
+        else mdWrap(kind);
+      }));
     document.getElementById('site-color-primary').addEventListener('input', checkContrast);
     document.getElementById('site-preview').addEventListener('click', async () => {
       const status = document.getElementById('site-status');
@@ -425,6 +722,7 @@ export async function mountSiteAdmin() {
       if (state.page === 'catalogue') { window.open('/catalogue', '_blank', 'noopener'); return; }
       if (state.page === 'dashboard') { window.open('/dashboard', '_blank', 'noopener'); return; }
       if (state.page === 'map') { window.open('/map', '_blank', 'noopener'); return; }
+      if (state.page === 'news') { window.open('/news', '_blank', 'noopener'); return; }
       readForm();
       try {
         await api.saveSiteDraft(state.content);
@@ -489,4 +787,5 @@ export async function mountSiteAdmin() {
   state.content = d.content || {};
   state.enabled = !!d.enabled;
   fillForm();
+  loadNewsPosts();
 }

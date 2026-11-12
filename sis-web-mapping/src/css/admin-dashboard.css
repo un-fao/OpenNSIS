@@ -1320,3 +1320,13 @@ input:checked + .toggle-slider:before {
 
 /* Tables breathe */
 .admin-table tbody tr:hover { box-shadow: inset 3px 0 0 var(--color-primary); }
+
+/* Website → News: images inside the expanded row preview stay contained
+   (inline Markdown images carry no size of their own). */
+#news-admin-list .news-row-body img {
+    max-width: min(440px, 100%);
+    height: auto;
+    border-radius: 6px;
+    display: block;
+    margin: 8px 0;
+}

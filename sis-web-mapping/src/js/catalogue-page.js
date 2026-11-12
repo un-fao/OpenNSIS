@@ -118,6 +118,36 @@ function card(r) {
 const selYears = new Set();
 const selKws = new Set();
 
+// Wrap occurrences of the search string in <mark>, walking only text
+// nodes so the rendered card markup is never re-parsed.
+function highlight(q) {
+  if (!q) return;
+  const needle = q.toLowerCase();
+  document.querySelectorAll('.cat-card').forEach((cardEl) => {
+    const walker = document.createTreeWalker(cardEl, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach((node) => {
+      const text = node.nodeValue;
+      const lower = text.toLowerCase();
+      let i = lower.indexOf(needle);
+      if (i < 0) return;
+      const frag = document.createDocumentFragment();
+      let pos = 0;
+      while (i >= 0) {
+        frag.appendChild(document.createTextNode(text.slice(pos, i)));
+        const m = document.createElement('mark');
+        m.textContent = text.slice(i, i + needle.length);
+        frag.appendChild(m);
+        pos = i + needle.length;
+        i = lower.indexOf(needle, pos);
+      }
+      frag.appendChild(document.createTextNode(text.slice(pos)));
+      node.parentNode.replaceChild(frag, node);
+    });
+  });
+}
+
 function render() {
   const list = document.getElementById('cat-list');
   const empty = document.getElementById('cat-empty');
@@ -128,6 +158,7 @@ function render() {
     && (!selKws.size || r.keywords.some((k) => selKws.has(k))));
   document.getElementById('cat-count').textContent = t('site.cat.count', { n: shown.length });
   list.innerHTML = shown.map(card).join('');
+  highlight(q);
   empty.style.display = shown.length ? 'none' : '';
   empty.textContent = t('site.cat.empty');
 }

@@ -22,6 +22,7 @@
    - [LIMS connections](#lims-connections)
    - [Sampling design](#sampling-design)
    - [Website (public site CMS)](#website-public-site-cms)
+   - [News (blog posts)](#news-blog-posts)
    - [Software updates](#software-updates)
    - [GloSIS Federation](#glosis-federation)
 4. [Validation rules](#validation-rules)
@@ -397,6 +398,24 @@ version history); saving a page that is already live republishes it.
 | POST   | `/api/site/publish` | JWT-admin | Render (Markdown → sanitised HTML) and set live  |
 | POST   | `/api/site/media`   | JWT-admin | Image upload — re-encoded with Pillow, size and dimension caps, content-hash filename |
 
+### News (blog posts)
+
+Blog-style posts on the public `/news` page: title, author, date, lowercase
+tags (year and tag filter pills on the page), Markdown body (rendered and
+sanitised at save; images inline, full width or floated thirds) and up to
+20 gallery images from the site media store. Posts are rows in
+`api.news_post`, saved and published individually — they bypass the site
+draft/publish flow; the `/news` header link is controlled by the opt-in
+`news_published` site-content flag.
+
+| Method | Path                   | Auth      | Description                                        |
+| ------ | ---------------------- | --------- | --------------------------------------------------- |
+| GET    | `/api/news`            | API key   | Published posts, newest first (public page)         |
+| GET    | `/api/news/manage`     | JWT-admin | All posts, including the Markdown source            |
+| POST   | `/api/news`            | JWT-admin | Create — author defaults to the signed-in user      |
+| PUT    | `/api/news/{post_id}`  | JWT-admin | Update / publish / unpublish                        |
+| DELETE | `/api/news/{post_id}`  | JWT-admin | Delete                                              |
+
 ### Software updates
 
 | Method | Path                      | Auth      | Description                                        |
@@ -481,6 +500,7 @@ the ISO 28258 core; tables added since are defined in the migrations:
 - `api.lims_connection` — laboratory (LIMS) connections
 - `api.sampling_design` / `api.sampling_design_feature` — sampling designs
 - `api.site_draft` / `api.site_published` — website CMS (draft + the single published copy)
+- `api.news_post` — blog posts for the public /news page
 
 ### `api.user`
 

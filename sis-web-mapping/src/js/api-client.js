@@ -173,6 +173,23 @@ class SISApiClient {
     return r.blob();
   }
 
+  // ---- News (blog posts on the public site) ----
+  async getNews() { return this.request('/api/news'); }
+  async getNewsManage() { return this.authenticatedRequest('/api/news/manage'); }
+  async createNewsPost(post) {
+    return this.authenticatedRequest('/api/news', {
+      method: 'POST', body: JSON.stringify(post)
+    });
+  }
+  async updateNewsPost(id, post) {
+    return this.authenticatedRequest(`/api/news/${id}`, {
+      method: 'PUT', body: JSON.stringify(post)
+    });
+  }
+  async deleteNewsPost(id) {
+    return this.authenticatedRequest(`/api/news/${id}`, { method: 'DELETE' });
+  }
+
   // ---- Landing page (site CMS, issue #13) ----
   async getSite() { return this.request('/api/site'); }
   async getSiteDraft() { return this.authenticatedRequest('/api/site/draft'); }

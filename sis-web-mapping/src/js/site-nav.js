@@ -13,7 +13,7 @@ const PAGE_IDS = { about: 'nav-about', people: 'nav-people', contact: 'nav-conta
 
 // Canonical header entries and their default order; the admin can reorder
 // them (content.nav_order), and every page renders the same sequence.
-export const NAV_SLUGS = ['home', 'about', 'map', 'catalogue', 'dashboard', 'people', 'contact'];
+export const NAV_SLUGS = ['home', 'about', 'map', 'catalogue', 'dashboard', 'news', 'people', 'contact'];
 
 export function normalizeOrder(order) {
   const base = Array.isArray(order) ? order.filter((s) => NAV_SLUGS.includes(s)) : [];
@@ -25,6 +25,7 @@ export function applyNav(current, pages, content) {
   const items = [['nav-home', 'site.nav.home', '/'], ['nav-about', 'site.nav.about', '/about'],
                  ['nav-map', 'site.nav.map', '/map'], ['nav-catalogue', 'site.nav.catalogue', null],
                  ['nav-dashboard', 'site.nav.dashboard', '/dashboard'],
+                 ['nav-news', 'site.nav.news', '/news'],
                  ['nav-people', 'site.nav.people', '/people'],
                  ['nav-contact', 'site.nav.contact', '/contact']];
   items.forEach(([id, key]) => {
@@ -60,6 +61,10 @@ export function applyNav(current, pages, content) {
         const el = document.getElementById(id);
         if (el) el.style.display = content[key] === false ? 'none' : '';
       });
+    // News is opt-in: shown only once published (instances start with no
+    // posts, so an unpublished News page never clutters the header).
+    const newsEl = document.getElementById('nav-news');
+    if (newsEl) newsEl.style.display = content.news_published === true ? '' : 'none';
   }
   // Admin-chosen ordering: moving each entry in sequence re-sorts the bar.
   const navEl = document.querySelector('.site-nav');
@@ -88,6 +93,7 @@ export function applyFooter(data) {
     map: c.map_published !== false && { href: '/map' },
     catalogue: c.catalogue_published !== false && { href: '/catalogue' },
     dashboard: c.dashboard_published !== false && { href: '/dashboard' },
+    news: c.news_published === true && { href: '/news' },
     about: pages.about && { href: '/about' },
     people: pages.people && { href: '/people' },
     contact: pages.contact && { href: '/contact' },

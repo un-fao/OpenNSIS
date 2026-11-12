@@ -7,6 +7,19 @@ the change landed on `main`.
 
 ## November 2026
 
+### 2026-11-12 — News page
+The public website gained a blog: a **News** page listing posts newest
+first, each with its title, author, date, body and an optional image
+gallery. Posts are written from a new Website → News sub-tab — title,
+author (pre-filled with the signed-in user), a Markdown body with a small
+formatting toolbar (bold, italic, heading, list, link) and one or more
+images uploaded through the same re-encoding pipeline as the rest of the
+site media. Each post saves and publishes on its own (with a draft state),
+independent of the site's draft/publish flow, and the News link in the
+header and footer appears only once the page is explicitly published from
+the sub-tab — so instances without news never show an empty page
+(migration 037).
+
 ### 2026-11-11 — Catalogue page
 The metadata catalogue became a proper public page at `/catalogue`, replacing
 the link out to pyCSW's bare records UI. Every record of the instance is
