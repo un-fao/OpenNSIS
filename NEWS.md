@@ -9,12 +9,17 @@ the change landed on `main`.
 
 ### 2026-11-12 — Public website live by default
 A fresh instance now serves the public website out of the box — header
-and footer with Home, News, Map, Catalogue and Statistics, the default
-hero image and built-in texts — instead of hiding everything behind the
-first Publish. Instances that had never published a website go live with
-these defaults (migration 039); anything an admin has published or
-unpublished is left exactly as it was, and the site can still be taken
-offline by unpublishing Home from Website → Home. The header also gained
+and footer with every page (Home, About, News, Map, Catalogue,
+Statistics, People, Contact), the default hero image and built-in
+texts — instead of hiding everything behind the first Publish. All
+pages are published by default, even when empty: About falls back to
+the standard system description and People/Contact to a short default
+line until real content is written, and a page disappears only when
+explicitly unpublished from its Website sub-tab. Instances that had
+never published a website go live with these defaults (migration 039);
+anything an admin has published or unpublished is left exactly as it
+was, and the site can still be taken offline by unpublishing Home from
+Website → Home. The header also gained
 an **Admin Panel** entry while signed in (it disappears on logout), and
 About, People, Contact and the Admin Panel now share the same page
 heading style as the rest of the site.

@@ -58,7 +58,7 @@ async function init() {
   // Contact details arrive obfuscated (email_x/phone_x) from the snapshot;
   // decoded text goes in, the mailto:/tel: href only on first interaction.
   const contacts = [];
-  if (slug === 'people' && Array.isArray(page.members)) {
+  if (slug === 'people' && Array.isArray(page.members) && page.members.length) {
     inner += '<div class="people-grid">' + page.members.map((m) => {
       const email = m.email_x ? deobf(m.email_x) : (m.email || '');
       const phone = m.phone_x ? deobf(m.phone_x) : (m.phone || '');
@@ -91,6 +91,17 @@ async function init() {
     inner += pick(page.body_html);
   } else {
     inner += pick(page.body_html);
+  }
+  // Pages published without content (the default website) read sensibly
+  // instead of rendering blank.
+  if (!inner.trim()) {
+    if (slug === 'about') {
+      inner = `<p>${esc(t('site.landing.aboutBody1'))}</p><p>${esc(t('site.landing.aboutBody2'))}</p>`;
+    } else if (slug === 'people') {
+      inner = `<p>${esc(t('site.page.peopleSoon'))}</p>`;
+    } else if (slug === 'contact') {
+      inner = `<p>${esc(t('site.page.contactSoon'))}</p>`;
+    }
   }
   body.innerHTML = inner;
   contacts.forEach(([id, kind, value]) => armContact(document.getElementById(id), kind, value));

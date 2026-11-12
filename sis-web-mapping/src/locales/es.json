@@ -622,6 +622,8 @@
   "site.landing.aboutTitle": "Datos de suelo, del perfil al mapa.",
   "site.landing.aboutBody1": "Los perfiles, observaciones y mapas se armonizan con el modelo ISO 28258 y las listas de códigos de propiedades y procedimientos de GloSIS, de modo que un valor de pH significa lo mismo en todos los proyectos.",
   "site.landing.aboutBody2": "Cada país u organización opera su propio nodo. Los datos permanecen donde se producen; solo lo que el proveedor decide publicar es visible para la federación.",
+  "site.page.peopleSoon": "Aquí se presentará el equipo responsable de este sistema de información de suelos.",
+  "site.page.contactSoon": "Los datos de contacto se publicarán aquí.",
   "site.landing.aboutCta": "Leer más",
   "a.site.title": "Sitio web",
   "a.site.general": "General",

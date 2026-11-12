@@ -622,6 +622,8 @@
   "site.landing.aboutTitle": "土壤数据，从剖面到地图。",
   "site.landing.aboutBody1": "剖面、观测与地图均按 ISO 28258 数据模型以及 GloSIS 属性与方法代码表进行统一，因此不同项目的 pH 值含义完全一致。",
   "site.landing.aboutBody2": "每个国家或机构运行自己的节点。数据保存在产生地；只有提供方选择发布的内容才会对联邦可见。",
+  "site.page.peopleSoon": "本土壤信息系统的团队将在此介绍。",
+  "site.page.contactSoon": "联系方式将在此发布。",
   "site.landing.aboutCta": "查看更多",
   "a.site.title": "网站",
   "a.site.general": "常规",

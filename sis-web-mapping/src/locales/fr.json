@@ -622,6 +622,8 @@
   "site.landing.aboutTitle": "Les données de sol, du profil à la carte.",
   "site.landing.aboutBody1": "Les profils, observations et cartes sont harmonisés selon le modèle ISO 28258 et les listes de codes GloSIS, si bien qu’une valeur de pH signifie la même chose d’un projet à l’autre.",
   "site.landing.aboutBody2": "Chaque pays ou organisation exploite son propre nœud. Les données restent là où elles sont produites ; seul ce que le fournisseur choisit de publier devient visible pour la fédération.",
+  "site.page.peopleSoon": "L'équipe derrière ce système d'information sur les sols sera présentée ici.",
+  "site.page.contactSoon": "Les coordonnées de contact seront publiées ici.",
   "site.landing.aboutCta": "En savoir plus",
   "a.site.title": "Site web",
   "a.site.general": "Général",

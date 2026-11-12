@@ -622,6 +622,8 @@
   "site.landing.aboutTitle": "Soil data, from profile to map.",
   "site.landing.aboutBody1": "Soil profiles, observations and maps are harmonised against the ISO 28258 data model and the GloSIS property and procedure codelists, so a pH value from one project means the same thing as a pH value from another.",
   "site.landing.aboutBody2": "Each country or organisation runs its own node. Data stays where it is produced; only what the provider chooses to publish becomes visible to the federation.",
+  "site.page.peopleSoon": "The team behind this soil information system will be introduced here.",
+  "site.page.contactSoon": "Contact details will be published here.",
   "site.landing.aboutCta": "Read more",
   "a.site.title": "Website",
   "a.site.general": "General",

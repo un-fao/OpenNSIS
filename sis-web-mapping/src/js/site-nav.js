@@ -13,7 +13,7 @@ const PAGE_IDS = { about: 'nav-about', people: 'nav-people', contact: 'nav-conta
 
 // Canonical header entries and their default order; the admin can reorder
 // them (content.nav_order), and every page renders the same sequence.
-export const NAV_SLUGS = ['home', 'about', 'map', 'catalogue', 'dashboard', 'news', 'people', 'contact'];
+export const NAV_SLUGS = ['home', 'about', 'news', 'map', 'catalogue', 'dashboard', 'people', 'contact'];
 
 export function normalizeOrder(order) {
   const base = Array.isArray(order) ? order.filter((s) => NAV_SLUGS.includes(s)) : [];

@@ -7540,12 +7540,14 @@ def _site_render(content: dict, include_unpublished: bool = False,
             out["hero"][f] = flat(out["hero"].get(f))
 
     # Standalone pages (About / People / Contact): per-page title + Markdown
-    # body, rendered the same way. Only pages with some body survive into
-    # the snapshot, which is what activates their navigation links.
+    # body, rendered the same way. Published by default, even when empty —
+    # every standard page reaches the snapshot unless explicitly
+    # unpublished; empty ones render the frontend's default texts.
     pages_out = {}
-    for slug, page in (out.get("pages") or {}).items():
-        if slug not in ("about", "people", "contact") or not isinstance(page, dict):
-            continue
+    pages_in = out.get("pages") or {}
+    for slug in ("about", "people", "contact"):
+        page = pages_in.get(slug)
+        page = page if isinstance(page, dict) else {}
         if not include_unpublished and page.get("published") is False:
             continue
         if slug == "people":
@@ -7565,9 +7567,8 @@ def _site_render(content: dict, include_unpublished: bool = False,
                 # draft but never reach the public snapshot.
                 if member["name"] and m.get("publish", True):
                     members.append(member)
-            if members:
-                pages_out[slug] = {"title": flat(page.get("title"))[:200],
-                                   "members": members}
+            pages_out[slug] = {"title": flat(page.get("title"))[:200],
+                               "members": members}
             continue
         body_md = flat(page.get("body_md"))
         body_html = render_md(body_md)
@@ -7578,18 +7579,16 @@ def _site_render(content: dict, include_unpublished: bool = False,
             address = flat(page.get("address"))[:500]
             email = str(page.get("email") or "").strip()[:200]
             phone = str(page.get("phone") or "").strip()[:60]
-            if body_html or address or email or phone:
-                pages_out[slug] = {"title": flat(page.get("title"))[:200],
-                                   "body_md": body_md,
-                                   "body_html": body_html,
-                                   "address": address,
-                                   "email_x": obfuscate(email),
-                                   "phone_x": obfuscate(phone)}
-            continue
-        if body_html:
             pages_out[slug] = {"title": flat(page.get("title"))[:200],
                                "body_md": body_md,
-                               "body_html": body_html}
+                               "body_html": body_html,
+                               "address": address,
+                               "email_x": obfuscate(email),
+                               "phone_x": obfuscate(phone)}
+            continue
+        pages_out[slug] = {"title": flat(page.get("title"))[:200],
+                           "body_md": body_md,
+                           "body_html": body_html}
     out["pages"] = pages_out
     return out
 
@@ -7607,8 +7606,10 @@ async def get_site(request: Request, api_client: dict = Depends(verify_api_key))
             cur.execute("SELECT content, published_at FROM api.site_published WHERE id = 1")
             row = cur.fetchone()
     # Never-published instances get the default website: empty content
-    # renders the landing's built-in hero, texts and feature pages.
-    content = row["content"] if row else {}
+    # renders the landing's built-in hero, texts and feature pages, and
+    # empty page stubs make About/People/Contact exist with the
+    # frontend's default texts.
+    content = row["content"] if row else {"pages": {"about": {}, "people": {}, "contact": {}}}
     # Home's own publish flag is the landing switch; older content without
     # the flag falls back to the SITE_LANDING_ENABLED setting.
     home_published = (content or {}).get("home_published")

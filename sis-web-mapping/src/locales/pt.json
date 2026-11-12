@@ -622,6 +622,8 @@
   "site.landing.aboutTitle": "Dados de solo, do perfil ao mapa.",
   "site.landing.aboutBody1": "Perfis, observações e mapas são harmonizados com o modelo ISO 28258 e as listas de códigos do GloSIS, para que um valor de pH signifique o mesmo em qualquer projeto.",
   "site.landing.aboutBody2": "Cada país ou organização opera o seu próprio nó. Os dados permanecem onde são produzidos; só o que o fornecedor decide publicar fica visível para a federação.",
+  "site.page.peopleSoon": "A equipa responsável por este sistema de informação de solos será apresentada aqui.",
+  "site.page.contactSoon": "Os dados de contacto serão publicados aqui.",
   "site.landing.aboutCta": "Saber mais",
   "a.site.title": "Sítio web",
   "a.site.general": "Geral",
