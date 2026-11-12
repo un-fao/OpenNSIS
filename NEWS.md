@@ -9,16 +9,22 @@ the change landed on `main`.
 
 ### 2026-11-12 — News page
 The public website gained a blog: a **News** page listing posts newest
-first, each with its title, author, date, body and an optional image
-gallery. Posts are written from a new Website → News sub-tab — title,
-author (pre-filled with the signed-in user), a Markdown body with a small
-formatting toolbar (bold, italic, heading, list, link) and one or more
-images uploaded through the same re-encoding pipeline as the rest of the
-site media. Each post saves and publishes on its own (with a draft state),
-independent of the site's draft/publish flow, and the News link in the
-header and footer appears only once the page is explicitly published from
-the sub-tab — so instances without news never show an empty page
-(migration 037).
+first, each with its title, author, editable ISO date (YYYY-MM-DD), body
+and lowercase **tags** (suggested from the tags already in use). Posts are
+written from a new Website → News sub-tab: the editor opens only from the
+**New post** button or a row's **Edit**, and each row carries its own
+**Edit / Publish / Delete** actions, independent of the site's
+draft/publish flow. The Markdown body has a formatting toolbar — bold,
+italic, heading, list, link and three image buttons that upload a picture
+through the site media pipeline and insert it inline at full width or
+floated left/right at a third of the column with the text wrapping around
+it. The public page offers a search box with the matched text highlighted
+in the posts, plus multi-select **Year** and **Tag** filter pills, all in
+a sticky sidebar on the right; the same highlighting and sidebar layout
+now also apply to the Catalogue page's search and filters. The News link
+in the header and footer appears only once the page is explicitly
+published from the sub-tab — so instances without news never show an
+empty page (migrations 037 and 038).
 
 ### 2026-11-11 — Catalogue page
 The metadata catalogue became a proper public page at `/catalogue`, replacing
