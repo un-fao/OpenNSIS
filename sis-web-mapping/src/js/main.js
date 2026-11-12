@@ -1,4 +1,3 @@
-import 'ol/ol.css';
 import Map from 'ol/Map';
 import View from 'ol/View';
 import { Tile as TileLayer, Image as ImageLayer, Vector as VectorLayer } from 'ol/layer';
@@ -36,6 +35,46 @@ function closeInfoPopup() {
   if (activePopup) activePopup.setPosition(undefined);
 }
 
+// ==================== Start-up requests ====================
+
+// The start-up API calls do not depend on one another; only their results
+// have to be applied in order (settings, map, layers, profiles, ...). They
+// are all sent at once and the loaders claim them in turn, so start-up
+// waits for about one network round trip rather than one per request.
+let startupRequests = {};
+
+function sendStartupRequests() {
+  // The browser opens six connections per host, so the seventh request
+  // queues: the two smallest responses go last.
+  const calls = [
+    ['settings', () => api.getSettings()],
+    ['layers', () => api.getLayers()],
+    ['profiles', () => api.getProfiles()],
+    ['samplingPublic', () => api.getSamplingPublic()],
+    ['adminDivisions', () => api.getAdminDivisions()],
+    ['profileBlur', () => api.getProfileBlurFlags()],
+    ['profileSymbology', () => api.getProfileSymbology()],
+  ];
+  startupRequests = {};
+  calls.forEach(([key, call]) => {
+    const pending = call();
+    // The loader that claims it handles a failure; this only keeps a
+    // rejection that settles before it is awaited from being reported as
+    // unhandled.
+    pending.catch(() => {});
+    startupRequests[key] = pending;
+  });
+}
+
+/** The start-up response for `key` while it is unclaimed, otherwise a fresh
+ *  request (loaders that run again later must not reuse stale data). */
+function startupOr(key, call) {
+  const pending = startupRequests[key];
+  if (!pending) return call();
+  delete startupRequests[key];
+  return pending;
+}
+
 // ==================== Initialization ====================
 
 async function initializeApp() {
@@ -46,11 +85,12 @@ async function initializeApp() {
     if (location.pathname === '/admin' && api.restoreSession()) {
       showAdminPanel();
     }
+    sendStartupRequests();
     showLoading(true);
 
     // Load settings from API
     console.log('Fetching settings...');
-    const settings = await api.getSettings();
+    const settings = await startupOr('settings', () => api.getSettings());
     console.log('Settings loaded:', settings);
     appConfig = settingsArrayToObject(settings);
     setInstanceDefault((appConfig.LANGUAGE || '').trim().toLowerCase());
@@ -206,7 +246,7 @@ function initializeMap() {
 
 async function loadLayers() {
   try {
-    const layers = await api.getLayers();
+    const layers = await startupOr('layers', () => api.getLayers());
     allRasterConfigs = layers;
 
     // Main raster groups come from the catalogue classification keywords:
@@ -322,7 +362,7 @@ function adminDivisionStyle(d) {
 async function loadAdminDivisions() {
   let divisions = [];
   try {
-    divisions = await api.getAdminDivisions();
+    divisions = await startupOr('adminDivisions', () => api.getAdminDivisions());
   } catch (error) {
     console.error('Failed to load administrative divisions:', error);
     return;
@@ -848,7 +888,7 @@ async function loadSamplingDesigns() {
   // the design's auto-generated abstract behind the metadata icon.
   let designs = [];
   try {
-    designs = await api.getSamplingPublic();
+    designs = await startupOr('samplingPublic', () => api.getSamplingPublic());
   } catch (e) {
     console.error('Failed to load sampling designs:', e);
     return;
@@ -1037,12 +1077,12 @@ function showHtmlPopup(html) {
 
 async function loadProfiles() {
   try {
-    const profiles = await api.getProfiles();
+    const profiles = await startupOr('profiles', () => api.getProfiles());
 
     // Which profile layers have spatial blur applied (booleans only — the
     // radius is never sent). Used to warn that locations are approximate.
     try {
-      const flags = await api.getProfileBlurFlags();
+      const flags = await startupOr('profileBlur', () => api.getProfileBlurFlags());
       blurredMapsetIds = new Set((flags && flags.blurred_mapset_ids) || []);
       locationsOnlyMapsetIds = new Set((flags && flags.locations_only_mapset_ids) || []);
     } catch (e) {
@@ -1081,7 +1121,7 @@ async function loadProfiles() {
     // Admin-set marker symbology (shape/size/colour/opacity per project);
     // a configured colour overrides the generated palette entry.
     try {
-      profileSymbology = await api.getProfileSymbology() || {};
+      profileSymbology = await startupOr('profileSymbology', () => api.getProfileSymbology()) || {};
     } catch (e) {
       console.warn('profile symbology unavailable:', e.message);
       profileSymbology = {};

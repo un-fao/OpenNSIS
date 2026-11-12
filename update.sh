@@ -5,10 +5,11 @@ set -euo pipefail
 # update.sh — safe in-place update for a single-country SIS install.
 #
 # Pulls the latest code from the repo, applies any pending DB migrations, then
-# rebuilds and recreates ONLY the application containers and reloads nginx.
+# rebuilds and recreates ONLY the application containers and refreshes nginx
+# (recreated or restarted only if its definition or configuration changed).
 #
 #   git pull → apply migrations/*.sql → up --build sis-api sis-api-glosis
-#              sis-web-mapping → reload nginx → health check
+#              sis-web-mapping → refresh nginx → health check
 #
 # IT NEVER TOUCHES YOUR DATA. It does not run `down`, never passes `-v`, and
 # never reloads the seed dump. Everything you uploaded — the Postgres database
@@ -134,10 +135,34 @@ export GIT_SHA="$NEW"
 echo "### 3/4  rebuild app containers (data containers untouched)"
 $DC up -d --build $APP_SVCS
 
-# nginx config is bind-mounted (it may have changed in the pull) — hot reload.
-if $DC exec -T sis-nginx nginx -t >/dev/null 2>&1; then
-  $DC exec -T sis-nginx nginx -s reload >/dev/null 2>&1 || true
-  echo "  nginx reloaded"
+# ---- nginx: apply a changed definition or configuration --------------------
+# nginx is not rebuilt, but the pull may have changed its service definition
+# (e.g. a new volume) or sis-nginx/nginx.conf. `up -d` recreates the container
+# only when the definition changed. The configuration needs more care: it is
+# a single-file bind mount and git REPLACES a changed file, so the running
+# container keeps seeing the old one and `nginx -s reload` would silently
+# re-read that. Only a restart re-attaches the mount. The new file is
+# validated inside the running container first, so a broken configuration
+# never takes the site down. `--no-deps` keeps the data containers untouched.
+nginx_conf_sum(){ $DC exec -T sis-nginx md5sum /etc/nginx/nginx.conf 2>/dev/null | cut -d' ' -f1 || true; }
+want=$(md5sum < sis-nginx/nginx.conf | cut -d' ' -f1)
+nginx_ok=1
+if $DC exec -T sis-nginx true >/dev/null 2>&1 && [ "$want" != "$(nginx_conf_sum)" ]; then
+  { $DC exec -T sis-nginx sh -c 'cat > /tmp/nginx.candidate.conf' < sis-nginx/nginx.conf \
+      && $DC exec -T sis-nginx nginx -t -c /tmp/nginx.candidate.conf; } >/dev/null 2>&1 || nginx_ok=0
+  $DC exec -T sis-nginx rm -f /tmp/nginx.candidate.conf >/dev/null 2>&1 || true
+fi
+if [ "$nginx_ok" = 1 ]; then
+  $DC up -d --no-deps sis-nginx
+  if [ "$want" != "$(nginx_conf_sum)" ]; then
+    $DC restart sis-nginx >/dev/null 2>&1 || true
+    echo "  nginx restarted (configuration changed)"
+  else
+    echo "  nginx up to date"
+  fi
+else
+  echo "  WARNING: the new sis-nginx/nginx.conf does not pass 'nginx -t'; nginx was left"
+  echo "           running on its previous configuration. Fix the file and re-run."
 fi
 
 # ---- 4. health -------------------------------------------------------------

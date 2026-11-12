@@ -233,9 +233,20 @@ the install dir:
 It `git pull`s, applies any pending DB migrations
 (`sis-database/migrations/*.sql`, tracked in `api.schema_migration`), rebuilds
 **only the application containers**
-(`sis-api`, `sis-api-glosis`, `sis-web-mapping`) and reloads nginx. It never
-runs `down`, never passes `-v`, and never reloads the seed dump — so the
-Postgres / pyCSW / raster volumes (everything you uploaded) are preserved.
+(`sis-api`, `sis-api-glosis`, `sis-web-mapping`) and refreshes nginx: the
+container is recreated if its service definition changed and restarted if
+`sis-nginx/nginx.conf` changed (after validating the new file), otherwise left
+alone. It never runs `down`, never passes `-v`, and never reloads the seed
+dump — so the Postgres / pyCSW / raster volumes (everything you uploaded) are
+preserved.
+
+> **One-off, for installs updated with an `update.sh` older than 2026-11-12:**
+> that version only *reloaded* nginx, which does not pick up a changed
+> `nginx.conf` or a new volume. An update always runs the script as it was
+> *before* the pull, so run `./update.sh` a second time once (or
+> `docker compose up -d --force-recreate --no-deps sis-nginx`). Until then
+> nginx keeps its old setup — for instance, images uploaded in the Website tab
+> (`/media/…`, added 2026-10-27) are not served.
 
 DB schema/function/view changes ship as numbered, idempotent migrations under
 `sis-database/migrations/` (see `sis-database/migrations/README.md`). Base-image

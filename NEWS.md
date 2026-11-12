@@ -7,6 +7,29 @@ the change landed on `main`.
 
 ## November 2026
 
+### 2026-11-12 — Faster map page
+The map opens two to three times faster. Its start-up requests (settings,
+layers, profiles, boundaries, sampling designs) are now sent together
+instead of one after another; each used to wait a full network round trip
+for the previous one, which is why even an instance with no data took
+almost two seconds on a distant connection. Raster images and legends are
+now kept by the browser for 30 days: their addresses already carried a
+version token that changes whenever a layer's pixels or styling change,
+but the map server's blanket `no-store` header defeated it, so a
+one-megabyte image was downloaded again on every visit. The OpenLayers
+stylesheet is served by the instance itself instead of a third-party CDN.
+Measured against the workshop server over a 190 ms connection, a repeat
+visit drops from about 1.8 s to 0.7 s on an empty instance and from 2.6 s
+to 1.2 s on one with data; a first visit from about 3.0 s to 2.1 s and
+from 4.2 s to 2.7 s.
+
+`update.sh` now applies nginx changes properly: it recreates the nginx
+container when its service definition changed and restarts it when
+`nginx.conf` changed, after validating the new file. It used to only
+reload nginx, which never picked up a pulled configuration. Servers
+updated with the older script should run `./update.sh` twice once — see
+the README's update section.
+
 ### 2026-11-12 — Public website live by default
 A fresh instance now serves the public website out of the box — header
 and footer with every page (Home, About, News, Map, Catalogue,
