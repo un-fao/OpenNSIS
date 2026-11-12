@@ -405,8 +405,9 @@ tags (year and tag filter pills on the page), Markdown body (rendered and
 sanitised at save; images inline, full width or floated thirds) and up to
 20 gallery images from the site media store. Posts are rows in
 `api.news_post`, saved and published individually — they bypass the site
-draft/publish flow; the `/news` header link is controlled by the opt-in
-`news_published` site-content flag.
+draft/publish flow; the `/news` header link is shown unless the
+`news_published` site-content flag is explicitly `false` (published by
+default, like the other pages).
 
 | Method | Path                   | Auth      | Description                                        |
 | ------ | ---------------------- | --------- | --------------------------------------------------- |

@@ -61,15 +61,11 @@ export function applyNav(current, pages, content) {
   // can be unpublished from the Website tab (default: shown).
   if (content) {
     [['nav-catalogue', 'catalogue_published'], ['nav-dashboard', 'dashboard_published'],
-     ['nav-map', 'map_published']]
+     ['nav-map', 'map_published'], ['nav-news', 'news_published']]
       .forEach(([id, key]) => {
         const el = document.getElementById(id);
         if (el) el.style.display = content[key] === false ? 'none' : '';
       });
-    // News is opt-in: shown only once published (instances start with no
-    // posts, so an unpublished News page never clutters the header).
-    const newsEl = document.getElementById('nav-news');
-    if (newsEl) newsEl.style.display = content.news_published === true ? '' : 'none';
   }
   // Admin-chosen ordering: moving each entry in sequence re-sorts the bar.
   const navEl = document.querySelector('.site-nav');
@@ -101,7 +97,7 @@ export function applyFooter(data) {
     map: c.map_published !== false && { href: '/map' },
     catalogue: c.catalogue_published !== false && { href: '/catalogue' },
     dashboard: c.dashboard_published !== false && { href: '/dashboard' },
-    news: c.news_published === true && { href: '/news' },
+    news: c.news_published !== false && { href: '/news' },
     about: pages.about && { href: '/about' },
     people: pages.people && { href: '/people' },
     contact: pages.contact && { href: '/contact' },

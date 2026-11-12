@@ -300,8 +300,6 @@ function pageIsPublished(slug) {
     const hp = state.content.home_published;
     return typeof hp === 'boolean' ? hp : !!state.enabled;
   }
-  // News is opt-in: its header link only appears once explicitly published.
-  if (slug === 'news') return state.content.news_published === true;
   if (FEATURE_FLAGS[slug]) return state.content[FEATURE_FLAGS[slug]] !== false;
   const p = ((state.content.pages || {})[slug]) || {};
   return p.published !== false;

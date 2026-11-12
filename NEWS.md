@@ -21,10 +21,9 @@ floated left/right at a third of the column with the text wrapping around
 it. The public page offers a search box with the matched text highlighted
 in the posts, plus multi-select **Year** and **Tag** filter pills, all in
 a sticky sidebar on the right; the same highlighting and sidebar layout
-now also apply to the Catalogue page's search and filters. The News link
-in the header and footer appears only once the page is explicitly
-published from the sub-tab — so instances without news never show an
-empty page (migrations 037 and 038).
+now also apply to the Catalogue page's search and filters. Like every
+other page, News is published by default; its header and footer link can
+be hidden from the Website → News sub-tab (migrations 037 and 038).
 
 ### 2026-11-11 — Catalogue page
 The metadata catalogue became a proper public page at `/catalogue`, replacing
