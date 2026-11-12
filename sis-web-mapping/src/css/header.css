@@ -47,6 +47,11 @@
     max-width: 320px;
 }
 
+/* display:flex would override the hidden attribute (map page with the
+   website unpublished), leaving 4px ghost links and the nav-current
+   underline as a stray dash. */
+.site-nav[hidden] { display: none; }
+
 .site-nav {
     display: flex;
     align-items: center;
