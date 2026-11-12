@@ -141,6 +141,7 @@ class AdminDashboard {
     // The panel owns the /admin path; leaving it restores the map's URL
     // (no-op when the back button already changed it).
     if (location.pathname === '/admin') history.pushState({}, '', '/map');
+    if (window.syncAdminNav) window.syncAdminNav();
     
     // Update the map login button back to "Admin Panel"
     const loginBtn = document.getElementById('login-btn');
@@ -167,9 +168,10 @@ class AdminDashboard {
   logout() {
     // Perform logout
     api.logout();
-    
+
     // Hide dashboard
     this.hide();
+    if (window.syncAdminNav) window.syncAdminNav();
     
     // Reset login button to initial state
     const loginBtn = document.getElementById('login-btn');

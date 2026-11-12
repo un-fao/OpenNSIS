@@ -229,20 +229,22 @@ input.no-spinner {
     flex-direction: column;
 }
 
+/* Same look as the public pages' headings (News, Catalogue, Statistics):
+   the title sits straight on the page background, not in a banner. */
 .dashboard-header {
-    padding: var(--sp-5) var(--sp-8);
-    background: linear-gradient(135deg, var(--color-primary) 0%, #1e4a1f 100%);
-    color: #ffffff;
+    padding: var(--sp-4) var(--sp-8) 0;
+    background: transparent;
+    color: var(--color-text);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: var(--shadow-md);
 }
 
 .dashboard-header h2 {
     margin: 0;
-    color: #ffffff;
-    font-size: var(--fs-2xl);
+    color: var(--color-text);
+    font-family: var(--font-display);
+    font-size: 32px;
     font-weight: 700;
     letter-spacing: -0.01em;
 }
@@ -1138,12 +1140,6 @@ input:checked + .toggle-slider:before {
 /* =====================================================================
    TERROIR RESTYLE (admin) — staged preview, DO NOT COMMIT.
    ===================================================================== */
-.dashboard-header {
-    background: linear-gradient(120deg, #2A1D12 0%, #3E2E1F 35%, #63452C 78%, #8A6844 110%);
-    color: #F4F1EA;
-}
-.dashboard-header h2 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.01em; }
-
 .dashboard-tabs { background: transparent; }
 .dashboard-tabs button {
     font-family: var(--font-display);
@@ -1225,17 +1221,6 @@ input:checked + .toggle-slider:before {
     @keyframes tr-rise-a { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
     .tab-pane.active { animation: tr-rise-a .38s cubic-bezier(.2,.8,.2,1) both; }
 }
-
-/* Header: deeper soil gradient with a slow sheen */
-.dashboard-header {
-    background: linear-gradient(120deg, #241810 0%, #3E2E1F 38%, #63452C 80%, #8A6844 110%);
-    background-size: 160% 160%;
-}
-@media (prefers-reduced-motion: no-preference) {
-    .dashboard-header { animation: tr-sheen 14s ease-in-out infinite alternate; }
-    @keyframes tr-sheen { from { background-position: 0% 0%; } to { background-position: 100% 100%; } }
-}
-.dashboard-header h2 { font-size: 24px; }
 
 /* Pill tab bar */
 .dashboard-tabs {

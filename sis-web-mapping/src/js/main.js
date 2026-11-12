@@ -124,7 +124,8 @@ async function applySiteNav() {
     const site = await api.getSite();
     const nav = document.getElementById('site-nav');
     const ok = !!(site && site.enabled && site.content);
-    if (ok) applyNav('map', site.content.pages, site.content);
+    if (ok) applyNav(location.pathname === '/admin' ? 'admin' : 'map',
+                     site.content.pages, site.content);
     if (nav) nav.hidden = !ok;
   } catch (e) { /* nav stays hidden */ }
 }
@@ -2418,6 +2419,7 @@ function addLoginButton() {
         if (adminDashboard && typeof adminDashboard.hide === 'function') adminDashboard.hide();
         setAuthButtonIcon(loginBtn, 'user', t('auth.login'));
         loginBtn.onclick = showLoginModal;
+        syncAdminNav();
       });
     },
   });
@@ -2456,6 +2458,7 @@ function addLoginButton() {
         loginBtn.onclick = showAdminPanel;
       }
     }
+    syncAdminNav();
   });
 }
 
@@ -2526,7 +2529,22 @@ function showAdminPanel() {
   if (location.pathname !== '/admin') history.pushState({ sisAdmin: 1 }, '', '/admin');
 
   markPanelOpenGlyph();
+  syncAdminNav();
 }
+
+/** Header "Admin Panel" entry: visible only while signed in, and marked
+ * as the current page while the panel owns the /admin path (the Map
+ * entry takes the highlight back when the panel closes). */
+function syncAdminNav() {
+  const adminEl = document.getElementById('nav-admin');
+  if (!adminEl) return;
+  adminEl.style.display = api.isAuthenticated() ? '' : 'none';
+  const onAdmin = location.pathname === '/admin';
+  adminEl.classList.toggle('nav-current', onAdmin);
+  const mapEl = document.getElementById('nav-map');
+  if (mapEl) mapEl.classList.toggle('nav-current', !onAdmin);
+}
+window.syncAdminNav = syncAdminNav;
 
 // While the panel is open the header glyph signs the admin out and
 // returns to Home; leaving the panel without logging out is the nav

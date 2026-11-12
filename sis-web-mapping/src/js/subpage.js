@@ -51,7 +51,10 @@ async function init() {
   const esc = (x) => String(x ?? '').replace(/[&<>"']/g,
     (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const body = document.getElementById('page-body');
-  let inner = `<h1 style="font-family:var(--font-display);margin-top:0;">${esc(title)}</h1>`;
+  // Page heading outside the card, same look as News / Catalogue /
+  // Statistics (h1 straight on the page background).
+  document.getElementById('page-title').textContent = title;
+  let inner = '';
   // Contact details arrive obfuscated (email_x/phone_x) from the snapshot;
   // decoded text goes in, the mailto:/tel: href only on first interaction.
   const contacts = [];

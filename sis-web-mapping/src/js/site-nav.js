@@ -27,13 +27,18 @@ export function applyNav(current, pages, content) {
                  ['nav-dashboard', 'site.nav.dashboard', '/dashboard'],
                  ['nav-news', 'site.nav.news', '/news'],
                  ['nav-people', 'site.nav.people', '/people'],
-                 ['nav-contact', 'site.nav.contact', '/contact']];
+                 ['nav-contact', 'site.nav.contact', '/contact'],
+                 ['nav-admin', 'auth.adminPanel', '/admin']];
   items.forEach(([id, key]) => {
     const el = document.getElementById(id);
     if (!el) return;
     el.textContent = t(key);
-    if (id === `nav-${current}`) el.classList.add('nav-current');
+    el.classList.toggle('nav-current', id === `nav-${current}`);
   });
+  // Admin panel entry: present on every page but visible only while a
+  // session exists; logging out makes it disappear again.
+  const adminEl = document.getElementById('nav-admin');
+  if (adminEl) adminEl.style.display = api.restoreSession() ? '' : 'none';
   // CMS pages appear in the header only while published (re-runnable: the
   // admin refreshes the header after every publish/unpublish).
   Object.entries(PAGE_IDS).forEach(([slug, id]) => {
@@ -73,6 +78,9 @@ export function applyNav(current, pages, content) {
       const el = document.getElementById(`nav-${slug}`);
       if (el && el.parentElement === navEl) navEl.appendChild(el);
     });
+    // The admin entry is not reorderable: it stays pinned after the
+    // public pages.
+    if (adminEl && adminEl.parentElement === navEl) navEl.appendChild(adminEl);
   }
 }
 
