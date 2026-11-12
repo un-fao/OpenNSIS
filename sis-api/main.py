@@ -7600,13 +7600,15 @@ async def get_site(request: Request, api_client: dict = Depends(verify_api_key))
     ETag'd so the landing page is one cheap request."""
     with get_db() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            enabled = _setting_value(cur, "SITE_LANDING_ENABLED", "false") == "true"
+            enabled = _setting_value(cur, "SITE_LANDING_ENABLED", "true") == "true"
             app_title = _setting_value(cur, "APP_TITLE", "")
             org_logo = _setting_value(cur, "ORG_LOGO_URL", "")
             language = _setting_value(cur, "LANGUAGE", "")
             cur.execute("SELECT content, published_at FROM api.site_published WHERE id = 1")
             row = cur.fetchone()
-    content = row["content"] if row else None
+    # Never-published instances get the default website: empty content
+    # renders the landing's built-in hero, texts and feature pages.
+    content = row["content"] if row else {}
     # Home's own publish flag is the landing switch; older content without
     # the flag falls back to the SITE_LANDING_ENABLED setting.
     home_published = (content or {}).get("home_published")
@@ -7629,7 +7631,7 @@ async def get_site_draft(current_user: dict = Depends(get_current_user)):
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("SELECT content, updated_at, updated_by FROM api.site_draft WHERE id = 1")
             row = cur.fetchone()
-            enabled = _setting_value(cur, "SITE_LANDING_ENABLED", "false") == "true"
+            enabled = _setting_value(cur, "SITE_LANDING_ENABLED", "true") == "true"
     return {"content": (row or {}).get("content") or {},
             "updated_at": row["updated_at"] if row else None,
             "updated_by": row["updated_by"] if row else None,

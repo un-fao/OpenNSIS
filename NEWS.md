@@ -7,6 +7,18 @@ the change landed on `main`.
 
 ## November 2026
 
+### 2026-11-12 — Public website live by default
+A fresh instance now serves the public website out of the box — header
+and footer with Home, News, Map, Catalogue and Statistics, the default
+hero image and built-in texts — instead of hiding everything behind the
+first Publish. Instances that had never published a website go live with
+these defaults (migration 039); anything an admin has published or
+unpublished is left exactly as it was, and the site can still be taken
+offline by unpublishing Home from Website → Home. The header also gained
+an **Admin Panel** entry while signed in (it disappears on logout), and
+About, People, Contact and the Admin Panel now share the same page
+heading style as the rest of the site.
+
 ### 2026-11-12 — News page
 The public website gained a blog: a **News** page listing posts newest
 first, each with its title, author, editable ISO date (YYYY-MM-DD), body
