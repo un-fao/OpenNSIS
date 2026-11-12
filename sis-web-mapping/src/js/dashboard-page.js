@@ -5,7 +5,7 @@
  */
 import Chart from 'chart.js/auto';
 import api from './api-client.js';
-import { t, setInstanceDefault } from './i18n.js';
+import { t, setInstanceDefault, i18nReady } from './i18n.js';
 import { applyNav, applyBrand, initHeaderControls, applyFooter } from './site-nav.js';
 
 let _charts = {};
@@ -237,10 +237,11 @@ async function init() {
     siteContent = site.content;
     pages = siteContent?.pages;
     // Instance default language before any t() output (nav, title, cards).
-    setInstanceDefault((site.language || '').trim().toLowerCase());
+    await setInstanceDefault((site.language || '').trim().toLowerCase());
     applyBrand(site);
     applyFooter(site);
   } catch (e) { /* nav stays muted */ }
+  await i18nReady();
   initHeaderControls();
   applyNav('dashboard', pages, siteContent);
   document.getElementById('dash-title').textContent = t('site.nav.dashboard');

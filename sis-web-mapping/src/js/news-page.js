@@ -4,7 +4,7 @@
  * sanitised server-side at save) and an optional image gallery.
  */
 import api from './api-client.js';
-import { t, setInstanceDefault } from './i18n.js';
+import { t, setInstanceDefault, i18nReady } from './i18n.js';
 import { applyNav, applyBrand, initHeaderControls, applyFooter } from './site-nav.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g,
@@ -114,10 +114,11 @@ async function init() {
     const site = (await api.getSite()) || {};
     siteContent = site.content;
     pages = siteContent?.pages;
-    setInstanceDefault((site.language || '').trim().toLowerCase());
+    await setInstanceDefault((site.language || '').trim().toLowerCase());
     applyBrand(site);
     applyFooter(site);
   } catch (e) { /* nav stays muted */ }
+  await i18nReady();
   initHeaderControls();
   applyNav('news', pages, siteContent);
   document.getElementById('news-title').textContent = t('site.nav.news');

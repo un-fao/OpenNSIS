@@ -114,7 +114,8 @@ sis-dev/
 
 ### Prerequisites
 
-- Docker Engine + Docker Compose plugin
+- Docker Engine + Docker Compose plugin, on a Linux kernel 4.15 or newer
+  (the nginx service sets a per-container TCP option older kernels refuse)
 - `openssl` (for secret generation in `deploy.sh`)
 - Country/project rasters and metadata in
   `~/Downloads/FAO/AFACI/<COUNTRY>/output/` (`*.tif`, `*.map`, `*.xml`).
@@ -234,7 +235,8 @@ It `git pull`s, applies any pending DB migrations
 (`sis-database/migrations/*.sql`, tracked in `api.schema_migration`), rebuilds
 **only the application containers**
 (`sis-api`, `sis-api-glosis`, `sis-web-mapping`) and refreshes nginx: the
-container is recreated if its service definition changed and restarted if
+container is recreated if its service definition changed (after checking the
+new definition can start on this host) and restarted if
 `sis-nginx/nginx.conf` changed (after validating the new file), otherwise left
 alone. It never runs `down`, never passes `-v`, and never reloads the seed
 dump — so the Postgres / pyCSW / raster volumes (everything you uploaded) are

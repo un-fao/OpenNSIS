@@ -153,7 +153,16 @@ if $DC exec -T sis-nginx true >/dev/null 2>&1 && [ "$want" != "$(nginx_conf_sum)
   $DC exec -T sis-nginx rm -f /tmp/nginx.candidate.conf >/dev/null 2>&1 || true
 fi
 if [ "$nginx_ok" = 1 ]; then
-  $DC up -d --no-deps sis-nginx
+  # `up` replaces the running container, so first make sure the definition
+  # just pulled can start on this host at all (it sets a kernel option that
+  # kernels older than 4.15 refuse, and the container would not come up).
+  if $DC run --rm --no-deps --entrypoint /bin/true sis-nginx >/dev/null 2>&1; then
+    $DC up -d --no-deps sis-nginx
+  else
+    echo "  WARNING: this host cannot start the updated sis-nginx definition (most likely a"
+    echo "           kernel older than 4.15). The running nginx container was kept as it is;"
+    echo "           the site works normally, without the new network tuning."
+  fi
   if [ "$want" != "$(nginx_conf_sum)" ]; then
     $DC restart sis-nginx >/dev/null 2>&1 || true
     echo "  nginx restarted (configuration changed)"

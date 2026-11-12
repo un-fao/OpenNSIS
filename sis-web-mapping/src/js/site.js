@@ -71,7 +71,7 @@ async function init() {
   }
   // A visitor without a chosen language gets the instance's LANGUAGE
   // setting (carried on /api/site), not English — must run before any t().
-  setInstanceDefault((data.language || '').trim().toLowerCase());
+  await setInstanceDefault((data.language || '').trim().toLowerCase());
   if (isPreview) {
     const bar = document.createElement('div');
     bar.textContent = t('site.previewBanner');

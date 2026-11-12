@@ -84,6 +84,14 @@ services:
   sis-nginx:
     image: nginx:alpine
     container_name: sis-nginx
+    # Keep TCP's sending window across idle gaps on keep-alive connections.
+    # By default Linux collapses it after a fraction of a second of silence,
+    # so each map tile, image or API answer on a reused connection starts
+    # slowly again and costs several extra round trips: the dominant delay
+    # for visitors far from the server. Set per container; the kernel must be
+    # 4.15 or newer (update.sh checks before replacing a running nginx).
+    sysctls:
+      net.ipv4.tcp_slow_start_after_idle: 0
     volumes:
       - ./sis-nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./sis-web-services/volume:/srv/rasters:ro

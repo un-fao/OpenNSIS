@@ -1,16 +1,16 @@
 import Map from 'ol/Map';
 import View from 'ol/View';
-import { Tile as TileLayer, Image as ImageLayer, Vector as VectorLayer } from 'ol/layer';
-import { OSM, XYZ, ImageWMS, Vector as VectorSource, Cluster } from 'ol/source';
+import { Tile as TileLayer, Vector as VectorLayer } from 'ol/layer';
+import { OSM, XYZ, TileWMS, Vector as VectorSource, Cluster } from 'ol/source';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import { ScaleLine, defaults as defaultControls } from 'ol/control';
 import Overlay from 'ol/Overlay';
 import { Circle as CircleStyle, Fill, Icon, RegularShape, Stroke, Style, Text } from 'ol/style';
 import { GeoJSON } from 'ol/format';
 import { getCenter } from 'ol/extent';
+import { createXYZ } from 'ol/tilegrid';
 import api, { MAPSERVER_URL } from './api-client.js';
-import adminDashboard from './admin-dashboard.js';
-import { t, setInstanceDefault } from './i18n.js';
+import { t, setInstanceDefault, i18nReady } from './i18n.js';
 import { applyNav, initHeaderControls } from './site-nav.js';
 import { formatSamplingMeta } from './sampling-meta.js';
 import { showMetadataPopup } from './metadata-popup.js';
@@ -33,6 +33,26 @@ let activePopup = null;   // the map info-popup overlay (set in setupPopup)
 // layer changes or is unselected, so a stale popup doesn't linger.
 function closeInfoPopup() {
   if (activePopup) activePopup.setPosition(undefined);
+}
+
+// ==================== Admin panel (loaded on demand) ====================
+
+// The admin panel is a third of this page's code and only signed-in users
+// ever open it, so it is fetched when first needed rather than shipped to
+// every visitor.
+let adminDashboard = null;          // the panel, once its code has arrived
+let adminDashboardLoad = null;
+
+function loadAdminDashboard() {
+  if (!adminDashboardLoad) {
+    adminDashboardLoad = import('./admin-dashboard.js').then((module) => {
+      adminDashboard = module.default;
+      return adminDashboard;
+    });
+    // A failed download is not remembered, so the next attempt retries.
+    adminDashboardLoad.catch(() => { adminDashboardLoad = null; });
+  }
+  return adminDashboardLoad;
 }
 
 // ==================== Start-up requests ====================
@@ -84,6 +104,9 @@ async function initializeApp() {
     // initialises, so the admin never watches the map load first.
     if (location.pathname === '/admin' && api.restoreSession()) {
       showAdminPanel();
+      // The panel's own first request must go out ahead of the map's
+      // start-up requests, or it queues behind all of them.
+      await adminPanelStarted;
     }
     sendStartupRequests();
     showLoading(true);
@@ -93,7 +116,7 @@ async function initializeApp() {
     const settings = await startupOr('settings', () => api.getSettings());
     console.log('Settings loaded:', settings);
     appConfig = settingsArrayToObject(settings);
-    setInstanceDefault((appConfig.LANGUAGE || '').trim().toLowerCase());
+    await setInstanceDefault((appConfig.LANGUAGE || '').trim().toLowerCase());
     applyStaticTranslations();
 
     // Apply settings to UI
@@ -125,7 +148,9 @@ async function initializeApp() {
     // if (api.restoreSession()) {
     //   showAdminPanel();
     // }
-    api.restoreSession();
+    // A signed-in visitor is likely to open the panel: fetch its code now
+    // that the map itself has everything it needs.
+    if (api.restoreSession()) loadAdminDashboard().catch(() => {});
 
     console.log('Application initialized successfully!');
     showLoading(false);
@@ -393,7 +418,7 @@ async function loadAdminDivisions() {
     item.appendChild(label);
     frag.appendChild(item);
 
-    // Above rasters (ImageLayers, zIndex 0) but under profile clusters (1000).
+    // Above rasters (zIndex 0) but under profile clusters (1000).
     const layer = new VectorLayer({
       source: new VectorSource(),
       style: adminDivisionStyle(d),
@@ -807,6 +832,38 @@ function switchLayer(layerConfig) {
   currentLayers[layerConfig.layer_id] = layerConfig;
 }
 
+// Rasters are requested on a fixed tile grid, so every visitor asks for the
+// same images and browser and server caches can reuse them. 512 px tiles,
+// not the default 256: a quarter of the requests, which matters while
+// browsers open only six connections per host.
+const WMS_TILE_GRID = createXYZ({ tileSize: 512 });
+
+// MapServer runs a handful of worker processes, and a request that finds
+// them all busy waits a full second before another worker is started. A
+// burst of uncached tiles is therefore fed to it a few at a time.
+const WMS_TILE_CONCURRENCY = 4;
+let wmsTilesLoading = 0;
+const wmsTileQueue = [];
+
+function loadWmsTile(tile, src) {
+  const start = () => {
+    wmsTilesLoading++;
+    const image = tile.getImage();
+    const finished = () => {
+      image.removeEventListener('load', finished);
+      image.removeEventListener('error', finished);
+      wmsTilesLoading--;
+      const next = wmsTileQueue.shift();
+      if (next) next();
+    };
+    image.addEventListener('load', finished);
+    image.addEventListener('error', finished);
+    image.src = src;
+  };
+  if (wmsTilesLoading < WMS_TILE_CONCURRENCY) start();
+  else wmsTileQueue.push(start);
+}
+
 function createWMSLayer(layerConfig) {
   // Parse the get_map_url to extract the map parameter AND the cache-buster
   // token (_v) the API stamps on so re-rendered tiles aren't served from
@@ -841,12 +898,18 @@ function createWMSLayer(layerConfig) {
     params['_v'] = cacheToken;
   }
 
-  const layer = new ImageLayer({
-    source: new ImageWMS({
+  const layer = new TileLayer({
+    source: new TileWMS({
       url: mapServerUrl,
       params: params,
-      ratio: 1,
-      serverType: 'mapserver'
+      serverType: 'mapserver',
+      tileGrid: WMS_TILE_GRID,
+      tileLoadFunction: loadWmsTile,
+      // Between zoom levels the browser scales the tiles: it must repeat
+      // pixels, never blend neighbours into colours the legend does not have.
+      interpolate: false,
+      // A fade-in would show through a semi-transparent layer as flicker.
+      transition: 0
     })
   });
 
@@ -2536,6 +2599,9 @@ function showLoginModal() {
   `;
 
   document.body.appendChild(modal);
+  // Whoever opens this dialogue is about to need the panel: fetch its code
+  // while they type.
+  loadAdminDashboard().catch(() => {});
 
   // Handle form submission
   document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -2563,13 +2629,36 @@ window.showLoginModal = showLoginModal;
 // Admin dashboard restores the button icon on hide/logout via this.
 window.setAuthButtonIcon = setAuthButtonIcon;
 
+// Opening is asynchronous (the panel's code and the active language may
+// still be on their way), so calls made while one is in flight join it
+// instead of opening the panel twice.
+let adminPanelOpening = null;
+// Settles once the panel has been told to show (or could not be loaded).
+let adminPanelStarted = Promise.resolve();
+
 function showAdminPanel() {
-  // Show the admin dashboard
-  adminDashboard.show();
+  if (!adminPanelOpening) {
+    let started;
+    adminPanelStarted = new Promise((resolve) => { started = resolve; });
+    adminPanelOpening = openAdminPanel(started)
+      .catch((error) => {
+        console.error('Failed to open the admin panel:', error);
+        showError(t('err.loadApp') + error.message);
+      })
+      .finally(() => { started(); adminPanelOpening = null; });
+  }
+  return adminPanelOpening;
+}
+
+async function openAdminPanel(started) {
+  const [dashboard] = await Promise.all([loadAdminDashboard(), i18nReady()]);
+  const shown = dashboard.show();
+  started();
   if (location.pathname !== '/admin') history.pushState({ sisAdmin: 1 }, '', '/admin');
 
   markPanelOpenGlyph();
   syncAdminNav();
+  await shown;
 }
 
 /** Header "Admin Panel" entry: visible only while signed in, and marked

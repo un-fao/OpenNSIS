@@ -7,6 +7,28 @@ the change landed on `main`.
 
 ## November 2026
 
+### 2026-11-12 — Faster map, second pass
+Raster layers are now drawn from fixed 512-pixel tiles instead of one
+image per view, and nginx keeps a server-side copy of every tile and
+legend it has served. Panning loads only the tiles that come into view,
+and returning to an area or zoom level already seen loads nothing; a
+tile is rendered by MapServer once and then served to every visitor from
+the cache (kept 30 days, renewed automatically when a layer's pixels or
+styling change). Click values are unchanged: a click still returns the
+raster value under the pointer.
+
+nginx also keeps TCP's sending window open across idle moments on a
+reused connection. Linux resets it by default, which made every image,
+tile and API answer start slowly again; for a visitor 190 ms away this
+alone cut raster loading time by about 40 %. It needs a Linux kernel of
+4.15 or newer; `update.sh` checks, and on an older kernel keeps the
+running nginx and says so.
+
+Pages are lighter. The admin panel's code is fetched only when someone
+signs in, and only the language in use is downloaded, not all six: the
+map page went from 242 KB to 140 KB of compressed JavaScript and the
+landing page from 79 KB to 20 KB.
+
 ### 2026-11-12 — Faster map page
 The map opens two to three times faster. Its start-up requests (settings,
 layers, profiles, boundaries, sampling designs) are now sent together

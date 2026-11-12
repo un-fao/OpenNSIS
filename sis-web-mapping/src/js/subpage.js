@@ -33,7 +33,7 @@ async function init() {
     return;
   }
   // Instance default language before any t() output.
-  setInstanceDefault((data.language || '').trim().toLowerCase());
+  await setInstanceDefault((data.language || '').trim().toLowerCase());
   if (isPreview) {
     const bar = document.createElement('div');
     bar.textContent = t('site.previewBanner');

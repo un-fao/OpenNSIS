@@ -6,7 +6,7 @@
  * links). Card layout modelled on the ESDAC dataset listing.
  */
 import api from './api-client.js';
-import { t, setInstanceDefault } from './i18n.js';
+import { t, setInstanceDefault, i18nReady } from './i18n.js';
 import { applyNav, applyBrand, initHeaderControls, applyFooter } from './site-nav.js';
 import { showMetadataPopup } from './metadata-popup.js';
 
@@ -200,10 +200,11 @@ async function init() {
     const site = (await api.getSite()) || {};
     siteContent = site.content;
     pages = siteContent?.pages;
-    setInstanceDefault((site.language || '').trim().toLowerCase());
+    await setInstanceDefault((site.language || '').trim().toLowerCase());
     applyBrand(site);
     applyFooter(site);
   } catch (e) { /* nav stays muted */ }
+  await i18nReady();
   initHeaderControls();
   applyNav('catalogue', pages, siteContent);
   document.getElementById('cat-title').textContent = t('site.nav.catalogue');
