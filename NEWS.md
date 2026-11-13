@@ -7,6 +7,16 @@ the change landed on `main`.
 
 ## November 2026
 
+### 2026-11-13 — Exercise guide for the hands-on day, in Portuguese
+`docs/presentations/pt-guia-de-exercicios.html` guides a practical day
+through twelve exercises: creating a project, filling in the soil-profile
+upload template, mapping and validating a CSV, sharing controls,
+publishing a GeoTIFF, opening it in QGIS, writing a news post, taking a
+backup and updating the system, then repeating the workflow with national
+data. Each exercise states its steps, how to tell it is finished, and a
+question or challenge; a table of common upload errors and their causes
+closes the guide.
+
 ### 2026-11-13 — Three more workshop presentations in Portuguese
 Three further Portuguese presentations sit in `docs/presentations/`,
 prepared for the Mozambique workshop: `pt-glosis.html` (what GloSIS is,
