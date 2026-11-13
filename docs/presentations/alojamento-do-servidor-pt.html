@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="pt">
+<meta charset="utf-8">
+<title>Onde vive o SIS nacional: alojamento e operação</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --paper:#F7F3EC; --paper-2:#EFE8DC; --ink:#241C14; --ink-soft:#5C5044;
+    --hz-o:#3E2E1F; --hz-a:#63452C; --hz-b:#8A6844; --hz-c:#B79A77; --hz-r:#6B6157;
+    --accent:#1D5F73; --accent-soft:#DDE9EC; --line:#D8CDBC;
+    --disp:"Bricolage Grotesque", Georgia, serif;
+    --body:"Source Sans 3", "Segoe UI", Arial, sans-serif;
+    --mono:"IBM Plex Mono", "Courier New", monospace;
+  }
+  html,body{height:100%;}
+  body{margin:0;background:#221A12;font-family:var(--body);color:var(--ink);overflow:hidden;}
+
+  /* ---------- stage ---------- */
+  #viewport{position:fixed;inset:0;display:grid;place-items:center;background:#221A12;}
+  #stage{width:1280px;height:720px;position:relative;background:var(--paper);
+         box-shadow:0 20px 60px rgba(0,0,0,.5);transform-origin:center center;overflow:hidden;}
+
+  .slide{position:absolute;inset:0;display:none;padding:64px 88px 56px 132px;box-sizing:border-box;background:var(--paper);}
+  .slide.current{display:flex;flex-direction:column;}
+
+  /* ---------- horizon rail ---------- */
+  #rail{position:absolute;left:0;top:0;bottom:0;width:76px;background:var(--paper-2);
+        border-right:1px solid var(--line);display:flex;flex-direction:column;z-index:5;}
+  #rail .hz{flex:1;display:flex;align-items:flex-start;justify-content:center;cursor:pointer;
+            border:none;font-family:var(--disp);font-weight:600;font-size:15px;
+            padding-top:9px;color:#F7F3EC;opacity:.42;transition:opacity .2s;}
+  #rail .hz.on{opacity:1;}
+  #rail .hz:focus-visible{outline:3px solid var(--accent);outline-offset:-3px;}
+  #rail .hz small{font-family:var(--body);font-weight:600;font-size:10px;letter-spacing:.08em;
+                  text-transform:uppercase;writing-mode:vertical-rl;margin-top:7px;}
+  #rail .o{background:var(--hz-o);} #rail .a{background:var(--hz-a);}
+  #rail .b{background:var(--hz-b);} #rail .c{background:var(--hz-c);}
+  #rail .r{background:var(--hz-r);}
+  #rail .t{background:var(--paper-2);color:var(--ink-soft);flex:0 0 46px;align-items:center;padding-top:0;}
+
+  #counter{position:absolute;right:26px;bottom:20px;font-family:var(--mono);font-size:13px;
+           color:var(--ink-soft);z-index:6;}
+
+  /* ---------- typography ---------- */
+  .eyebrow{font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+           color:var(--accent);margin:0 0 10px;}
+  .eyebrow .hzchip{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:8px;}
+  h1{font-family:var(--disp);font-weight:800;font-size:64px;line-height:1.04;margin:0;text-wrap:balance;}
+  h2{font-family:var(--disp);font-weight:800;font-size:44px;line-height:1.08;margin:0 0 26px;text-wrap:balance;}
+  h3{font-family:var(--disp);font-weight:600;font-size:22px;margin:0 0 8px;}
+  p,li{font-size:21px;line-height:1.5;margin:0;}
+  .lead{font-size:25px;line-height:1.45;color:var(--ink-soft);max-width:30em;}
+  ul.pts{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:18px;}
+  ul.pts li{padding-left:30px;position:relative;max-width:34em;}
+  ul.pts li::before{content:"";position:absolute;left:0;top:11px;width:14px;height:8px;
+                    background:var(--hz-a);border-radius:2px;}
+  strong{font-weight:600;}
+  .mono{font-family:var(--mono);font-size:.9em;}
+  .quiet{color:var(--ink-soft);}
+  a{color:var(--accent);text-decoration:none;}
+
+  .cols{display:grid;gap:36px;align-items:start;}
+  .c2{grid-template-columns:1fr 1fr;} .c3{grid-template-columns:1fr 1fr 1fr;}
+
+  .card{background:#FFFDF9;border:1px solid var(--line);border-radius:10px;padding:22px 26px;box-sizing:border-box;}
+  .card h3{color:var(--hz-a);}
+  .card p{font-size:18px;line-height:1.45;}
+
+  .tag{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:99px;
+       padding:3px 14px;font-size:15px;font-weight:600;}
+
+  table{border-collapse:collapse;width:100%;font-size:19px;}
+  th{font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);
+     text-align:left;padding:0 18px 10px 0;border-bottom:2px solid var(--ink);}
+  td{padding:11px 18px 11px 0;border-bottom:1px solid var(--line);vertical-align:top;}
+  td.svc{font-family:var(--mono);font-weight:500;white-space:nowrap;}
+
+  .code{background:#2B221A;color:#EFE4D2;border-radius:10px;padding:18px 22px;
+        font-family:var(--mono);font-size:16px;line-height:1.65;overflow-x:auto;}
+  .code .k{color:#B7D9C9;}
+
+  footer.src{margin-top:auto;font-size:14px;color:var(--ink-soft);}
+
+  /* metadata label card */
+  .label-card{background:#FFFDF9;border:1.5px solid var(--hz-a);border-radius:12px;overflow:hidden;}
+  .label-card .head{background:var(--hz-a);color:#F7F3EC;padding:12px 22px;font-family:var(--mono);font-size:16px;}
+  .label-card dl{display:grid;grid-template-columns:auto 1fr;gap:7px 20px;margin:0;padding:18px 22px;}
+  .label-card dt{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);padding-top:3px;}
+  .label-card dd{margin:0;font-size:17px;}
+
+  /* architecture diagram */
+  .arch{display:flex;flex-direction:column;gap:14px;align-items:center;}
+  .arch .row{display:flex;gap:14px;justify-content:center;}
+  .arch .box{background:#FFFDF9;border:1.5px solid var(--hz-a);border-radius:9px;padding:10px 18px;text-align:center;}
+  .arch .box b{display:block;font-family:var(--disp);font-weight:600;font-size:18px;}
+  .arch .box span{font-size:14px;color:var(--ink-soft);}
+  .arch .box.std{border-color:var(--accent);background:var(--accent-soft);}
+  .arch .down{font-size:20px;color:var(--ink-soft);line-height:1;}
+
+  /* horizon strip on title + roadmap */
+  .hzstrip{display:flex;flex-direction:column;border-radius:12px;overflow:hidden;height:100%;min-height:340px;}
+  .hzstrip div{flex:1;display:flex;align-items:center;gap:16px;padding:0 24px;color:#F7F3EC;}
+  .hzstrip .lt{font-family:var(--disp);font-weight:800;font-size:30px;width:32px;}
+  .hzstrip b{font-family:var(--disp);font-weight:600;font-size:20px;display:block;}
+  .hzstrip span{font-size:14.5px;opacity:.85;display:block;}
+  .hzstrip .o{background:var(--hz-o);} .hzstrip .a{background:var(--hz-a);}
+  .hzstrip .b{background:var(--hz-b);} .hzstrip .c{background:var(--hz-c);}
+  .hzstrip .r{background:var(--hz-r);}
+
+  .bigquote{font-family:var(--disp);font-weight:600;font-size:34px;line-height:1.25;max-width:20em;text-wrap:balance;}
+  .bigquote em{color:var(--hz-a);font-style:normal;}
+
+
+  /* live-demo + screenshot slides */
+  .slide.live{background:#2B221A;color:#EFE4D2;}
+  .slide.live h2{color:#EFE4D2;}
+  .slide.live .steps{display:flex;flex-direction:column;gap:20px;max-width:38em;}
+  .slide.live .step{display:flex;gap:18px;align-items:baseline;font-size:22px;line-height:1.5;}
+  .slide.live .step .n{font-family:var(--disp);font-weight:800;font-size:26px;color:#B7D9C9;min-width:30px;}
+  .livetag{display:inline-block;background:#B7D9C9;color:#2B221A;border-radius:99px;
+           padding:4px 18px;font-weight:600;font-size:15px;letter-spacing:.12em;text-transform:uppercase;}
+  .slide.shot{padding:0 0 0 76px;background:#2B221A;}
+  .slide.shot img{flex:1;min-height:0;width:100%;object-fit:contain;}
+  .slide.shot .cap{background:rgba(36,28,20,.88);color:#EFE4D2;padding:16px 40px;font-size:19px;}
+  .slide.shot .cap b{font-family:var(--disp);}
+
+  /* feature cards */
+  .feat>div{background:#FFFDF9;border:1px solid var(--line);border-radius:8px;padding:10px 16px;}
+  .feat h3{font-size:17px;margin:0 0 4px;color:var(--hz-a);}
+  .feat p{font-size:14px;line-height:1.35;}
+
+  /* additions for the day-one decks */
+  .fig{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#FFFDF9;}
+  .fig img{display:block;width:100%;}
+  .card p.num,.num{font-family:var(--disp);font-weight:800;font-size:46px;line-height:1;color:var(--hz-a);margin-bottom:8px;}
+  .yes{color:#2E7D4F;font-weight:600;} .no{color:#A6432D;font-weight:600;}
+  td.c,th.c{text-align:center;}
+  table.sm{font-size:17.5px;} table.sm td{padding:9px 16px 9px 0;}
+  .c4{grid-template-columns:repeat(4,1fr);}
+  .card.dark{background:var(--hz-o);border-color:var(--hz-o);color:#F7F3EC;} .card.dark h3{color:#E9D9BF;}
+
+  @media print{
+    body{overflow:visible;background:#fff;}
+    #viewport{position:static;display:block;background:#fff;}
+    #stage{transform:none !important;box-shadow:none;width:1280px;height:720px;overflow:hidden;
+           page-break-after:always;position:relative;margin:0 auto;}
+    .slide{display:flex !important;flex-direction:column;position:relative;height:720px;page-break-after:always;}
+    #counter{display:none;}
+  }
+  @media (prefers-reduced-motion: no-preference){
+    .slide.current{animation:fade .28s ease;}
+    @keyframes fade{from{opacity:0}to{opacity:1}}
+  }
+</style>
+
+<div id="viewport">
+<div id="stage">
+  <nav id="rail" aria-label="Secções">
+    <button class="hz t" data-go="0" aria-label="Título">▲</button>
+    <button class="hz o" data-go="1">O<small>Opções</small></button>
+    <button class="hz a" data-go="6">A<small>Requisitos</small></button>
+    <button class="hz b" data-go="10">B<small>Instalar</small></button>
+    <button class="hz c" data-go="13">C<small>Operar</small></button>
+    <button class="hz r" data-go="17">R<small>Pessoas</small></button>
+  </nav>
+  <div id="counter">1 / 22</div>
+
+  <!-- 1 · TITLE -->
+  <section class="slide">
+    <div class="cols c2" style="flex:1;align-items:center;grid-template-columns:1.35fr 1fr;">
+      <div>
+        <p class="eyebrow">FAO · Parceria Global do Solo</p>
+        <h1>Onde vive o<br>SIS nacional?</h1>
+        <p class="lead" style="margin-top:22px;">Alojamento do servidor, requisitos técnicos e o trabalho
+        de manter o sistema a funcionar — todos os meses.</p>
+        <p style="margin-top:34px;font-size:19px;">Eloi Ribeiro &nbsp;·&nbsp; <span class="quiet">Divisão de Terras e Águas, FAO</span></p>
+      </div>
+      <div class="hzstrip" aria-hidden="true">
+        <div class="o"><span class="lt">O</span><div><b>Opções</b><span>três casas possíveis</span></div></div>
+        <div class="a"><span class="lt">A</span><div><b>Requisitos</b><span>máquina, software, rede</span></div></div>
+        <div class="b"><span class="lt">B</span><div><b>Instalar</b><span>um comando; atualizar, outro</span></div></div>
+        <div class="c"><span class="lt">C</span><div><b>Operar</b><span>cópias, atualizações, rotina</span></div></div>
+        <div class="r"><span class="lt">R</span><div><b>Pessoas</b><span>quem, o quê, quanto tempo</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · OPTIONS: THREE HOMES -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-o)"></span>O · Opções</p>
+    <h2>Três casas possíveis</h2>
+    <div class="cols c3" style="flex:1;align-content:center;">
+      <div class="card">
+        <h3>Nuvem</h3>
+        <p>Um servidor virtual alugado a um <strong>fornecedor privado</strong>, pago ao mês.</p>
+      </div>
+      <div class="card">
+        <h3>TI do Estado</h3>
+        <p>Um servidor virtual no <strong>centro de dados do Governo</strong> ou na infraestrutura de TI do ministério.</p>
+      </div>
+      <div class="card">
+        <h3>Na instituição</h3>
+        <p>Uma máquina <strong>na sala de servidores</strong> da própria instituição, gerida pela sua equipa de TI.</p>
+      </div>
+    </div>
+    <footer class="src">O OpenNSIS funciona da mesma maneira nas três. O que muda é quem trata da energia, da rede, da fatura — e quem tem a chave.</footer>
+  </section>
+
+  <!-- 3 · OPTIONS: CLOUD -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-o)"></span>O · Opções</p>
+    <h2>Nuvem: fornecedor privado</h2>
+    <div class="cols c2" style="flex:1;align-content:center;">
+      <div class="card" style="border-color:var(--accent);background:var(--accent-soft);">
+        <h3 style="color:var(--accent);">A favor</h3>
+        <p>Pronto em minutos, sem compras de equipamento.<br>
+        Energia, rede e hardware são problema do fornecedor.<br>
+        Cópias instantâneas da máquina inteira.<br>
+        Custo mensal previsível; cresce-se com um clique.</p>
+      </div>
+      <div class="card">
+        <h3>A ter em conta</h3>
+        <p>Pagamento recorrente, em regra em moeda estrangeira: <strong>quem paga depois do projeto?</strong><br>
+        Os dados ficam fora do país — verificar a política nacional.<br>
+        Depende da ligação internacional à Internet.</p>
+      </div>
+    </div>
+    <footer class="src">Ordem de grandeza: para a dimensão necessária, algumas dezenas de dólares por mês, conforme o fornecedor.</footer>
+  </section>
+
+  <!-- 4 · OPTIONS: GOVERNMENT IT -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-o)"></span>O · Opções</p>
+    <h2>Infraestrutura de TI do Estado</h2>
+    <div class="cols c2" style="flex:1;align-content:center;">
+      <div class="card" style="border-color:var(--accent);background:var(--accent-soft);">
+        <h3 style="color:var(--accent);">A favor</h3>
+        <p>Os dados ficam no país, sob tutela pública.<br>
+        Energia, rede e segurança física já existem.<br>
+        Em regra, sem fatura mensal direta.<br>
+        Alinhado com a estratégia de governo eletrónico.</p>
+      </div>
+      <div class="card">
+        <h3>A ter em conta</h3>
+        <p>Procedimentos e prazos de outra instituição.<br>
+        <strong>Acesso de administração</strong> (SSH): combinar à partida quem o tem.<br>
+        Regras sobre software e portas: confirmar que Docker e as portas 80/443 são permitidos.<br>
+        Quem intervém fora de horas?</p>
+      </div>
+    </div>
+    <footer class="src">Boa prática: um acordo escrito entre as duas instituições — recursos, acessos, contactos e responsabilidades.</footer>
+  </section>
+
+  <!-- 5 · OPTIONS: SELF-HOSTING -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-o)"></span>O · Opções</p>
+    <h2>Na própria instituição</h2>
+    <div class="cols c2" style="flex:1;align-content:center;">
+      <div class="card" style="border-color:var(--accent);background:var(--accent-soft);">
+        <h3 style="color:var(--accent);">A favor</h3>
+        <p>Controlo total, sem dependências externas.<br>
+        A equipa está ao lado da máquina.<br>
+        Os dados nunca saem do edifício.<br>
+        Reforça a capacidade de TI da instituição.</p>
+      </div>
+      <div class="card">
+        <h3>A ter em conta</h3>
+        <p><strong>Energia estável</strong>: UPS e, idealmente, gerador.<br>
+        Climatização e segurança física da sala.<br>
+        Internet com <strong>IP público fixo</strong> e largura de banda suficiente.<br>
+        O hardware envelhece: prever a substituição.<br>
+        Alguém de TI disponível — também nas férias.</p>
+      </div>
+    </div>
+    <footer class="src">Se a luz ou a Internet falham no edifício, o SIS nacional fica fora do ar para todo o país.</footer>
+  </section>
+
+  <!-- 6 · OPTIONS: COMPARISON -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-o)"></span>O · Opções</p>
+    <h2>Comparar com os mesmos critérios</h2>
+    <table class="sm">
+      <thead><tr><th>Critério</th><th>Nuvem</th><th>TI do Estado</th><th>Na instituição</th></tr></thead>
+      <tbody>
+        <tr><td>Tempo até estar no ar</td><td>horas</td><td>semanas</td><td>semanas a meses</td></tr>
+        <tr><td>Investimento inicial</td><td>nenhum</td><td>nenhum ou baixo</td><td>servidor, UPS, rede</td></tr>
+        <tr><td>Custo recorrente</td><td>mensalidade</td><td>em regra, nenhum direto</td><td>energia, Internet, manutenção</td></tr>
+        <tr><td>Dados em território nacional</td><td>depende do fornecedor</td><td>sim</td><td>sim</td></tr>
+        <tr><td>Energia e rede</td><td>fornecedor</td><td>centro de dados</td><td>a instituição</td></tr>
+        <tr><td>Acesso de administração</td><td>total</td><td>a combinar</td><td>total</td></tr>
+      </tbody>
+    </table>
+    <footer class="src">A escolha não é para sempre: mudar de casa é uma cópia de segurança e um restauro.</footer>
+  </section>
+
+  <!-- 7 · REQUIREMENTS: THE MACHINE -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-a)"></span>A · Requisitos</p>
+    <h2>O que a máquina precisa</h2>
+    <table class="sm">
+      <thead><tr><th>Recurso</th><th>Mínimo</th><th>Recomendado</th></tr></thead>
+      <tbody>
+        <tr><td>Processador</td><td>2 vCPU</td><td>4 vCPU</td></tr>
+        <tr><td>Memória</td><td>4 GB</td><td>8 GB</td></tr>
+        <tr><td>Disco</td><td>40 GB SSD</td><td>100 GB SSD ou mais — cresce com os mapas</td></tr>
+        <tr><td>Sistema operativo</td><td colspan="2">Linux de 64 bits com suporte de longa duração — por exemplo, Ubuntu Server LTS</td></tr>
+        <tr><td>Rede</td><td colspan="2">IP público fixo; portas 80 e 443 abertas; SSH para administração</td></tr>
+      </tbody>
+    </table>
+    <footer class="src">Valores indicativos. Medido hoje na instância de Moçambique: ≈ 0,4 GB de memória em repouso, 630 MB de mapas (5 rasters) e 31 MB de base de dados.</footer>
+  </section>
+
+  <!-- 8 · REQUIREMENTS: A REAL DATA POINT -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-a)"></span>A · Requisitos</p>
+    <h2>Um dado real: o servidor das demonstrações</h2>
+    <div class="cols c4" style="flex:1;align-content:center;gap:16px;">
+      <div class="card"><p class="num">1</p><h3>servidor virtual</h3><p>8 vCPU · 16 GB de memória · 300 GB de disco</p></div>
+      <div class="card"><p class="num">8</p><h3>instâncias nacionais</h3><p>incluindo a de Moçambique — 57 contentores no total</p></div>
+      <div class="card"><p class="num">≈ 4 GB</p><h3>de memória em uso</h3><p>no servidor inteiro, em funcionamento normal</p></div>
+      <div class="card"><p class="num">24 %</p><h3>do disco ocupado</h3><p>com todos os mapas e bases de dados</p></div>
+    </div>
+    <footer class="src">Um SIS nacional é pequeno: cabe com folga numa máquina modesta. Ubuntu 26.04 LTS · Docker 29 · Git.</footer>
+  </section>
+
+  <!-- 9 · REQUIREMENTS: SOFTWARE -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-a)"></span>A · Requisitos</p>
+    <h2>Software: três peças, todas livres</h2>
+    <div class="cols c3" style="flex:1;align-content:center;">
+      <div class="card">
+        <h3>Linux</h3>
+        <p>O sistema operativo do servidor. Uma versão com suporte de longa duração, com <strong>núcleo 4.15 ou mais recente</strong>.</p>
+      </div>
+      <div class="card">
+        <h3>Docker</h3>
+        <p>Docker Engine + Compose. Cada componente corre no seu <strong>contentor</strong>: base de dados, API, mapas, catálogo, servidor web.</p>
+      </div>
+      <div class="card">
+        <h3>Git</h3>
+        <p>Vai buscar o código — e as atualizações — ao repositório público <span class="mono">un-fao/OpenNSIS</span>.</p>
+      </div>
+    </div>
+    <footer class="src">Nada mais se instala no sistema: PostgreSQL/PostGIS, MapServer, pyCSW e nginx vêm dentro dos contentores. Sem licenças a pagar.</footer>
+  </section>
+
+  <!-- 10 · REQUIREMENTS: NETWORK, DOMAIN, HTTPS -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-a)"></span>A · Requisitos</p>
+    <h2>Rede, domínio e HTTPS</h2>
+    <div class="cols c2" style="flex:1;align-items:center;grid-template-columns:1.1fr 1fr;">
+      <ul class="pts">
+        <li>Um <strong>IP público fixo</strong> e as portas <strong>80 e 443</strong> abertas na firewall.</li>
+        <li>Um <strong>nome de domínio</strong> da instituição, com um registo DNS a apontar para o servidor.</li>
+        <li><strong>HTTPS automático</strong>: indica-se o domínio na instalação; o certificado é obtido e renovado sozinho.</li>
+        <li><strong>Saída para a Internet</strong>: atualizações (GitHub), imagens Docker, covariáveis para os desenhos de amostragem.</li>
+      </ul>
+      <div>
+        <div class="code" style="font-size:14px;">
+<span class="quiet" style="color:#B7A995"># língua e domínio definidos à partida</span><br>
+LANGUAGE=<span class="k">pt</span> \<br>
+DOMAIN=<span class="k">solos.exemplo.gov.mz</span> \<br>
+sudo -E ops/single/host-install.sh <span class="k">MZ</span>
+        </div>
+        <p style="margin-top:16px;font-size:17px;" class="quiet">O domínio é um exemplo: o nome verdadeiro é uma decisão da instituição.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 · INSTALL: ONE COMMAND -->
+  <section class="slide live">
+    <p style="margin-bottom:18px;"><span class="livetag">Instalar · um comando</span></p>
+    <h2>Do servidor vazio ao SIS no ar</h2>
+    <div class="steps" style="flex:1;justify-content:center;">
+      <div class="step"><span class="n">1</span><div>Entrar no servidor por <strong>SSH</strong>.</div></div>
+      <div class="step"><span class="n">2</span><div>Colar o comando de instalação:<br><span class="mono" style="font-size:15px;word-break:break-all;display:inline-block;">curl -fsSL https://raw.githubusercontent.com/un-fao/OpenNSIS/main/ops/single/host-install.sh | sudo bash -s -- MZ</span></div></div>
+      <div class="step"><span class="n">3</span><div>O instalador trata do resto: Docker, firewall, código em <span class="mono">/opt/sis</span>, base de dados, serviços e utilizador <span class="mono">admin</span>.</div></div>
+      <div class="step"><span class="n">4</span><div><strong>Guardar a palavra-passe</strong> de administração: é mostrada uma única vez, no fim.</div></div>
+    </div>
+    <footer class="src" style="color:#B7A995;">O sistema nasce vazio, só com as listas de códigos: os dados de Moçambique entram depois, pelo painel de administração ou por restauro.</footer>
+  </section>
+
+  <!-- 12 · INSTALL: FOUR THINGS -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-b)"></span>B · Instalar</p>
+    <h2>Um SIS completo são quatro coisas</h2>
+    <table class="sm">
+      <thead><tr><th>O quê</th><th>Onde</th><th>Contém</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Base de dados</strong></td><td class="mono">contentor sis-database</td><td>utilizadores, definições, projetos, perfis, metadados</td></tr>
+        <tr><td><strong>Mapas</strong></td><td class="mono">sis-web-services/volume/</td><td>os rasters carregados e os ficheiros de mapa</td></tr>
+        <tr><td><strong>Catálogo</strong></td><td class="mono">sis-metadata/volume/</td><td>os registos de metadados em XML</td></tr>
+        <tr><td><strong>Configuração</strong></td><td class="mono">.env</td><td>os segredos gerados na instalação</td></tr>
+      </tbody>
+    </table>
+    <footer class="src">Tudo o resto reconstrói-se a partir do código público. São estas quatro coisas que se guardam nas cópias de segurança.</footer>
+  </section>
+
+  <!-- 13 · INSTALL: UPDATE -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-b)"></span>B · Instalar</p>
+    <h2>Atualizar: outro comando</h2>
+    <div class="fig"><img src="data:image/jpeg;base64,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KMNKRDix50heTA+Qz4tac+JHz8vrxpU6t19dIh/9XTZGQgy5OJ1ClCK8j5oialPllS5H4dL3fYfd+yjpKKGAqDaIZRt0spWqGGUdElbVB5iIZwdPiKGESOmFnH8VZRuIFEQkR4QxEAYpJgmlFQj5eIyOFUkU0ACJHSUZwoyp9Y6SioIZygkSqqKa4lGRJK2R8KaKaIDEjgNqg/6tOHHRP8OF7vsPu/IBe77D7v3NrUSnrcopz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOfKKc+UU58opz5RTnyinPlFOcKtRKgt+y930z+h935AL3fTP6H3fkAvdj7D7v9tuO327x3/oc5wOMZwWP4mM94/wAffX+/L3fYfd+6qoOoyjVpq9SyLzOkYDMhdOSJANQTmrZFdXxy05cntWQsshKmqRzBXwsJyxpoqGjiJKJVCHOWkGUlQZsaoKrqSpygSL1W5xJUSSFZTEuHMWXNaYomEibITziSqmpClGsoM1Rx6gss7uVbVEx1OUtlyJRDHKZLTxLmmgr5zTFWUQU5WZISVCVI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IKHhsVBAYHDR/9oACAEBAAE/EHWpdSjAqDwYa/3G+8ag/wDor/YvgUf7VT/asf7VR/asKIf2WHHusOPdU8aR491jx7qmde6p491Dx7rDi97Di97Di967nvYb97DfvUzz72O/eg3713Pe/Z72O/ex372O/ep372O/ex372O/ex372O/ex372O/ex372O/ex372O/ex372O/ex372O/ex372O/ex372O/ex372O/ex372O/ex372O/ex372O/ex372O/ex372O/e9ff/lf/wD/APh4/gefZsOLY8W/f+b93vfu37t+7fu37t+7X/mf/wD/AP8A9/y8AR+gixY/UGj5B8JlWzPW/em+/axp9u9Bxe9dz3phq96Hi97CdXvY8XvY8e6hjXuoJ17qDj3WHHusY1sDj3KHjaP9qh/tWMArus2KKmK/EVsUKK6U+r0rrpYr9V+r0r9XpX6+OlfqumlNNKmdL0vSxel6V10vSmulfq9L0vS9K6aXpel6Xpel6Xpel6Xpel6Xpel6Xpel6Xpel6Xpel6Xpel6Xpel6Xpel6Xpel6Xpel6Xpel6Xpel6Xpel6Xpel6Xpel6Xpel6VL0vS9L0vS9L0vS9L0vS9L0+O97/L1ubO1nazs/PS9L0vS9L0vS9L0vS9L0vS9L0vS9L0sfdjaxtYsWNrFjaxtY2sbWNrH3Y2sbWNrG1jaxtY2sbWNrFOt6XpY2sbUNrG1jahtY2sZ0sbWNrG1DaxtYxpQ2sbWMaUMaUsZ0sbUNqG1DOljaxtQxpRQKUHwFNfh+JrpZs5qq0c1+63lXS9b1rretdNfg+6/A1vW9b1vW9a/d62au963ret61b1vW9b1vW9b1vW9b1vW9b1vW9b1vW9b1vW9b1vW9b1vW9b1vW9b1vW9b1vW9b1vW9b1vW9b1vW9b1vW9b1vW9b1vW9b1vW9a/d63ret63ret63ret63ret63ret63ret61vW9b1vW9bO9nezvZ3+Tqs72d7O9nezvet63ret63ret63r8xu/He9fnret7/g73ve9Gb3+T5Pu9a001+D7+T7p93reWtKa/DSnx3pyy055pr8DR+BwU+GrdKtWsGxsP1X31fdVf6Nr/Vvza3sd9jr/T32+v8AW322+w1T/wCN9pp/U1/qb7Lfa77ffZ77LX+vvt99vvtd9vvt99vr/V32O+x32O+x32O+x32O+x32O+x32O+x32O+x32O+x32O+x32O+x32O+x32O+x32O+x32O+x32O+x32O+x32O+x32O+x32O+x32O+x32O+x32O+x32O+x32O+0322+z32e+z32e+z32e+z32e+z32e+x32O+132u+132u+132u+132u+132u+x32O+x32O+x32O+x32O+132u+132u+132u+132u+132u+132u+132u+132u+132++332++332++332e+z32e+z32e+y32W+w32G+032m+132u+132u+032u+x32O+z32e+z32e+z32en9Tfab7HfY6f1d9rvtdP6Ov9HT+jvsdP6O+x32+h/wDzvt99nvstP6e+y32m+00/oaS+jfb77PT+jp/R0pucHpRo0uinxorVzVunwNVyo/O4srZeLZeNl42XjZeNV42XjZeNl42XjZeNl42XjZeNl42XjZeNl41WNbLxsvGy8bLxsvGy8bLxsvGy8bLxsvGy8bLxsvGy8bLxsvGy8bLxsvGy8bLxsvGy8bLxsvGy8bLxsvGy8bLxsvGy8bLxsvGy8bLxsvGy8bLxsvGy8bLxsvGy8bLxsvGy8bLxsvGy8bLxsvGy8bLxsvGy8bLxsvGy8bLxsvGy8bLxsvGy8bLxsvGy8bLxsvGz8S8bLxsvGy8bLxbLxbLxbLxbLxb1f9f1ueP4ev4JeNl42XjZeNl42Xjc7/l6vxLxaPzuQwl1GDoOdH4F0Vq1atLnOru/u/lf/GT8MfhLnOo8GqjRprdFWrNwXEf5rr+7+N+HX/xg/wCGa3AcFRo/ItdfZV/QR0T5fiF0J+rDwe37Imoh8OnwmaiaifZ+wLoL9H/jZp+Er76qrF1V+Dq7Kvym5PRdXcGB1rR3lmU0jmENtlyvJNzsaSwFbY+ip+E2VzOOVDO1a4xIcvSnNScJQYbgSTlJV7R2kphVJjRHjQ2iNgqSaMmjMQnNxBTDglZ+2XhVHgxakDGRCJ58qe6InEg0GTOdeGakLpHU6mCYYNcLoVlCRk3Vckc3l1K+N/XpOUAQHAieFIf8jDEc5iFWInihVk8EZrgAaKwE4liSuU0uBpTYBsU60RaTEyRC6STFwzBHYyCjQJ46FDSCOJdFTIc5zH1mqSjJPBCZnhGbA/jechLKGvLETE0TDS1WfukMzgj6lzigpywIcygTiXlcEooAvAQZ1eMA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" alt="Secção Atualização do software do painel de administração, com a versão instalada"></div>
+    <div class="cols c2" style="flex:1;align-items:center;margin-top:18px;grid-template-columns:1fr 1.15fr;">
+      <div class="code">
+cd /opt/sis<br>
+<span class="k">./update.sh</span>
+      </div>
+      <ul class="pts" style="gap:12px;">
+        <li>Vai buscar o código novo, aplica as alterações à base de dados e reconstrói só a aplicação.</li>
+        <li><strong>Nunca toca nos dados</strong>: perfis, mapas e catálogo ficam como estavam.</li>
+        <li>O painel mostra a versão instalada e se há novidades — apenas verifica.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 14 · OPERATE: BACKUPS -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-c)"></span>C · Operar</p>
+    <h2>Cópias de segurança: dois comandos</h2>
+    <div class="code" style="font-size:14.5px;">
+<span class="quiet" style="color:#B7A995"># 1 · a base de dados</span><br>
+docker exec sis-database <span class="k">pg_dump</span> -U sis -d sis | gzip &gt; sis-db-$(date +%F).sql.gz<br>
+<span class="quiet" style="color:#B7A995"># 2 · mapas, catálogo e configuração</span><br>
+<span class="k">tar</span> czf sis-volumes-$(date +%F).tgz sis-web-services/volume sis-metadata/volume .env
+    </div>
+    <div class="cols c3" style="flex:1;align-content:center;margin-top:18px;">
+      <div class="card"><h3>Fora do servidor</h3><p>Uma cópia que fica na mesma máquina não é uma cópia de segurança.</p></div>
+      <div class="card"><h3>Automática</h3><p>Agendada no servidor — e alguém confirma, todos os meses, que foi feita.</p></div>
+      <div class="card"><h3>Testada</h3><p>Só se sabe que uma cópia serve depois de a restaurar numa máquina de teste.</p></div>
+    </div>
+  </section>
+
+  <!-- 15 · OPERATE: THE MONTHLY ROUTINE -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-c)"></span>C · Operar</p>
+    <h2>A rotina: cerca de 4 horas por mês, de uma pessoa</h2>
+    <table class="sm">
+      <thead><tr><th>Tarefa</th><th>Quando</th><th>Tempo</th></tr></thead>
+      <tbody>
+        <tr><td>Confirmar as cópias de segurança e guardá-las fora do servidor</td><td>todos os meses</td><td>1 h</td></tr>
+        <tr><td>Atualizar o OpenNSIS (<span class="mono">./update.sh</span>) e verificar que tudo responde</td><td>todos os meses</td><td>1 h</td></tr>
+        <tr><td>Atualizações de segurança do sistema operativo</td><td>todos os meses</td><td>1 h</td></tr>
+        <tr><td>Espaço em disco, registos de erros, certificado</td><td>todos os meses</td><td>½ h</td></tr>
+        <tr><td>Teste de restauro numa máquina de teste</td><td>de três em três meses</td><td>≈ ½ h por mês</td></tr>
+      </tbody>
+    </table>
+    <footer class="src">Estimativa para um sistema já estável. A instalação e os primeiros carregamentos de dados pedem alguns dias de trabalho concentrado.</footer>
+  </section>
+
+  <!-- 16 · OPERATE: BASIC SECURITY -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-c)"></span>C · Operar</p>
+    <h2>Segurança de base</h2>
+    <div class="cols c2" style="flex:1;align-content:center;">
+      <div class="card">
+        <h3>O que já vem feito</h3>
+        <p>Segredos gerados na instalação, únicos em cada servidor.<br>
+        Palavra-passe de administração aleatória, sem valor por omissão.<br>
+        Base de dados não exposta à Internet.<br>
+        Conta bloqueada após cinco tentativas falhadas.<br>
+        Registo de auditoria que não pode ser alterado.</p>
+      </div>
+      <div class="card" style="border-color:var(--accent);background:var(--accent-soft);">
+        <h3 style="color:var(--accent);">O que cabe à instituição</h3>
+        <p>HTTPS com um domínio próprio.<br>
+        Firewall: só SSH, 80 e 443.<br>
+        Acesso SSH por chave, com contas pessoais.<br>
+        Sistema operativo atualizado.<br>
+        Uma conta por pessoa no painel de administração.</p>
+      </div>
+    </div>
+    <footer class="src">Quando alguém sai da equipa, a sua conta é desativada no mesmo dia.</footer>
+  </section>
+
+  <!-- 17 · OPERATE: MOVING HOUSE -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-c)"></span>C · Operar</p>
+    <h2>Mudar de casa — ou recuperar de um desastre</h2>
+    <div class="cols c4" style="flex:1;align-content:center;gap:16px;">
+      <div class="card"><p class="num">1</p><h3>Instalar</h3><p>No servidor novo, o mesmo comando de instalação.</p></div>
+      <div class="card"><p class="num">2</p><h3>Copiar</h3><p>Levar as duas cópias de segurança para lá.</p></div>
+      <div class="card"><p class="num">3</p><h3>Restaurar</h3><p>Base de dados, mapas, catálogo e configuração.</p></div>
+      <div class="card"><p class="num">4</p><h3>Apontar</h3><p>Mudar o registo DNS para o servidor novo e verificar.</p></div>
+    </div>
+    <footer class="src">É o mesmo caminho para passar da instância de demonstração ao servidor nacional. O procedimento está documentado no repositório.</footer>
+  </section>
+
+  <!-- 18 · PEOPLE: WHO DOES WHAT -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-r)"></span>R · Pessoas</p>
+    <h2>Dois papéis, e sempre um suplente</h2>
+    <div class="cols c2" style="flex:1;align-content:center;">
+      <div class="card">
+        <h3>Administrador do sistema — TI</h3>
+        <p>Instala, atualiza, faz e verifica as cópias, vigia o servidor.</p>
+        <p style="margin-top:12px;"><strong>≈ 4 horas por mês</strong>, depois de alguns dias na instalação.</p>
+      </div>
+      <div class="card" style="border-color:var(--accent);background:var(--accent-soft);">
+        <h3 style="color:var(--accent);">Gestor de dados de solo</h3>
+        <p>Carrega perfis e mapas, preenche metadados, escolhe licenças, mantém o sítio web.</p>
+        <p style="margin-top:12px;"><strong>Trabalho contínuo</strong>, ao ritmo dos projetos e dos dados.</p>
+      </div>
+    </div>
+    <footer class="src">Um sistema que depende de uma só pessoa pára quando ela vai de férias, adoece ou muda de emprego. Dois nomes por papel.</footer>
+  </section>
+
+  <!-- 19 · PEOPLE: SKILLS -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-r)"></span>R · Pessoas</p>
+    <h2>O que o administrador precisa de saber</h2>
+    <table class="sm">
+      <thead><tr><th>Competência</th><th>Nível</th><th>Para quê</th></tr></thead>
+      <tbody>
+        <tr><td>Linha de comandos Linux e SSH</td><td>básico</td><td>entrar no servidor, ver ficheiros e espaço em disco</td></tr>
+        <tr><td>Docker e Compose</td><td>básico</td><td>ver o estado dos contentores e os registos de erros</td></tr>
+        <tr><td>Git</td><td>mínimo</td><td>o <span class="mono">update.sh</span> trata de quase tudo</td></tr>
+        <tr><td>Redes: DNS, firewall, HTTPS</td><td>básico a intermédio</td><td>domínio, portas, certificado</td></tr>
+        <tr><td>Cópias de segurança e restauro</td><td><strong>essencial</strong></td><td>é o que salva o sistema num dia mau</td></tr>
+        <tr><td>PostgreSQL</td><td>opcional</td><td>diagnóstico e consultas diretas</td></tr>
+      </tbody>
+    </table>
+    <footer class="src">Não é preciso programar: o trabalho é operar o sistema, não desenvolvê-lo. A prática é no dia 19.</footer>
+  </section>
+
+  <!-- 20 · PEOPLE: DECISIONS -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-r)"></span>R · Pessoas</p>
+    <h2>Decisões para levar daqui</h2>
+    <div class="cols c2" style="flex:1;align-items:center;grid-template-columns:1.15fr 1fr;">
+      <ul class="pts" style="gap:14px;">
+        <li>Qual das <strong>três casas</strong> — e quem assina o acordo?</li>
+        <li>Quem <strong>paga</strong>, e com que orçamento, quando o projeto acabar?</li>
+        <li>Quem é o <strong>administrador</strong> e quem é o seu suplente?</li>
+        <li>Que <strong>domínio</strong> vai ter o SIS nacional?</li>
+        <li>Onde ficam guardadas as <strong>cópias de segurança</strong>?</li>
+        <li>A quem se pede <strong>apoio técnico</strong>?</li>
+      </ul>
+      <p class="bigquote">O servidor é a parte fácil.<br><em>O difícil é saber quem<br>cuida dele daqui a três anos.</em></p>
+    </div>
+    <footer class="src">Para as sessões de governação de 17–18 de novembro; o plano de instalação fecha-se no dia 19.</footer>
+  </section>
+
+  <!-- 21 · RECAP -->
+  <section class="slide">
+    <h2>O perfil completo</h2>
+    <div class="cols c2" style="grid-template-columns:1fr 1.1fr;flex:1;align-items:center;">
+      <div class="hzstrip">
+        <div class="o"><span class="lt">O</span><div><b>Opções</b><span>nuvem, TI do Estado ou a própria instituição</span></div></div>
+        <div class="a"><span class="lt">A</span><div><b>Requisitos</b><span>máquina modesta; Linux, Docker, Git</span></div></div>
+        <div class="b"><span class="lt">B</span><div><b>Instalar</b><span>um comando; atualizar, outro</span></div></div>
+        <div class="c"><span class="lt">C</span><div><b>Operar</b><span>cópias testadas; 4 horas por mês</span></div></div>
+        <div class="r"><span class="lt">R</span><div><b>Pessoas</b><span>dois papéis, dois nomes em cada um</span></div></div>
+      </div>
+      <p class="bigquote">Instalar é um comando.<br>Manter é um compromisso:<br><em>quatro horas, todos os meses.</em></p>
+    </div>
+  </section>
+
+  <!-- 22 · THANKS -->
+  <section class="slide">
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
+      <p class="eyebrow">Obrigado</p>
+      <h2 style="font-size:54px;">Perguntas — ou escolhemos já a casa?</h2>
+      <div class="cols c2" style="margin-top:30px;max-width:940px;">
+        <div>
+          <p style="font-size:20px;line-height:1.9;">
+            <strong>Código e instruções de instalação</strong><br>
+            <span class="mono"><a href="https://github.com/un-fao/OpenNSIS" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">github.com/un-fao/OpenNSIS</a></span><br>
+            <span class="mono"><a href="https://github.com/un-fao/OpenNSIS/tree/main/ops/single" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">…/OpenNSIS/tree/main/ops/single</a></span>
+          </p>
+        </div>
+        <div>
+          <p style="font-size:20px;line-height:1.9;">
+            <strong>Um sistema a funcionar</strong><br>
+            <span class="mono"><a href="http://5.223.62.255:8027/" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">http://5.223.62.255:8027/</a></span> <span class="quiet">· Moçambique</span><br>
+            <span class="mono"><a href="http://5.223.62.255/" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">http://5.223.62.255/</a></span> <span class="quiet">· todas</span>
+          </p>
+        </div>
+      </div>
+      <p class="quiet" style="margin-top:22px;font-size:19px;">Eloi Ribeiro · Divisão de Terras e Águas, FAO</p>
+    </div>
+    <footer class="src">CC BY 4.0 — Esta apresentação está licenciada sob uma licença Creative Commons Atribuição 4.0 Internacional · <span class="mono">creativecommons.org/licenses/by/4.0</span></footer>
+  </section>
+</div>
+</div>
+
+<script>
+(function(){
+  const slides=[...document.querySelectorAll('.slide')];
+  const counter=document.getElementById('counter');
+  const rail=[...document.querySelectorAll('#rail .hz')];
+  const sect=[[0,0],[1,5],[6,9],[10,12],[13,16],[17,21]]; // rail button -> slide range
+  let cur=0;
+  function show(i){
+    cur=Math.max(0,Math.min(slides.length-1,i));
+    slides.forEach((s,j)=>s.classList.toggle('current',j===cur));
+    counter.textContent=(cur+1)+' / '+slides.length;
+    rail.forEach((b,j)=>b.classList.toggle('on',cur>=sect[j][0]&&cur<=sect[j][1]));
+    try{history.replaceState(null,'','#'+(cur+1));}catch(e){}
+  }
+  function fit(){
+    const s=Math.min(innerWidth/1280,innerHeight/720);
+    document.getElementById('stage').style.transform='scale('+s+')';
+  }
+  addEventListener('resize',fit);
+  addEventListener('keydown',e=>{
+    if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();show(cur+1);}
+    else if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();show(cur-1);}
+    else if(e.key==='Home'){show(0);} else if(e.key==='End'){show(slides.length-1);}
+  });
+  let wheelLock=0;
+  addEventListener('wheel',e=>{
+    const now=Date.now();
+    if(now-wheelLock<400||Math.abs(e.deltaY)<10)return;
+    wheelLock=now;
+    show(cur+(e.deltaY>0?1:-1));
+  },{passive:true});
+  rail.forEach((b)=>b.addEventListener('click',()=>show(+b.dataset.go)));
+  let x0=null;
+  addEventListener('touchstart',e=>{x0=e.touches[0].clientX},{passive:true});
+  addEventListener('touchend',e=>{
+    if(x0===null)return;
+    const dx=e.changedTouches[0].clientX-x0;
+    if(Math.abs(dx)>50)show(cur+(dx<0?1:-1));
+    x0=null;
+  },{passive:true});
+  const h=parseInt(location.hash.slice(1),10);
+  show(isNaN(h)?0:h-1); fit();
+})();
+</script>
