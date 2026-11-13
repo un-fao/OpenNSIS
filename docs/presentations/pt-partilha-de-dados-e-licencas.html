@@ -161,9 +161,9 @@
     <button class="hz a" data-go="4">A<small>Princípios</small></button>
     <button class="hz b" data-go="7">B<small>Licenças CC</small></button>
     <button class="hz c" data-go="11">C<small>Escolher</small></button>
-    <button class="hz r" data-go="14">R<small>OpenNSIS</small></button>
+    <button class="hz r" data-go="13">R<small>OpenNSIS</small></button>
   </nav>
-  <div id="counter">1 / 20</div>
+  <div id="counter">1 / 19</div>
 
   <!-- 1 · TITLE -->
   <section class="slide">
@@ -359,24 +359,7 @@
     <footer class="src">Cada «não» nas perguntas 2 e 3 reduz quem pode usar os dados. Vale a pena perguntar: quem queremos servir?</footer>
   </section>
 
-  <!-- 13 · CHOOSE: REAL EXAMPLE -->
-  <section class="slide">
-    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-c)"></span>C · Escolher</p>
-    <h2>Exemplo real: o que está hoje na instância de Moçambique</h2>
-    <table class="sm">
-      <thead><tr><th>Conjunto de dados</th><th>Licença</th><th>Na prática</th></tr></thead>
-      <tbody>
-        <tr><td>Perfis de solo SoilFER-VACS</td><td class="svc">CC BY</td><td>usar, adaptar e redistribuir, com crédito</td></tr>
-        <tr><td>Clay texture fraction (2026)</td><td class="svc">CC BY-NC-ND</td><td>ver e redistribuir tal como está; sem derivados, sem uso comercial</td></tr>
-        <tr><td>Soil colour (Subsoil) (2026)</td><td class="svc">CC BY-NC-ND</td><td>idem</td></tr>
-        <tr><td>Clay 0-30 cm UNC (2026)</td><td class="svc">CC BY</td><td>usar, adaptar e redistribuir, com crédito</td></tr>
-        <tr><td>Soil Colour (Topsoil) · Drainage (Topsoil)</td><td class="svc">CC BY</td><td>idem</td></tr>
-      </tbody>
-    </table>
-    <footer class="src">Para discussão: o mapa de argila e o da sua incerteza têm regras diferentes. Foi uma decisão — ou aconteceu?</footer>
-  </section>
-
-  <!-- 14 · CHOOSE: A ONE-PAGE POLICY -->
+  <!-- 13 · CHOOSE: A ONE-PAGE POLICY -->
   <section class="slide">
     <p class="eyebrow"><span class="hzchip" style="background:var(--hz-c)"></span>C · Escolher</p>
     <h2>Uma política institucional numa página</h2>
@@ -394,7 +377,7 @@
     <footer class="src">Tema para levar às sessões de governação de 17–18 de novembro.</footer>
   </section>
 
-  <!-- 15 · OPENNSIS: LICENCE IN THE RECORD -->
+  <!-- 14 · OPENNSIS: LICENCE IN THE RECORD -->
   <section class="slide">
     <p class="eyebrow"><span class="hzchip" style="background:var(--hz-r)"></span>R · OpenNSIS</p>
     <h2>No OpenNSIS, a licença faz parte do registo</h2>
@@ -418,7 +401,7 @@
     <footer class="src">Sem licença, o registo diz «UNKNOWN» — e quem lê não sabe o que pode fazer.</footer>
   </section>
 
-  <!-- 16 · OPENNSIS: PROFILE CONTROLS -->
+  <!-- 15 · OPENNSIS: PROFILE CONTROLS -->
   <section class="slide">
     <p class="eyebrow"><span class="hzchip" style="background:var(--hz-r)"></span>R · OpenNSIS</p>
     <h2>Perfis: quatro controlos por projeto</h2>
@@ -432,7 +415,7 @@
     <footer class="src">Painel de administração → Perfis de solo. Muda-se com um clique e tem efeito imediato.</footer>
   </section>
 
-  <!-- 17 · OPENNSIS: MAPS -->
+  <!-- 16 · OPENNSIS: MAPS -->
   <section class="slide">
     <p class="eyebrow"><span class="hzchip" style="background:var(--hz-r)"></span>R · OpenNSIS</p>
     <h2>Mapas: o que «publicar» quer dizer</h2>
@@ -447,7 +430,7 @@
     </div>
   </section>
 
-  <!-- 18 · OPENNSIS: GOOD PRACTICE -->
+  <!-- 17 · OPENNSIS: GOOD PRACTICE -->
   <section class="slide">
     <p class="eyebrow"><span class="hzchip" style="background:var(--hz-r)"></span>R · OpenNSIS</p>
     <h2>Boas práticas no dia a dia</h2>
@@ -468,7 +451,7 @@
     <footer class="src">A federação GloSIS recebe exatamente o que o visitante vê — as mesmas regras servem para os dois.</footer>
   </section>
 
-  <!-- 19 · RECAP -->
+  <!-- 18 · RECAP -->
   <section class="slide">
     <h2>O perfil completo</h2>
     <div class="cols c2" style="grid-template-columns:1fr 1.1fr;flex:1;align-items:center;">
@@ -483,7 +466,7 @@
     </div>
   </section>
 
-  <!-- 20 · THANKS -->
+  <!-- 19 · THANKS -->
   <section class="slide">
     <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
       <p class="eyebrow">Obrigado</p>
@@ -516,7 +499,7 @@
   const slides=[...document.querySelectorAll('.slide')];
   const counter=document.getElementById('counter');
   const rail=[...document.querySelectorAll('#rail .hz')];
-  const sect=[[0,0],[1,3],[4,6],[7,10],[11,13],[14,19]]; // rail button -> slide range
+  const sect=[[0,0],[1,3],[4,6],[7,10],[11,12],[13,18]]; // rail button -> slide range
   let cur=0;
   function show(i){
     cur=Math.max(0,Math.min(slides.length-1,i));

@@ -9,11 +9,11 @@ the change landed on `main`.
 
 ### 2026-11-13 — Three more workshop presentations in Portuguese
 Three further Portuguese presentations sit in `docs/presentations/`,
-prepared for the Mozambique workshop: `glosis-pt.html` (what GloSIS is,
+prepared for the Mozambique workshop: `pt-glosis.html` (what GloSIS is,
 the shared vocabulary, and how a national system joins the federation),
-`partilha-de-dados-e-licencas-pt.html` (data-sharing principles, the
+`pt-partilha-de-dados-e-licencas.html` (data-sharing principles, the
 Creative Commons licences, and the sharing and licence controls in
-OpenNSIS) and `alojamento-do-servidor-pt.html` (hosting options, server
+OpenNSIS) and `pt-alojamento-do-servidor.html` (hosting options, server
 requirements, installation, routine operation and the people needed).
 Their examples and figures come from the Mozambique demonstration
 instance.
@@ -21,7 +21,7 @@ instance.
 ### 2026-11-13 — Workshop presentation in Portuguese
 The standards presentation, *Open Standards for Soil Data*, gained a
 Portuguese edition next to the English and Spanish ones:
-`docs/presentations/normas-abertas-para-dados-de-solo-pt.html`. Its live
+`docs/presentations/pt-normas-abertas-para-dados-de-solo.html`. Its live
 examples (the metadata record, the WMS request and the QGIS connection)
 use the Mozambique demonstration instance, and it presents the system as
 it stands this month, including the public website, laboratory (LIMS)
