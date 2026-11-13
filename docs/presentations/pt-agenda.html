@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt">
+<meta charset="utf-8">
+<title>OpenNSIS em Moçambique: agenda</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --paper:#F7F3EC; --paper-2:#EFE8DC; --ink:#241C14; --ink-soft:#5C5044;
+    --hz-o:#3E2E1F; --hz-a:#63452C; --hz-b:#8A6844; --hz-c:#B79A77; --hz-r:#6B6157;
+    --accent:#1D5F73; --accent-soft:#DDE9EC; --line:#D8CDBC;
+    --disp:"Bricolage Grotesque", Georgia, serif;
+    --body:"Source Sans 3", "Segoe UI", Arial, sans-serif;
+    --mono:"IBM Plex Mono", "Courier New", monospace;
+  }
+  html,body{height:100%;}
+  body{margin:0;background:#221A12;font-family:var(--body);color:var(--ink);overflow:hidden;}
+
+  /* ---------- stage ---------- */
+  #viewport{position:fixed;inset:0;display:grid;place-items:center;background:#221A12;}
+  #stage{width:1280px;height:720px;position:relative;background:var(--paper);
+         box-shadow:0 20px 60px rgba(0,0,0,.5);transform-origin:center center;overflow:hidden;}
+
+  .slide{position:absolute;inset:0;display:none;padding:64px 88px 56px 132px;box-sizing:border-box;background:var(--paper);}
+  .slide.current{display:flex;flex-direction:column;}
+
+  /* ---------- horizon rail ---------- */
+  #rail{position:absolute;left:0;top:0;bottom:0;width:76px;background:var(--paper-2);
+        border-right:1px solid var(--line);display:flex;flex-direction:column;z-index:5;}
+  #rail .hz{flex:1;display:flex;align-items:flex-start;justify-content:center;cursor:pointer;
+            border:none;font-family:var(--disp);font-weight:600;font-size:15px;
+            padding-top:9px;color:#F7F3EC;opacity:.42;transition:opacity .2s;}
+  #rail .hz.on{opacity:1;}
+  #rail .hz:focus-visible{outline:3px solid var(--accent);outline-offset:-3px;}
+  #rail .hz small{font-family:var(--body);font-weight:600;font-size:10px;letter-spacing:.08em;
+                  text-transform:uppercase;writing-mode:vertical-rl;margin-top:7px;}
+  #rail .o{background:var(--hz-o);} #rail .a{background:var(--hz-a);}
+  #rail .b{background:var(--hz-b);} #rail .c{background:var(--hz-c);}
+  #rail .r{background:var(--hz-r);}
+  #rail .t{background:var(--paper-2);color:var(--ink-soft);flex:0 0 46px;align-items:center;padding-top:0;}
+
+  #counter{position:absolute;right:26px;bottom:20px;font-family:var(--mono);font-size:13px;
+           color:var(--ink-soft);z-index:6;}
+
+  /* ---------- typography ---------- */
+  .eyebrow{font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+           color:var(--accent);margin:0 0 10px;}
+  .eyebrow .hzchip{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:8px;}
+  h1{font-family:var(--disp);font-weight:800;font-size:64px;line-height:1.04;margin:0;text-wrap:balance;}
+  h2{font-family:var(--disp);font-weight:800;font-size:44px;line-height:1.08;margin:0 0 26px;text-wrap:balance;}
+  h3{font-family:var(--disp);font-weight:600;font-size:22px;margin:0 0 8px;}
+  p,li{font-size:21px;line-height:1.5;margin:0;}
+  .lead{font-size:25px;line-height:1.45;color:var(--ink-soft);max-width:30em;}
+  ul.pts{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:18px;}
+  ul.pts li{padding-left:30px;position:relative;max-width:34em;}
+  ul.pts li::before{content:"";position:absolute;left:0;top:11px;width:14px;height:8px;
+                    background:var(--hz-a);border-radius:2px;}
+  strong{font-weight:600;}
+  .mono{font-family:var(--mono);font-size:.9em;}
+  .quiet{color:var(--ink-soft);}
+  a{color:var(--accent);text-decoration:none;}
+
+  .cols{display:grid;gap:36px;align-items:start;}
+  .c2{grid-template-columns:1fr 1fr;} .c3{grid-template-columns:1fr 1fr 1fr;}
+
+  .card{background:#FFFDF9;border:1px solid var(--line);border-radius:10px;padding:22px 26px;box-sizing:border-box;}
+  .card h3{color:var(--hz-a);}
+  .card p{font-size:18px;line-height:1.45;}
+
+  .tag{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:99px;
+       padding:3px 14px;font-size:15px;font-weight:600;}
+
+  table{border-collapse:collapse;width:100%;font-size:19px;}
+  th{font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);
+     text-align:left;padding:0 18px 10px 0;border-bottom:2px solid var(--ink);}
+  td{padding:11px 18px 11px 0;border-bottom:1px solid var(--line);vertical-align:top;}
+  td.svc{font-family:var(--mono);font-weight:500;white-space:nowrap;}
+
+  .code{background:#2B221A;color:#EFE4D2;border-radius:10px;padding:18px 22px;
+        font-family:var(--mono);font-size:16px;line-height:1.65;overflow-x:auto;}
+  .code .k{color:#B7D9C9;}
+
+  footer.src{margin-top:auto;font-size:14px;color:var(--ink-soft);}
+
+  /* metadata label card */
+  .label-card{background:#FFFDF9;border:1.5px solid var(--hz-a);border-radius:12px;overflow:hidden;}
+  .label-card .head{background:var(--hz-a);color:#F7F3EC;padding:12px 22px;font-family:var(--mono);font-size:16px;}
+  .label-card dl{display:grid;grid-template-columns:auto 1fr;gap:7px 20px;margin:0;padding:18px 22px;}
+  .label-card dt{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);padding-top:3px;}
+  .label-card dd{margin:0;font-size:17px;}
+
+  /* architecture diagram */
+  .arch{display:flex;flex-direction:column;gap:14px;align-items:center;}
+  .arch .row{display:flex;gap:14px;justify-content:center;}
+  .arch .box{background:#FFFDF9;border:1.5px solid var(--hz-a);border-radius:9px;padding:10px 18px;text-align:center;}
+  .arch .box b{display:block;font-family:var(--disp);font-weight:600;font-size:18px;}
+  .arch .box span{font-size:14px;color:var(--ink-soft);}
+  .arch .box.std{border-color:var(--accent);background:var(--accent-soft);}
+  .arch .down{font-size:20px;color:var(--ink-soft);line-height:1;}
+
+  /* horizon strip on title + roadmap */
+  .hzstrip{display:flex;flex-direction:column;border-radius:12px;overflow:hidden;height:100%;min-height:340px;}
+  .hzstrip div{flex:1;display:flex;align-items:center;gap:16px;padding:0 24px;color:#F7F3EC;}
+  .hzstrip .lt{font-family:var(--disp);font-weight:800;font-size:30px;width:32px;}
+  .hzstrip b{font-family:var(--disp);font-weight:600;font-size:20px;display:block;}
+  .hzstrip span{font-size:14.5px;opacity:.85;display:block;}
+  .hzstrip .o{background:var(--hz-o);} .hzstrip .a{background:var(--hz-a);}
+  .hzstrip .b{background:var(--hz-b);} .hzstrip .c{background:var(--hz-c);}
+  .hzstrip .r{background:var(--hz-r);}
+
+  .bigquote{font-family:var(--disp);font-weight:600;font-size:34px;line-height:1.25;max-width:20em;text-wrap:balance;}
+  .bigquote em{color:var(--hz-a);font-style:normal;}
+
+
+  /* live-demo + screenshot slides */
+  .slide.live{background:#2B221A;color:#EFE4D2;}
+  .slide.live h2{color:#EFE4D2;}
+  .slide.live .steps{display:flex;flex-direction:column;gap:20px;max-width:38em;}
+  .slide.live .step{display:flex;gap:18px;align-items:baseline;font-size:22px;line-height:1.5;}
+  .slide.live .step .n{font-family:var(--disp);font-weight:800;font-size:26px;color:#B7D9C9;min-width:30px;}
+  .livetag{display:inline-block;background:#B7D9C9;color:#2B221A;border-radius:99px;
+           padding:4px 18px;font-weight:600;font-size:15px;letter-spacing:.12em;text-transform:uppercase;}
+  .slide.shot{padding:0 0 0 76px;background:#2B221A;}
+  .slide.shot img{flex:1;min-height:0;width:100%;object-fit:contain;}
+  .slide.shot .cap{background:rgba(36,28,20,.88);color:#EFE4D2;padding:16px 40px;font-size:19px;}
+  .slide.shot .cap b{font-family:var(--disp);}
+
+  /* feature cards */
+  .feat>div{background:#FFFDF9;border:1px solid var(--line);border-radius:8px;padding:10px 16px;}
+  .feat h3{font-size:17px;margin:0 0 4px;color:var(--hz-a);}
+  .feat p{font-size:14px;line-height:1.35;}
+
+  /* additions for the day-one decks */
+  .fig{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#FFFDF9;}
+  .fig img{display:block;width:100%;}
+  .card p.num,.num{font-family:var(--disp);font-weight:800;font-size:46px;line-height:1;color:var(--hz-a);margin-bottom:8px;}
+  .yes{color:#2E7D4F;font-weight:600;} .no{color:#A6432D;font-weight:600;}
+  td.c,th.c{text-align:center;}
+  table.sm{font-size:17.5px;} table.sm td{padding:9px 16px 9px 0;}
+  .c4{grid-template-columns:repeat(4,1fr);}
+  .card.dark{background:var(--hz-o);border-color:var(--hz-o);color:#F7F3EC;} .card.dark h3{color:#E9D9BF;}
+
+  /* additions for the one-slide agenda */
+  h3.dh{display:flex;align-items:baseline;gap:12px;font-size:21px;margin:0 0 12px;padding-bottom:10px;border-bottom:2px solid var(--ink);color:var(--ink);}
+  h3.dh .quiet{font-family:var(--body);font-weight:400;font-size:17px;}
+  h3.dh .dn{font-family:var(--disp);font-weight:800;font-size:40px;line-height:.8;color:var(--hz-a);}
+  table.ag{font-size:17.5px;line-height:1.35;} table.ag td{padding:8px 0 8px 0;border-bottom:1px solid var(--line);}
+  table.ag td.t{font-family:var(--mono);font-size:14.5px;white-space:nowrap;width:7.4em;color:var(--ink-soft);padding-top:10px;}
+  table.ag tr.brk td{padding:5px 0;font-size:14.5px;color:var(--ink-soft);} table.ag tr.brk td.t{padding-top:6px;font-size:13px;}
+  table.ag a{color:inherit;text-decoration:none;}
+
+  @media print{
+    body{overflow:visible;background:#fff;}
+    #viewport{position:static;display:block;background:#fff;}
+    #stage{transform:none !important;box-shadow:none;width:1280px;height:720px;overflow:hidden;
+           page-break-after:always;position:relative;margin:0 auto;}
+    .slide{display:flex !important;flex-direction:column;position:relative;height:720px;page-break-after:always;}
+    #counter{display:none;}
+  }
+  @media (prefers-reduced-motion: no-preference){
+    .slide.current{animation:fade .28s ease;}
+    @keyframes fade{from{opacity:0}to{opacity:1}}
+  }
+</style>
+
+<div id="viewport">
+<div id="stage">
+  <nav id="rail" aria-label="Horizontes">
+    <button class="hz t" data-go="0" aria-label="Agenda">▲</button>
+    <button class="hz o" data-go="0">O</button>
+    <button class="hz a" data-go="0">A</button>
+    <button class="hz b" data-go="0">B</button>
+    <button class="hz c" data-go="0">C</button>
+    <button class="hz r" data-go="0">R</button>
+  </nav>
+  <div id="counter">1 / 1</div>
+
+  <!-- AGENDA -->
+  <section class="slide">
+    <p class="eyebrow">OpenNSIS em Moçambique · Hotel Avenida, Maputo · novembro de 2026</p>
+    <h2>A agenda dos dois dias</h2>
+    <div class="cols c2" style="flex:1;align-items:start;gap:44px;">
+      <div>
+        <h3 class="dh"><span class="dn">1</span>Segunda-feira, 16 de novembro <span class="quiet">· conceitos e decisões</span></h3>
+        <table class="ag">
+          <tbody>
+            <tr><td class="t">08:30–10:30</td><td>Abertura · <a href="pt-normas-abertas-para-dados-de-solo.html" target="_blank" rel="noopener"><strong>Normas abertas para dados de solo</strong></a> e o OpenNSIS, com demonstração</td></tr>
+            <tr class="brk"><td class="t">10:30–11:00</td><td>Pausa para café</td></tr>
+            <tr><td class="t">11:00–13:00</td><td><a href="pt-glosis.html" target="_blank" rel="noopener"><strong>GloSIS</strong>: ligar os solos do mundo</a> · o Discovery Hub ao vivo</td></tr>
+            <tr class="brk"><td class="t">13:00–14:00</td><td>Almoço</td></tr>
+            <tr><td class="t">14:00–15:30</td><td><a href="pt-partilha-de-dados-e-licencas.html" target="_blank" rel="noopener"><strong>Partilhar dados de solo</strong>: regras e licenças</a> · discussão</td></tr>
+            <tr class="brk"><td class="t">15:30–16:00</td><td>Pausa para café</td></tr>
+            <tr><td class="t">16:00–17:00</td><td><a href="pt-alojamento-do-servidor.html" target="_blank" rel="noopener"><strong>Onde vive o SIS nacional</strong>: alojamento e operação</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h3 class="dh"><span class="dn">2</span>Quinta-feira, 19 de novembro <span class="quiet">· mãos à obra</span></h3>
+        <table class="ag">
+          <tbody>
+            <tr><td class="t">08:30–10:30</td><td><a href="pt-guia-de-exercicios.html#4" target="_blank" rel="noopener"><strong>Perfis de solo</strong></a>: do modelo em Excel ao mapa<br><span class="quiet">exercícios 1–5</span></td></tr>
+            <tr class="brk"><td class="t">10:30–11:00</td><td>Pausa para café</td></tr>
+            <tr><td class="t">11:00–12:00</td><td><a href="pt-guia-de-exercicios.html#13" target="_blank" rel="noopener"><strong>Mapas e publicação</strong></a>: GeoTIFF, QGIS, notícia<br><span class="quiet">exercícios 6–8</span></td></tr>
+            <tr><td class="t">12:00–13:00</td><td><a href="pt-guia-de-exercicios.html#16" target="_blank" rel="noopener"><strong>Servidor</strong></a>: cópia de segurança e atualização<br><span class="quiet">exercícios 9–10</span></td></tr>
+            <tr class="brk"><td class="t">13:00–14:00</td><td>Almoço</td></tr>
+            <tr><td class="t">14:00–15:30</td><td><a href="pt-guia-de-exercicios.html#18" target="_blank" rel="noopener"><strong>Dados nacionais</strong></a>: os vossos dados, clínica de erros<br><span class="quiet">exercícios 11–12</span></td></tr>
+            <tr class="brk"><td class="t">15:30–16:00</td><td>Pausa para café</td></tr>
+            <tr><td class="t">16:00–17:00</td><td><a href="pt-guia-de-exercicios.html#21" target="_blank" rel="noopener"><strong>Roteiro</strong></a>: a casa do sistema, os papéis, o calendário</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <footer class="src">Entre os dois dias, a 17 e 18 de novembro: sessões sobre a governação do SIS, conduzidas pelo CABI. Os títulos a negrito abrem a apresentação de cada sessão.</footer>
+  </section>
+</div>
+</div>
+
+<script>
+(function(){
+  const slides=[...document.querySelectorAll('.slide')];
+  const counter=document.getElementById('counter');
+  const rail=[...document.querySelectorAll('#rail .hz')];
+  const sect=[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]; // rail button -> slide range
+  let cur=0;
+  function show(i){
+    cur=Math.max(0,Math.min(slides.length-1,i));
+    slides.forEach((s,j)=>s.classList.toggle('current',j===cur));
+    counter.textContent=(cur+1)+' / '+slides.length;
+    rail.forEach((b,j)=>b.classList.toggle('on',cur>=sect[j][0]&&cur<=sect[j][1]));
+    try{history.replaceState(null,'','#'+(cur+1));}catch(e){}
+  }
+  function fit(){
+    const s=Math.min(innerWidth/1280,innerHeight/720);
+    document.getElementById('stage').style.transform='scale('+s+')';
+  }
+  addEventListener('resize',fit);
+  addEventListener('keydown',e=>{
+    if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();show(cur+1);}
+    else if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();show(cur-1);}
+    else if(e.key==='Home'){show(0);} else if(e.key==='End'){show(slides.length-1);}
+  });
+  let wheelLock=0;
+  addEventListener('wheel',e=>{
+    const now=Date.now();
+    if(now-wheelLock<400||Math.abs(e.deltaY)<10)return;
+    wheelLock=now;
+    show(cur+(e.deltaY>0?1:-1));
+  },{passive:true});
+  rail.forEach((b)=>b.addEventListener('click',()=>show(+b.dataset.go)));
+  let x0=null;
+  addEventListener('touchstart',e=>{x0=e.touches[0].clientX},{passive:true});
+  addEventListener('touchend',e=>{
+    if(x0===null)return;
+    const dx=e.changedTouches[0].clientX-x0;
+    if(Math.abs(dx)>50)show(cur+(dx<0?1:-1));
+    x0=null;
+  },{passive:true});
+  const h=parseInt(location.hash.slice(1),10);
+  show(isNaN(h)?0:h-1); fit();
+})();
+</script>
