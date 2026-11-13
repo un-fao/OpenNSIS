@@ -7,6 +7,15 @@ the change landed on `main`.
 
 ## November 2026
 
+### 2026-11-13 — Workshop presentation in Portuguese
+The standards presentation, *Open Standards for Soil Data*, gained a
+Portuguese edition next to the English and Spanish ones:
+`docs/presentations/normas-abertas-para-dados-de-solo-pt.html`. Its live
+examples (the metadata record, the WMS request and the QGIS connection)
+use the Mozambique demonstration instance, and it presents the system as
+it stands this month, including the public website, laboratory (LIMS)
+imports, sampling designs, the catalogue page and cached raster tiles.
+
 ### 2026-11-13 — Account lockout now takes effect
 The lock after five failed sign-ins, documented since May, never engaged:
 the failed-attempt count was discarded together with the "incorrect
