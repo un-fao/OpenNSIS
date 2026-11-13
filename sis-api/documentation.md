@@ -156,6 +156,13 @@ JWT (any user) for mutations; API key for the published-only `GET /api/layer`.
 | GET    | `/api/layer/all`                    | JWT    | All layers including unpublished                  |
 | GET    | `/api/layer`                        | API key| Published layers only                             |
 
+`get_map_url` and `get_legend_url` carry a version token, `_v`, built from
+the layer's statistics, its mapfile text and the GeoTIFF's modification
+time. The viewer requests rasters as 512-pixel WMS tiles with that token;
+`sis-nginx` caches such answers server-side and marks them cacheable for
+30 days, while requests without a token pass straight to MapServer and
+keep its `no-store` (see "Raster tiles and caching" in the README).
+
 ### Soil profile layers
 
 Per-project controls used by the **Soil profiles** section of the Layers tab. JWT (any user).
@@ -395,6 +402,17 @@ from the Website tab. Content is **single-language**: it is shown exactly
 as entered. Flow is draft → publish, with **one published copy** (no
 version history); saving a page that is already live republishes it.
 
+The website is **live by default**. An instance that has never published
+anything serves the default site: `GET /api/site` answers `enabled: true`
+with empty page stubs, and the front end fills in its built-in hero and
+texts. Every page is **published by default, even when empty** — About,
+People and Contact reach the published copy unless explicitly unpublished,
+and the Map, Catalogue, Statistics and News links show unless their flag
+(`map_published`, `catalogue_published`, `dashboard_published`,
+`news_published`) is `false`. Unpublishing Home takes the whole site
+offline. The header order defaults to Home, About, News, Map, Catalogue,
+Statistics, People, Contact and can be changed (`nav_order`).
+
 | Method | Path                | Auth      | Description                                     |
 | ------ | ------------------- | --------- | ------------------------------------------------ |
 | GET    | `/api/site`         | API key   | Published content + enabled flags + instance language |
@@ -596,7 +614,8 @@ Per-CSV provenance for the ETL pipeline. Each upload creates a row in `uploaded_
 - **Per-deployment secrets** — `deploy.sh` generates `SECRET_KEY`, `WEB_MAPPING_API_KEY`, `POSTGRES_PASSWORD`, `POSTGRES_GLOSIS_PASSWORD` on first run. `.env` is gitignored.
 - **Random admin password** — printed once at the end of `deploy.sh`, not stored anywhere else.
 - **JWT revocation** — `iat` claim compared to `password_changed_at`; tokens issued before the last password change are rejected.
-- **Account lockout** — 5 failures → 15-min lock.
+- **Account lockout** — 5 consecutive failures → 15-min lock; the count is committed before the 401 is sent and incremented under a row lock, so parallel attempts cannot exceed it. Unknown user, wrong password and locked account answer identically.
+- **Tile cache integrity** — the nginx WMS cache stores only image answers to versioned GetMap / GetLegendGraphic requests, keyed on the full request, and strips the `Cookie` header (MapServer would read cookies as request parameters).
 - **Per-account API keys** — federation token stored separately from the web-mapping key; sis-api-glosis can only see federation tokens via the restricted view.
 - **Read-only DB role** — `sis_glosis`; the federation service cannot read other API keys or write any table except `api.audit`.
 - **Append-only audit** — SQL triggers block UPDATE/DELETE on `api.audit` (except nulling FKs).
@@ -606,11 +625,17 @@ Per-CSV provenance for the ETL pipeline. Each upload creates a row in `uploaded_
 - **Public XSS sink hardening** — admin dashboard `onclick="…('${...}')"` interpolations go through `escapeJsAttr`.
 - **CORS allowlist** — no `*` on the JWT-bearing service.
 - **`/docs` off by default** — set `ENABLE_DOCS=true` to re-enable.
-- **`X-Forwarded-For` trust** — audit IP captured from the proxy header.
+- **`X-Forwarded-For` trust** — audit IP captured from the proxy header (see the open items below).
 - **nginx hardening headers** — `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `server_tokens off`.
 - **Login rate limit at nginx** — `limit_req` zone on `/api/auth/login` (5 req/s per IP).
 - **SSRF guard** — `_validate_pycsw_url` rejects non-http(s) and any host outside an allowlist, and the `requests.get` call disables redirects.
 - **Postgres unpublished** — host port 8005 removed from `docker-compose.yml`; use `docker exec` for psql.
+
+Still **open** (known, not yet addressed):
+- The audit IP is the **first** `X-Forwarded-For` entry, which a client can set when nginx is the only proxy; a value that is not an address makes the audit insert fail.
+- Login response **timing** differs between an unknown or locked account and a wrong password.
+- A locked account can only wait: there is **no manual unlock** and no admin password reset.
+- A raster **replaced under the same name** can be drawn from the old file until MapServer is restarted (see the README).
 
 Still **open by design** (parked):
 - API keys remain **plaintext at rest** — the federation token UX requires the admin be able to re-display it. The web-mapping key is the same column.

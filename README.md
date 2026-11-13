@@ -4,13 +4,14 @@ A spatial data infrastructure for soils, designed to be deployed as a node of
 the **GloSIS Federation**. Each instance hosts the soil data of one country or
 organisation and exposes:
 
-- a public **website** (landing page, About / People / Contact pages,
-  a Statistics page and the metadata catalogue), edited from the admin
-  **Website** tab and published page by page — content is shown exactly
-  as entered, in the instance's configured language;
+- a public **website** (landing page, About / People / Contact pages, a
+  News blog, a Statistics page and the metadata Catalogue), live out of
+  the box with every page published by default, edited from the admin
+  **Website** tab and hidden or published page by page — content is shown
+  exactly as entered, in the instance's configured language;
 - a public **Web Mapping** application (OpenLayers, at `/map`) for viewing
   rasters, soil profiles, sampling designs and administrative division
-  boundaries on a map;
+  boundaries on a map; rasters are drawn from cached 512-pixel tiles;
 - an **Admin Panel** (at `/admin`) for users, projects, soil-profile ETL
   (CSV upload → validate → ingest → prune), laboratory (LIMS) imports,
   raster upload, a raster calculator (DST), administrative division
@@ -256,6 +257,29 @@ upgrades of the data
 containers (Postgres / pyCSW / MapServer) are a deliberate manual step and are
 out of `update.sh`'s scope.
 
+### Raster tiles and caching
+
+The map viewer requests rasters as fixed 512-pixel WMS tiles whose address
+carries a version token (`_v`), which changes whenever a layer's pixels or
+styling change. Such tiles and legends are kept at three levels: by
+MapServer only for the render itself, by `sis-nginx` in a server-side
+cache (inside the container, at most 1 GB, 30 days) and by the visitor's
+browser (30 days). Requests without a token — other WMS clients such as
+QGIS, GetFeatureInfo, GetCapabilities — are never cached.
+
+- **Emptying the server cache:** recreate nginx —
+  `docker compose up -d --force-recreate --no-deps sis-nginx`.
+- **After replacing a raster under the same name:** MapServer keeps the
+  old file open in its running workers, so the new version token can end
+  up attached to old pixels. Restart MapServer, then empty the cache:
+  `docker compose restart sis-web-services` followed by the command above.
+- **After deleting a layer:** tiles already cached stay retrievable until
+  the cache is emptied or they expire.
+
+`sis-nginx` also keeps TCP's sending window open across idle moments
+(`net.ipv4.tcp_slow_start_after_idle=0`, set on the container), which
+shortens every answer on a reused connection for distant visitors.
+
 ### Backup, and migrating to a new server
 
 A complete instance is four things — everything else is rebuilt from source:
@@ -388,7 +412,10 @@ The deployment pattern enforces:
 - Postgres is not published to the host (use `docker exec` for psql)
 - read-only Postgres role for federation traffic
 - JWT revocation on password change (via `password_changed_at`)
-- account lockout after 5 failed logins (15-minute window)
+- account lockout after 5 failed logins (15-minute window); unknown user
+  names, wrong passwords and locked accounts get the same generic answer
+- the raster tile cache stores only versioned map images and legends and
+  never forwards cookies to MapServer
 - nginx-level rate limiting on `/api/auth/login`
 - append-only `api.audit` log enforced by SQL trigger
 - baseline hardening headers (`X-Frame-Options`, `X-Content-Type-Options`,
