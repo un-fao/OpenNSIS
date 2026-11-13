@@ -1108,7 +1108,10 @@ class AdminDashboard {
         return;
       }
       try {
-        const res = await fetch(this._relMapserverUrl(layer.get_legend_url), { method: 'GET', cache: 'no-store' });
+        // Without its version token the request bypasses nginx's tile cache
+        // and reaches MapServer, which is what this check is about.
+        const probe = this._relMapserverUrl(layer.get_legend_url).replace(/([?&])_v=[^&]*&?/, '$1').replace(/[?&]$/, '');
+        const res = await fetch(probe, { method: 'GET', cache: 'no-store' });
         const ct = res.headers.get('content-type') || '';
         if (res.ok && ct.startsWith('image/')) {
           cell.innerHTML = '<span style="color:#2a7;font-weight:bold;" title="OK">✓</span>';

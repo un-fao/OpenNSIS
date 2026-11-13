@@ -182,83 +182,113 @@ def _ensure_raster_query_tolerance():
 LOGIN_MAX_ATTEMPTS = 5
 LOGIN_LOCKOUT_MINUTES = 15
 
+
+def _can_be_user_id(text: str) -> bool:
+    """False for text PostgreSQL cannot hold (NUL, or not valid Unicode). No
+    account has such a name, and the driver raises if asked to look it up."""
+    try:
+        text.encode("utf-8")
+    except UnicodeError:
+        return False
+    return "\x00" not in text
+
+
+def _password_matches(password: str, password_hash: str) -> bool:
+    """verify_password(), with a password that cannot even be checked (text
+    that is not valid Unicode cannot be encoded for bcrypt) treated as a
+    mismatch. An error there would answer differently for a real account
+    than for an unknown one."""
+    try:
+        return verify_password(password, password_hash)
+    except ValueError:
+        return False
+
+
 @app.post("/api/auth/login", response_model=Token)
 async def login(user_credentials: UserLogin, request: Request):
     """Login with email/password — returns a JWT token.
 
     After LOGIN_MAX_ATTEMPTS consecutive failures the account is locked for
-    LOGIN_LOCKOUT_MINUTES. A successful login resets the counter.
+    LOGIN_LOCKOUT_MINUTES. A successful login resets the counter; until then
+    every further failure, once a lock has run out, locks the account again.
     """
+    client_ip = get_client_ip(request)
+
+    # The outcome is decided inside the transaction and acted on only after
+    # it has committed. get_db() rolls back when an exception passes through
+    # it, so a 401 raised in there would undo the failure count it follows.
+    refused = None      # (audit user_id, audit action, audit details)
+    inactive = False
     with get_db() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                "SELECT user_id, password_hash, is_active, "
-                "       failed_login_attempts, locked_until "
-                "FROM api.user WHERE user_id = %s",
-                (user_credentials.user_id,)
-            )
-            user = cur.fetchone()
-
-            # Generic auth-error response — same message for unknown user / bad
-            # password / locked account so we don't leak which one it was.
-            generic_unauthorized = HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password"
-            )
+            user = None
+            if _can_be_user_id(user_credentials.user_id):
+                # The row stays locked until commit, so attempts on one
+                # account are judged one at a time and no more than
+                # LOGIN_MAX_ATTEMPTS passwords are tried before the lock
+                # applies. NO KEY UPDATE rather than UPDATE: audit rows
+                # reference this row, and their key-share lock must not wait
+                # on a login in progress.
+                cur.execute(
+                    "SELECT user_id, password_hash, is_active, locked_until, "
+                    "       (locked_until IS NOT NULL AND locked_until > now()) AS locked "
+                    "FROM api.user WHERE user_id = %s FOR NO KEY UPDATE",
+                    (user_credentials.user_id,)
+                )
+                user = cur.fetchone()
 
             if not user:
-                log_audit(user_credentials.user_id, None, "login_failed",
-                          {"reason": "unknown_user"}, get_client_ip(request))
-                raise generic_unauthorized
-
-            # Lockout window still active?
-            if user.get("locked_until") and user["locked_until"] > datetime.now(user["locked_until"].tzinfo):
-                log_audit(user["user_id"], None, "login_locked",
-                          {"locked_until": user["locked_until"].isoformat()},
-                          get_client_ip(request))
-                raise generic_unauthorized
-
-            if not verify_password(user_credentials.password, user['password_hash']):
-                # Increment failed counter; lock if threshold reached
-                attempts = (user.get("failed_login_attempts") or 0) + 1
-                if attempts >= LOGIN_MAX_ATTEMPTS:
-                    cur.execute(
-                        "UPDATE api.user SET failed_login_attempts = %s, "
-                        "       locked_until = now() + (%s || ' minutes')::interval "
-                        "WHERE user_id = %s",
-                        (attempts, LOGIN_LOCKOUT_MINUTES, user["user_id"])
-                    )
-                    log_audit(user["user_id"], None, "login_account_locked",
-                              {"attempts": attempts}, get_client_ip(request))
-                else:
-                    cur.execute(
-                        "UPDATE api.user SET failed_login_attempts = %s "
-                        "WHERE user_id = %s",
-                        (attempts, user["user_id"])
-                    )
-                    log_audit(user["user_id"], None, "login_failed",
-                              {"attempts": attempts}, get_client_ip(request))
-                raise generic_unauthorized
-
-            if not user['is_active']:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="User account is inactive"
+                # No user_id on the audit row: the column references api.user.
+                refused = (None, "login_failed", {"reason": "unknown_user"})
+            elif user["locked"]:
+                refused = (user["user_id"], "login_locked",
+                           {"locked_until": user["locked_until"].isoformat()})
+            elif not _password_matches(user_credentials.password, user["password_hash"]):
+                cur.execute(
+                    "UPDATE api.user "
+                    "SET failed_login_attempts = failed_login_attempts + 1, "
+                    "    locked_until = CASE WHEN failed_login_attempts + 1 >= %s "
+                    "                        THEN now() + make_interval(mins => %s) "
+                    "                        ELSE locked_until END "
+                    "WHERE user_id = %s "
+                    "RETURNING failed_login_attempts AS attempts",
+                    (LOGIN_MAX_ATTEMPTS, LOGIN_LOCKOUT_MINUTES, user["user_id"])
+                )
+                attempts = cur.fetchone()["attempts"]
+                refused = (user["user_id"],
+                           "login_account_locked" if attempts >= LOGIN_MAX_ATTEMPTS else "login_failed",
+                           {"attempts": attempts})
+            elif not user["is_active"]:
+                inactive = True
+            else:
+                # Successful login — reset lockout state
+                cur.execute(
+                    "UPDATE api.user SET last_login = %s, "
+                    "       failed_login_attempts = 0, locked_until = NULL "
+                    "WHERE user_id = %s",
+                    (datetime.now(), user["user_id"])
                 )
 
-            # Successful login — reset lockout state
-            cur.execute(
-                "UPDATE api.user SET last_login = %s, "
-                "       failed_login_attempts = 0, locked_until = NULL "
-                "WHERE user_id = %s",
-                (datetime.now(), user['user_id'])
-            )
-            log_audit(user['user_id'], None, "login_success", None, get_client_ip(request))
-            access_token = create_access_token(
-                data={"sub": user['user_id']},
-                expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-            )
-            return {"access_token": access_token, "token_type": "bearer"}
+    if refused:
+        log_audit(refused[0], None, refused[1], refused[2], client_ip)
+        # Generic auth-error response — same message for unknown user / bad
+        # password / locked account so we don't leak which one it was.
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password"
+        )
+    if inactive:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is inactive"
+        )
+
+    log_audit(user["user_id"], None, "login_success", None, client_ip)
+    access_token = create_access_token(
+        data={"sub": user["user_id"]},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
 @app.patch("/api/users/me")
 async def update_own_account(

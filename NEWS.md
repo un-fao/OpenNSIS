@@ -7,6 +7,27 @@ the change landed on `main`.
 
 ## November 2026
 
+### 2026-11-13 — Account lockout now takes effect
+The lock after five failed sign-ins, documented since May, never engaged:
+the failed-attempt count was discarded together with the "incorrect
+username or password" answer, so it never rose above one. It is now
+recorded, and an account is locked for 15 minutes after five consecutive
+failures, as described; attempts arriving in parallel cannot get more
+than five passwords tested. Signing in with a user name that does not
+exist used to answer with a server error, which told real user names
+from invented ones; it now gets the same generic answer as a wrong
+password and is written to the audit log. Administrators should know
+that a locked account unlocks only by waiting: there is no manual
+unlock.
+
+The raster tile cache introduced the day before no longer forwards
+cookies to MapServer. MapServer reads cookies as request parameters, so
+a crafted request could have made nginx store a different image under a
+genuine tile's address for every visitor. The stored tiles on all
+instances were compared with fresh renders and none had been altered.
+The admin panel's "Check WMS" button now asks MapServer directly instead
+of being answered from that cache.
+
 ### 2026-11-12 — Faster map, second pass
 Raster layers are now drawn from fixed 512-pixel tiles instead of one
 image per view, and nginx keeps a server-side copy of every tile and

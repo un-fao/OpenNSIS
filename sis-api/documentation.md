@@ -76,7 +76,12 @@ Tokens expire after `ACCESS_TOKEN_EXPIRE_MINUTES` (default **60 minutes**), and 
 
 ### Account lockout
 
-After **5 consecutive failed logins** the account is locked for **15 minutes**. The lockout response is indistinguishable from "wrong password" (same generic error) so it doesn't leak state. A successful login resets the counter.
+After **5 consecutive failed logins** the account is locked for **15 minutes**. The lockout response is indistinguishable from "wrong password" (same generic error) so it doesn't leak state, and so is the response for a user name that does not exist. A successful login resets the counter.
+
+- While an account is locked, every attempt is refused — with the correct password too — without being counted and without extending the lock. The lock ends by itself; there is no manual unlock.
+- The counter is not reset when a lock runs out: until a successful login, each further failure locks the account for another 15 minutes.
+- Attempts on one account are judged one at a time (the row is locked for the duration of the check), so parallel requests cannot test more than five passwords.
+- Every refused attempt is written to `api.audit`: `login_failed` (with the running count, or `reason: unknown_user` and no `user_id`), `login_account_locked` for the attempt that triggers a lock, and `login_locked` for attempts during one.
 
 ### Authorization model
 
