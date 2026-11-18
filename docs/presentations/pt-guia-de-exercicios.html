@@ -151,6 +151,13 @@
   .card.done h3,.card.try h3{font-family:var(--mono);font-weight:500;font-size:13px;letter-spacing:.1em;text-transform:uppercase;margin:0 0 7px;}
   .card.done h3{color:#2E7D4F;}
   .code .c{color:#9C8E7C;}
+  .code.cmd{font-size:14px;line-height:1.6;margin-top:7px;padding:9px 16px;white-space:nowrap;}
+  .wmsex{margin-top:8px;padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:#FFFDF9;font-size:15.5px;line-height:1.6;}
+  .wmsex .mono{font-size:14px;} .wmsex .url{white-space:nowrap;color:var(--ink);} .wmsex .url b{font-weight:600;color:var(--accent);}
+  .grp{display:flex;flex-direction:column;font-size:17.5px;}
+  .grp .g{display:grid;grid-template-columns:108px 1fr 96px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line);}
+  .grp .g .mono{font-size:15.5px;}
+  .grp .gh{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);border-bottom:2px solid var(--ink);padding-top:0;}
   .sw{display:inline-block;width:13px;height:13px;border-radius:3px;border:1px solid var(--line);margin-right:8px;vertical-align:-1px;}
   table.tpl{font-family:var(--mono);font-size:12px;border:1px solid var(--line);background:#FFFDF9;table-layout:auto;}
   table.tpl th{height:138px;vertical-align:bottom;text-align:center;padding:8px 2px;text-transform:none;letter-spacing:0;color:var(--ink);border:1px solid var(--line);background:#EFE9DD;font-weight:500;font-size:13px;}
@@ -226,21 +233,30 @@
   <!-- 3 · PREPARE: BEFORE YOU START -->
   <section class="slide">
     <p class="eyebrow"><span class="hzchip" style="background:var(--hz-o)"></span>O · Preparar</p>
-    <h2>Antes de começar</h2>
-    <div class="cols c4" style="margin-top:6px;align-items:stretch;gap:22px;">
-      <div class="card"><h3>Endereço</h3><p><span class="mono" style="font-size:15px;"><a href="http://5.223.62.255:8027/" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">http://5.223.62.255:8027/</a></span><br>e, no menu, <strong>Painel de administração</strong>.</p></div>
-      <div class="card"><h3>Conta</h3><p>O utilizador e a palavra-passe do grupo, entregues pelo formador.</p></div>
-      <div class="card"><h3>Modelo</h3><p>O ficheiro <span class="mono" style="font-size:14px;">.xlsx</span> de carregamento de perfis, na pasta <a href="https://github.com/un-fao/OpenNSIS/tree/main/docs/templates" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;"><span class="mono" style="font-size:14px;">docs/templates</span></a> do repositório.</p><p style="margin-top:12px;"><a class="ui" href="https://github.com/un-fao/OpenNSIS/raw/main/docs/templates/OpenNSIS_soil_profile_upload_template.xlsx" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">↓ Descarregar o modelo</a></p></div>
-      <div class="card"><h3>Programas</h3><p>LibreOffice Calc ou Excel, um editor de texto simples e o QGIS.</p></div>
+    <h2>Antes de começar: uma instância por grupo</h2>
+    <div class="cols c2" style="flex:1;align-items:start;grid-template-columns:1.5fr 1fr;gap:40px;">
+      <div>
+        <div class="grp">
+        <div class="g gh"><span>Grupo</span><span>Endereço</span><span>Utilizador</span></div>
+        <div class="g"><strong>Grupo 01</strong><span class="mono"><a href="http://5.223.62.255:8011/" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">http://5.223.62.255:8011/</a></span><span class="mono quiet">admin</span></div>
+        <div class="g"><strong>Grupo 02</strong><span class="mono"><a href="http://5.223.62.255:8012/" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">http://5.223.62.255:8012/</a></span><span class="mono quiet">admin</span></div>
+        <div class="g"><strong>Grupo 03</strong><span class="mono"><a href="http://5.223.62.255:8013/" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">http://5.223.62.255:8013/</a></span><span class="mono quiet">admin</span></div>
+        <div class="g"><strong>Grupo 04</strong><span class="mono"><a href="http://5.223.62.255:8014/" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">http://5.223.62.255:8014/</a></span><span class="mono quiet">admin</span></div>
+        <div class="g"><strong>Grupo 05</strong><span class="mono"><a href="http://5.223.62.255:8015/" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">http://5.223.62.255:8015/</a></span><span class="mono quiet">admin</span></div>
+        <div class="g"><strong>Grupo 06</strong><span class="mono"><a href="http://5.223.62.255:8016/" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">http://5.223.62.255:8016/</a></span><span class="mono quiet">admin</span></div>
+        <div class="g"><strong>Grupo 07</strong><span class="mono"><a href="http://5.223.62.255:8017/" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">http://5.223.62.255:8017/</a></span><span class="mono quiet">admin</span></div>
+        <div class="g"><strong>Grupo 08</strong><span class="mono"><a href="http://5.223.62.255:8018/" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">http://5.223.62.255:8018/</a></span><span class="mono quiet">admin</span></div>
+        <div class="g"><strong>Grupo 09</strong><span class="mono"><a href="http://5.223.62.255:8019/" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">http://5.223.62.255:8019/</a></span><span class="mono quiet">admin</span></div>
+        <div class="g"><strong>Grupo 10</strong><span class="mono"><a href="http://5.223.62.255:8020/" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">http://5.223.62.255:8020/</a></span><span class="mono quiet">admin</span></div>
+        </div>
+      </div>
+      <div class="side">
+        <div class="card"><h3>Conta</h3><p>Utilizador <span class="mono">admin</span>, em <strong>Painel de administração</strong>. A palavra-passe de cada grupo é entregue pelo formador.</p></div>
+        <div class="card"><h3>Modelo</h3><p>O ficheiro <span class="mono" style="font-size:14px;">.xlsx</span> de carregamento de perfis.</p><p style="margin-top:12px;"><a class="ui" href="https://github.com/un-fao/OpenNSIS/raw/main/docs/templates/OpenNSIS_soil_profile_upload_template.xlsx" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">↓ Descarregar o modelo</a></p></div>
+        <div class="card"><h3>Programas</h3><p>LibreOffice Calc ou Excel, um editor de texto simples e o QGIS.</p></div>
+      </div>
     </div>
-    <div class="cols c2" style="flex:1;align-items:center;margin-top:8px;grid-template-columns:1fr 1fr;">
-      <ul class="pts" style="gap:12px;">
-        <li>Cada grupo trabalha <strong>no seu próprio projeto</strong> (exercício 1).</li>
-        <li>O projeto <span class="mono">SoilFER-VACS</span> e os seus mapas <strong>não se alteram</strong>.</li>
-        <li>No fim do dia, arrumamos: os dados de exercício saem.</li>
-      </ul>
-      <p class="bigquote" style="font-size:30px;">Errar aqui é o objetivo:<br><em>é para isso que serve o dia.</em></p>
-    </div>
+    <footer class="src">Cada instância começa vazia e é só do grupo: errar aqui é o objetivo. A lista completa está também em <span class="mono"><a href="http://5.223.62.255/" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">http://5.223.62.255/</a></span>, na secção de formação.</footer>
   </section>
 
   <!-- 4 · PROFILES: THE TEMPLATE -->
@@ -432,7 +448,7 @@
       </ol>
       <div class="side">
         <div class="card done"><h3>Feito quando</h3><p>O mapa aparece na lista de camadas do <strong>Mapa</strong>, com legenda, e a coluna «WMS» está em ordem.</p></div>
-        <div class="card try"><h3>Atenção</h3><p>Não mexa em «Predefinido» nem nos mapas dos outros: a instância é partilhada.</p></div>
+        <div class="card try"><h3>Desafio</h3><p>Tornar o mapa «Predefinido» e mudar-lhe a opacidade: o que vê agora quem abre o <strong>Mapa</strong> pela primeira vez?</p></div>
       </div>
     </div>
   </section>
@@ -441,15 +457,16 @@
   <section class="slide">
     <p class="eyebrow"><span class="hzchip" style="background:var(--hz-b)"></span>B · Mapas · Exercício 7 <span class="dur">15 min</span></p>
     <h2>Do registo de metadados ao QGIS</h2>
-    <div class="cols c2 exg">
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:26px;">
       <ol class="ex">
         <li>No <strong>Mapa</strong>, abrir os <strong>metadados</strong> do mapa que publicou: título, resumo, licença e contacto estão certos?</li>
         <li>Descarregar o <strong>XML</strong> e procurar a licença lá dentro.</li>
         <li>No QGIS: <em>Camada → Adicionar camada → WMS/WMTS → Novo</em>.</li>
-        <li>Colar o endereço, trocando o identificador pelo do seu mapa:<br><span class="mono" style="font-size:14px;word-break:break-all;display:inline-block;">http://5.223.62.255:8027/mapserver?map=/etc/mapserver/MZ-GRUPO1-TEXTCLAY-2026-0-30-MEAN.map</span></li>
+        <li>Colar o endereço WMS do mapa, com a <strong>porta</strong> da sua instância e o <strong>identificador</strong> do seu mapa (a coluna «ID do raster» da lista GeoTIFFs).
+          <div class="wmsex"><span class="quiet">Exemplo — grupo 01, mapa <span class="mono">MZ-GRUPO1-TEXTCLAY-2026-0-30-MEAN</span>:</span><br><span class="mono url">http://5.223.62.255:<b>8011</b>/mapserver?map=/etc/mapserver/<b>MZ-GRUPO1-TEXTCLAY-2026-0-30-MEAN</b>.map</span></div></li>
         <li><em>Ligar</em>, escolher a camada e <em>Adicionar</em>.</li>
       </ol>
-      <div class="side">
+      <div class="cols c2" style="gap:22px;">
         <div class="card done"><h3>Feito quando</h3><p>O mapa do grupo está aberto no QGIS, por cima de um mapa de base, sem ter descarregado ficheiro nenhum.</p></div>
         <div class="card try"><h3>Desafio</h3><p>Abrir no QGIS, da mesma forma, o mapa de <strong>outro grupo</strong>. De que precisou que ele lhe desse?</p></div>
       </div>
@@ -470,7 +487,7 @@
       </ol>
       <div class="side">
         <div class="card done"><h3>Feito quando</h3><p>A notícia do grupo está na página pública e outra pessoa, sem contexto, percebe o que pode fazer com os dados.</p></div>
-        <div class="card try"><h3>Atenção</h3><p>Este separador pede uma conta de <strong>administrador</strong>. As páginas e as cores do sítio são de todos: hoje, só notícias.</p></div>
+        <div class="card try"><h3>Desafio</h3><p>No mesmo separador, mudar o título, a imagem e as cores do sítio: a instância é do grupo.</p></div>
       </div>
     </div>
   </section>
@@ -481,21 +498,28 @@
     <h2>Fazer uma cópia de segurança — e prová-la</h2>
     <div class="cols c2 exg" style="grid-template-columns:1.25fr 1fr;">
       <div>
-        <div class="code" style="font-size:14.5px;line-height:1.75;">
-<span class="c"># 1 · a base de dados</span><br>
-cd /opt/sis<br>
-<span class="k">docker exec sis-database pg_dump -U sis -d sis \</span><br>
+        <div class="code" style="font-size:14px;line-height:1.6;">
+<span class="c"># 1 · entrar no servidor</span><br>
+<span class="k">ssh root@5.223.62.255</span><br>
+<span class="c"># 2 · a base de dados</span><br>
+cd /opt/sis-mz01<br>
+<span class="k">docker exec sis-mz01-database pg_dump -U sis -d sis \</span><br>
 <span class="k">&nbsp;&nbsp;| gzip &gt; sis-db-$(date +%F).sql.gz</span><br>
-<span class="c"># 2 · os ficheiros: mapas, catálogo, configuração</span><br>
+<span class="c"># 3 · os ficheiros: mapas, catálogo, configuração</span><br>
 <span class="k">tar czf sis-volumes-$(date +%F).tgz \</span><br>
 <span class="k">&nbsp;&nbsp;sis-web-services/volume sis-metadata/volume .env</span><br>
-<span class="c"># 3 · conferir</span><br>
-ls -lh sis-db-* sis-volumes-*
+<span class="c"># 4 · conferir</span><br>
+ls -lh sis-db-* sis-volumes-*<br>
+<span class="c"># 5 · sair do servidor; no portátil, trazer as cópias</span><br>
+<span class="k">exit</span><br>
+<span class="k">scp 'root@5.223.62.255:/opt/sis-mz01/sis-*-20*' \</span><br>
+<span class="k">&nbsp;&nbsp;~/Downloads/</span><br>
+ls -lh ~/Downloads/sis-*-20*
         </div>
-        <p style="font-size:16.5px;margin-top:14px;" class="quiet">Um voluntário ao teclado, o ecrã projetado. No servidor de formação, os nomes levam o código do país: <span class="mono">sis-mz-database</span>, <span class="mono">/opt/sis-mz</span>.</p>
+        <p style="font-size:16.5px;margin-top:14px;" class="quiet">Um voluntário ao teclado, o ecrã projetado. O exemplo é o do grupo 01; numa instalação nacional, os nomes são <span class="mono">/opt/sis</span> e <span class="mono">sis-database</span>.</p>
       </div>
       <div class="side">
-        <div class="card done"><h3>Feito quando</h3><p>Há dois ficheiros com a data de hoje, de tamanho plausível, e uma cópia de ambos <strong>fora do servidor</strong>.</p></div>
+        <div class="card done"><h3>Feito quando</h3><p>Há dois ficheiros com a data de hoje, de tamanho plausível, e uma cópia de ambos <strong>fora do servidor</strong>, na pasta <span class="mono" style="font-size:15px;">Downloads</span> do portátil.</p></div>
         <div class="card try"><h3>Desafio</h3><p>Provar que os dados do grupo estão lá dentro:<br><span class="mono" style="font-size:14px;">zcat sis-db-*.sql.gz | grep -c GRUPO1</span></p></div>
       </div>
     </div>
@@ -509,8 +533,8 @@ ls -lh sis-db-* sis-volumes-*
       <ol class="ex">
         <li>Em <span class="ui">Administração</span>, secção <strong>Atualização do software</strong>: anotar a versão instalada e clicar em <span class="ui">Procurar atualizações</span>.</li>
         <li>Confirmar que existe uma <strong>cópia de segurança de hoje</strong> (exercício 9).</li>
-        <li>No servidor: <span class="mono">cd /opt/sis</span> e <span class="mono">./update.sh</span>.</li>
-        <li>Ver o estado dos serviços com <span class="mono">docker ps</span>: todos a funcionar?</li>
+        <li>No servidor, atualizar:<div class="code cmd"><span class="k">cd /opt/sis-mz01 &amp;&amp; ./update.sh</span></div></li>
+        <li>Ver o estado dos serviços — todos a funcionar?<div class="code cmd"><span class="k">docker ps --filter name=sis-mz01</span></div></li>
         <li>No navegador: o mapa abre, um perfil abre, um mapa desenha-se, a versão mudou.</li>
         <li>Registar no <strong>diário do sistema</strong>: data, versão, quem fez, o que verificou.</li>
       </ol>
@@ -567,9 +591,9 @@ ls -lh sis-db-* sis-volumes-*
     <div class="cols c3" style="flex:1;align-items:center;">
       <div class="card"><h3>Perfis</h3><p>Em <strong>Perfis de solo</strong>, o botão <strong>Depurar</strong> retira da base de dados os perfis do projeto. O projeto e os CSV carregados ficam.</p></div>
       <div class="card"><h3>Mapas</h3><p>Em <strong>Rasters</strong>, <strong>Eliminar</strong> remove de uma vez o ficheiro, o mapa, o registo do catálogo e as entradas da base de dados.</p></div>
-      <div class="card"><h3>Projeto e ficheiros</h3><p>Eliminar um projeto ou um CSV carregado é tarefa de <strong>administrador</strong>: o formador trata disso no fim.</p></div>
+      <div class="card"><h3>Projeto e ficheiros</h3><p>Eliminar um projeto ou um CSV carregado é tarefa de <strong>administrador</strong> — na sua instância, é o grupo.</p></div>
     </div>
-    <footer class="src">Despublicar esconde; eliminar retira. O que leva para casa: o seu CSV já corrigido e a lista do que foi preciso corrigir.</footer>
+    <footer class="src">Despublicar esconde; eliminar retira. As instâncias de formação são temporárias: o que leva para casa é o seu CSV já corrigido e a lista do que foi preciso corrigir.</footer>
   </section>
 
   <!-- 21 · ROADMAP -->
@@ -600,7 +624,7 @@ ls -lh sis-db-* sis-volumes-*
         <div>
           <p style="font-size:20px;line-height:1.9;">
             <strong>Para os exercícios</strong><br>
-            <span class="mono"><a href="http://5.223.62.255:8027/" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">http://5.223.62.255:8027/</a></span> <span class="quiet">· Moçambique</span><br>
+            <span class="mono"><a href="http://5.223.62.255/" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">http://5.223.62.255/</a></span> <span class="quiet">· as instâncias de formação</span><br>
             <a class="ui" href="https://github.com/un-fao/OpenNSIS/raw/main/docs/templates/OpenNSIS_soil_profile_upload_template.xlsx" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">↓ Descarregar o modelo</a> <span class="quiet">· ficheiro .xlsx</span>
           </p>
         </div>
