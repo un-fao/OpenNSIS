@@ -33,7 +33,7 @@ was on disk before the pull, so the automatic correction takes effect
 from the second update onwards.
 
 ### 2026-11-22 — GloSIS update presentation
-`docs/presentations/en-glosis-update-opennsis-and-discovery-hub.html` is a
+`docs/presentations/en-2026-11-24-glosis-update-opennsis-and-discovery-hub.html` is a
 short English presentation for a twenty-minute slot at the 12th Meeting
 of the International Network of Soil Information Institutions (INSII,
 24–26 November 2026): what GloSIS now offers, OpenNSIS in one picture,
@@ -44,7 +44,7 @@ slide carries a screenshot of each step as a backup: the right arrow
 skips them, the down arrow opens them.
 
 ### 2026-11-13 — Exercise guide for the hands-on day, in Portuguese
-`docs/presentations/pt-guia-de-exercicios.html` guides a practical day
+`docs/presentations/pt-2026-11-19-guia-de-exercicios.html` guides a practical day
 through twelve exercises: creating a project, filling in the soil-profile
 upload template, mapping and validating a CSV, sharing controls,
 publishing a GeoTIFF, opening it in QGIS, writing a news post, taking a
@@ -55,11 +55,11 @@ closes the guide.
 
 ### 2026-11-13 — Three more workshop presentations in Portuguese
 Three further Portuguese presentations sit in `docs/presentations/`,
-prepared for the Mozambique workshop: `pt-glosis.html` (what GloSIS is,
+prepared for the Mozambique workshop: `pt-2026-11-16-glosis.html` (what GloSIS is,
 the shared vocabulary, and how a national system joins the federation),
-`pt-partilha-de-dados-e-licencas.html` (data-sharing principles, the
+`pt-2026-11-16-partilha-de-dados-e-licencas.html` (data-sharing principles, the
 Creative Commons licences, and the sharing and licence controls in
-OpenNSIS) and `pt-alojamento-do-servidor.html` (hosting options, server
+OpenNSIS) and `pt-2026-11-16-alojamento-do-servidor.html` (hosting options, server
 requirements, installation, routine operation and the people needed).
 Their examples and figures come from the Mozambique demonstration
 instance.
@@ -67,7 +67,7 @@ instance.
 ### 2026-11-13 — Workshop presentation in Portuguese
 The standards presentation, *Open Standards for Soil Data*, gained a
 Portuguese edition next to the English and Spanish ones:
-`docs/presentations/pt-normas-abertas-para-dados-de-solo.html`. Its live
+`docs/presentations/pt-2026-11-16-normas-abertas-para-dados-de-solo.html`. Its live
 examples (the metadata record, the WMS request and the QGIS connection)
 use the Mozambique demonstration instance, and it presents the system as
 it stands this month, including the public website, laboratory (LIMS)
