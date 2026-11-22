@@ -7,6 +7,17 @@ the change landed on `main`.
 
 ## November 2026
 
+### 2026-11-22 — GloSIS update presentation
+`docs/presentations/en-glosis-update-opennsis-and-discovery-hub.html` is a
+short English presentation for a twenty-minute slot at the 12th Meeting
+of the International Network of Soil Information Institutions (INSII,
+24–26 November 2026): what GloSIS now offers, OpenNSIS in one picture,
+where it runs, what is new since September, and how the Discovery Hub
+connects the nodes, followed by a five-step live demonstration that
+follows one dataset from a national node to the Hub. The demonstration
+slide carries a screenshot of each step as a backup: the right arrow
+skips them, the down arrow opens them.
+
 ### 2026-11-13 — Exercise guide for the hands-on day, in Portuguese
 `docs/presentations/pt-guia-de-exercicios.html` guides a practical day
 through twelve exercises: creating a project, filling in the soil-profile
