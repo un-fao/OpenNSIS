@@ -1,6 +1,8 @@
 /* Shared site header — one bar across every page (landing, sub-pages,
-   dashboard and the map). Brand on the left, navigation in the middle,
-   theme / sign-in / language controls on the right. Colours come from the
+   dashboard and the map). Logo on the left, navigation in the middle,
+   theme / sign-in / language controls on the right, always in one row: when
+   room runs short the navigation wraps inside its own box, and the controls
+   never leave the right end. Colours come from the
    page's own theme tokens, so it follows light/dark everywhere. */
 
 .site-header {
@@ -19,7 +21,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 
 .brand {
@@ -27,6 +29,10 @@
     align-items: center;
     gap: 12px;
     min-width: 0;
+    flex: none;
+    /* the brand is a link to the home page */
+    color: inherit;
+    text-decoration: none;
 }
 .brand img {
     height: 38px;
@@ -34,17 +40,20 @@
     width: auto;
     object-fit: contain;
 }
+/* The title is never shown in the header: the logo, when there is one, is
+   the brand, and the row is left to the navigation (a long title plus the
+   Admin Panel entry used to push the controls onto a second row). It stays
+   in the page for screen readers only. */
 .site-name {
-    margin: 0;
-    font-family: var(--font-display, inherit);
-    font-size: 19px;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    color: var(--color-text);
-    white-space: nowrap;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
     overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 320px;
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
 
 /* display:flex would override the hidden attribute (map page with the
@@ -56,7 +65,10 @@
     display: flex;
     align-items: center;
     gap: clamp(8px, 1.6vw, 20px);
+    row-gap: 0;
     flex-wrap: wrap;
+    flex: 0 1 auto;
+    min-width: 0;
 }
 .nav-link {
     font-size: 15px;
@@ -75,6 +87,7 @@ a.nav-link:hover { color: var(--color-primary); border-bottom-color: var(--color
     align-items: center;
     gap: 4px;
     position: relative;   /* anchors the language menu to the glyphs */
+    flex: none;
 }
 .hdr-glyph {
     display: inline-flex;
@@ -180,7 +193,6 @@ a.nav-link:hover { color: var(--color-primary); border-bottom-color: var(--color
 }
 
 @media (max-width: 760px) {
-    .site-header-inner { padding: 8px 14px; gap: 8px; }
-    .site-nav { gap: 10px; font-size: 14px; order: 3; flex-basis: 100%; padding-bottom: 6px; }
-    .site-name { font-size: 16px; max-width: 180px; }
+    .site-header-inner { flex-wrap: wrap; padding: 8px 14px; gap: 8px; }
+    .site-nav { gap: 10px; font-size: 14px; order: 3; flex: 1 1 100%; padding-bottom: 6px; }
 }

@@ -7,6 +7,17 @@ the change landed on `main`.
 
 ## November 2026
 
+### 2026-11-22 — Header: logo only, controls always on the right
+The shared header no longer shows the instance title next to the logo.
+With a long title and the Admin Panel entry that appears while signed
+in, the row ran out of room and the sign-in, theme and language icons
+dropped to a second row on the left. The header is now a single row:
+logo, navigation, controls. When the window is too narrow the
+navigation wraps inside its own space and the controls stay at the
+right end. The title remains in the page for screen readers only; an
+instance whose logo is removed shows neither logo nor title. The logo
+is now a link to the home page.
+
 ### 2026-11-22 — Website image uploads after an update
 On servers where the install folder belongs to root, uploading a hero
 image, a person's photo or a news picture failed with "API Error: 500":
