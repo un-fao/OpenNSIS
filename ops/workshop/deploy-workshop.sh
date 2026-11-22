@@ -89,12 +89,13 @@ echo "============================================================"
 dc down -v --remove-orphans
 rm -rf "$PROJECT_DIR/sis-database/volume/"* 2>/dev/null || true
 
-# sis-api runs as uid 1000 (appuser) and writes rasters + pyCSW XML into
+# sis-api runs as uid 1000 (appuser) and writes rasters, pyCSW XML and website images into
 # these bind mounts. On a server where the repo was cloned by root they're
 # root-owned → PermissionError on upload. Chown when we can (root on the
 # server); best-effort elsewhere (dev laptops usually already match uid 1000).
 chown -R 1000:1000 "$PROJECT_DIR/sis-web-services/volume" \
-                   "$PROJECT_DIR/sis-metadata/volume" 2>/dev/null \
+                   "$PROJECT_DIR/sis-metadata/volume" \
+                   "$PROJECT_DIR/sis-site/volume" 2>/dev/null \
   || echo "NOTE: could not chown volumes to uid 1000 (not root?) — fine if your user is uid 1000."
 
 ####################

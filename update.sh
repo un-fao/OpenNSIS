@@ -135,6 +135,26 @@ export GIT_SHA="$NEW"
 echo "### 3/4  rebuild app containers (data containers untouched)"
 $DC up -d --build $APP_SVCS
 
+# ---- upload folders: writable by the application ---------------------------
+# sis-api runs as uid 1000 and saves uploads into bind-mounted folders. A
+# folder that first arrives with a pull (sis-site/volume came with the public
+# website) is created by git as the user running this script, which is root on
+# most servers, and every image upload then fails with "API Error: 500". The
+# check runs inside the container just recreated, so a folder is only touched
+# when the application really cannot write to it.
+for pair in "sis-site/volume:/srv/site-media"; do
+  host_dir=${pair%%:*}; in_container=${pair##*:}
+  [ -d "$host_dir" ] || continue
+  $DC exec -T sis-api test -w "$in_container" </dev/null >/dev/null 2>&1 && continue
+  if chown -R 1000:1000 "$host_dir" 2>/dev/null \
+     && $DC exec -T sis-api test -w "$in_container" </dev/null >/dev/null 2>&1; then
+    echo "  $host_dir: made writable by the application (uid 1000)"
+  else
+    echo "  WARNING: the application cannot write to $host_dir, so image uploads will fail."
+    echo "           Fix it with:  sudo chown -R 1000:1000 $host_dir"
+  fi
+done
+
 # ---- nginx: apply a changed definition or configuration --------------------
 # nginx is not rebuilt, but the pull may have changed its service definition
 # (e.g. a new volume) or sis-nginx/nginx.conf. `up -d` recreates the container

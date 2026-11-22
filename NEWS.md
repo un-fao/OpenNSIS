@@ -7,6 +7,20 @@ the change landed on `main`.
 
 ## November 2026
 
+### 2026-11-22 — Website image uploads after an update
+On servers where the install folder belongs to root, uploading a hero
+image, a person's photo or a news picture failed with "API Error: 500":
+the folder that holds website images (`sis-site/volume`) arrived with a
+`git pull` and was not writable by the application, which runs as user
+1000. `deploy.sh` now hands that folder to the application together with
+the raster and catalogue folders, and `update.sh` checks, once the
+containers are recreated, that the application can write to it and
+corrects the ownership when it cannot. An affected server is repaired at
+once with `sudo chown -R 1000:1000 sis-site/volume`, run from the install
+folder; no restart is needed. An update runs the copy of `update.sh` that
+was on disk before the pull, so the automatic correction takes effect
+from the second update onwards.
+
 ### 2026-11-22 — GloSIS update presentation
 `docs/presentations/en-glosis-update-opennsis-and-discovery-hub.html` is a
 short English presentation for a twenty-minute slot at the 12th Meeting
