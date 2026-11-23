@@ -7,6 +7,15 @@ the change landed on `main`.
 
 ## November 2026
 
+### 2026-11-23 — Workshop presentations in French
+The six presentations for the two days in Tunisia and their agenda now
+have French editions in `docs/presentations/`: the standards deck
+(`fr-2026-09-10-normes-ouvertes-pour-les-donnees-de-sol.html`), GloSIS,
+the database, data sharing and licences, hosting, the exercise guide
+(all `fr-2026-11-23-…`) and `fr-2026-11-30-agenda.html`. The exercises
+name the interface labels as they read in French, and the screenshots
+were taken with the interface in French.
+
 ### 2026-11-23 — Four workshop presentations in English
 The hosting, GloSIS, data-sharing and exercise-guide presentations now
 have English editions in `docs/presentations/`:
@@ -14,7 +23,9 @@ have English editions in `docs/presentations/`:
 `en-2026-11-23-data-sharing-and-licences.html` and
 `en-2026-11-23-exercise-guide.html`. Their examples, figures and
 screenshots come from the Tunisia demonstration instance, and the
-exercises name the interface labels as they read in English.
+exercises name the interface labels as they read in English. A one-slide
+agenda for the two days in Tunisia (30 November and 3 December 2026),
+`en-2026-11-30-agenda.html`, links each session to its presentation.
 
 ### 2026-11-23 — Presentation on the database
 `docs/presentations/en-2026-11-23-opennsis-database.html` explains the
