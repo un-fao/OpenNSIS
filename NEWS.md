@@ -7,6 +7,26 @@ the change landed on `main`.
 
 ## November 2026
 
+### 2026-11-23 — Four workshop presentations in English
+The hosting, GloSIS, data-sharing and exercise-guide presentations now
+have English editions in `docs/presentations/`:
+`en-2026-11-23-hosting-the-server.html`, `en-2026-11-23-glosis.html`,
+`en-2026-11-23-data-sharing-and-licences.html` and
+`en-2026-11-23-exercise-guide.html`. Their examples, figures and
+screenshots come from the Tunisia demonstration instance, and the
+exercises name the interface labels as they read in English.
+
+### 2026-11-23 — Presentation on the database
+`docs/presentations/en-2026-11-23-opennsis-database.html` explains the
+`soil_data` schema in fourteen slides: ISO 28258 in short, the entity
+relationship diagram as a whole, then one slide for each of its seven
+coloured parts (soil data, descriptive data, wet chemistry, spectral
+data, soil map, metadata, translation), each with a simplified drawing
+of its tables and a marker showing where the part sits in the full
+diagram. It closes with one value followed through the tables and what
+the model gives back. A Portuguese edition sits next to it:
+`pt-2026-11-23-base-de-dados-opennsis.html`.
+
 ### 2026-11-22 — Header: logo only, controls always on the right
 The shared header no longer shows the instance title next to the logo.
 With a long title and the Admin Panel entry that appears while signed

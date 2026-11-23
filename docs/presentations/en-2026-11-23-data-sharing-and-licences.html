@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<meta charset="utf-8"/>
+<title>Sharing soil data: rules and licences</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&amp;family=Source+Sans+3:ital,wght@0,400;0,600;1,400&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    --paper:#F7F3EC; --paper-2:#EFE8DC; --ink:#241C14; --ink-soft:#5C5044;
+    --hz-o:#3E2E1F; --hz-a:#63452C; --hz-b:#8A6844; --hz-c:#B79A77; --hz-r:#6B6157;
+    --accent:#1D5F73; --accent-soft:#DDE9EC; --line:#D8CDBC;
+    --disp:"Bricolage Grotesque", Georgia, serif;
+    --body:"Source Sans 3", "Segoe UI", Arial, sans-serif;
+    --mono:"IBM Plex Mono", "Courier New", monospace;
+  }
+  html,body{height:100%;}
+  body{margin:0;background:#221A12;font-family:var(--body);color:var(--ink);overflow:hidden;}
+
+  /* ---------- stage ---------- */
+  #viewport{position:fixed;inset:0;display:grid;place-items:center;background:#221A12;}
+  #stage{width:1280px;height:720px;position:relative;background:var(--paper);
+         box-shadow:0 20px 60px rgba(0,0,0,.5);transform-origin:center center;overflow:hidden;}
+
+  .slide{position:absolute;inset:0;display:none;padding:64px 88px 56px 132px;box-sizing:border-box;background:var(--paper);}
+  .slide.current{display:flex;flex-direction:column;}
+
+  /* ---------- horizon rail ---------- */
+  #rail{position:absolute;left:0;top:0;bottom:0;width:76px;background:var(--paper-2);
+        border-right:1px solid var(--line);display:flex;flex-direction:column;z-index:5;}
+  #rail .hz{flex:1;display:flex;align-items:flex-start;justify-content:center;cursor:pointer;
+            border:none;font-family:var(--disp);font-weight:600;font-size:15px;
+            padding-top:9px;color:#F7F3EC;opacity:.42;transition:opacity .2s;}
+  #rail .hz.on{opacity:1;}
+  #rail .hz:focus-visible{outline:3px solid var(--accent);outline-offset:-3px;}
+  #rail .hz small{font-family:var(--body);font-weight:600;font-size:10px;letter-spacing:.08em;
+                  text-transform:uppercase;writing-mode:vertical-rl;margin-top:7px;}
+  #rail .o{background:var(--hz-o);} #rail .a{background:var(--hz-a);}
+  #rail .b{background:var(--hz-b);} #rail .c{background:var(--hz-c);}
+  #rail .r{background:var(--hz-r);}
+  #rail .t{background:var(--paper-2);color:var(--ink-soft);flex:0 0 46px;align-items:center;padding-top:0;}
+
+  #counter{position:absolute;right:26px;bottom:20px;font-family:var(--mono);font-size:13px;
+           color:var(--ink-soft);z-index:6;}
+
+  /* ---------- typography ---------- */
+  .eyebrow{font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+           color:var(--accent);margin:0 0 10px;}
+  .eyebrow .hzchip{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:8px;}
+  h1{font-family:var(--disp);font-weight:800;font-size:64px;line-height:1.04;margin:0;text-wrap:balance;}
+  h2{font-family:var(--disp);font-weight:800;font-size:44px;line-height:1.08;margin:0 0 26px;text-wrap:balance;}
+  h3{font-family:var(--disp);font-weight:600;font-size:22px;margin:0 0 8px;}
+  p,li{font-size:21px;line-height:1.5;margin:0;}
+  .lead{font-size:25px;line-height:1.45;color:var(--ink-soft);max-width:30em;}
+  ul.pts{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:18px;}
+  ul.pts li{padding-left:30px;position:relative;max-width:34em;}
+  ul.pts li::before{content:"";position:absolute;left:0;top:11px;width:14px;height:8px;
+                    background:var(--hz-a);border-radius:2px;}
+  strong{font-weight:600;}
+  .mono{font-family:var(--mono);font-size:.9em;}
+  .quiet{color:var(--ink-soft);}
+  a{color:var(--accent);text-decoration:none;}
+
+  .cols{display:grid;gap:36px;align-items:start;}
+  .c2{grid-template-columns:1fr 1fr;} .c3{grid-template-columns:1fr 1fr 1fr;}
+
+  .card{background:#FFFDF9;border:1px solid var(--line);border-radius:10px;padding:22px 26px;box-sizing:border-box;}
+  .card h3{color:var(--hz-a);}
+  .card p{font-size:18px;line-height:1.45;}
+
+  .tag{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:99px;
+       padding:3px 14px;font-size:15px;font-weight:600;}
+
+  table{border-collapse:collapse;width:100%;font-size:19px;}
+  th{font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);
+     text-align:left;padding:0 18px 10px 0;border-bottom:2px solid var(--ink);}
+  td{padding:11px 18px 11px 0;border-bottom:1px solid var(--line);vertical-align:top;}
+  td.svc{font-family:var(--mono);font-weight:500;white-space:nowrap;}
+
+  .code{background:#2B221A;color:#EFE4D2;border-radius:10px;padding:18px 22px;
+        font-family:var(--mono);font-size:16px;line-height:1.65;overflow-x:auto;}
+  .code .k{color:#B7D9C9;}
+
+  footer.src{margin-top:auto;font-size:14px;color:var(--ink-soft);}
+
+  /* metadata label card */
+  .label-card{background:#FFFDF9;border:1.5px solid var(--hz-a);border-radius:12px;overflow:hidden;}
+  .label-card .head{background:var(--hz-a);color:#F7F3EC;padding:12px 22px;font-family:var(--mono);font-size:16px;}
+  .label-card dl{display:grid;grid-template-columns:auto 1fr;gap:7px 20px;margin:0;padding:18px 22px;}
+  .label-card dt{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);padding-top:3px;}
+  .label-card dd{margin:0;font-size:17px;}
+
+  /* architecture diagram */
+  .arch{display:flex;flex-direction:column;gap:14px;align-items:center;}
+  .arch .row{display:flex;gap:14px;justify-content:center;}
+  .arch .box{background:#FFFDF9;border:1.5px solid var(--hz-a);border-radius:9px;padding:10px 18px;text-align:center;}
+  .arch .box b{display:block;font-family:var(--disp);font-weight:600;font-size:18px;}
+  .arch .box span{font-size:14px;color:var(--ink-soft);}
+  .arch .box.std{border-color:var(--accent);background:var(--accent-soft);}
+  .arch .down{font-size:20px;color:var(--ink-soft);line-height:1;}
+
+  /* horizon strip on title + roadmap */
+  .hzstrip{display:flex;flex-direction:column;border-radius:12px;overflow:hidden;height:100%;min-height:340px;}
+  .hzstrip div{flex:1;display:flex;align-items:center;gap:16px;padding:0 24px;color:#F7F3EC;}
+  .hzstrip .lt{font-family:var(--disp);font-weight:800;font-size:30px;width:32px;}
+  .hzstrip b{font-family:var(--disp);font-weight:600;font-size:20px;display:block;}
+  .hzstrip span{font-size:14.5px;opacity:.85;display:block;}
+  .hzstrip .o{background:var(--hz-o);} .hzstrip .a{background:var(--hz-a);}
+  .hzstrip .b{background:var(--hz-b);} .hzstrip .c{background:var(--hz-c);}
+  .hzstrip .r{background:var(--hz-r);}
+
+  .bigquote{font-family:var(--disp);font-weight:600;font-size:34px;line-height:1.25;max-width:20em;text-wrap:balance;}
+  .bigquote em{color:var(--hz-a);font-style:normal;}
+
+
+  /* live-demo + screenshot slides */
+  .slide.live{background:#2B221A;color:#EFE4D2;}
+  .slide.live h2{color:#EFE4D2;}
+  .slide.live .steps{display:flex;flex-direction:column;gap:20px;max-width:38em;}
+  .slide.live .step{display:flex;gap:18px;align-items:baseline;font-size:22px;line-height:1.5;}
+  .slide.live .step .n{font-family:var(--disp);font-weight:800;font-size:26px;color:#B7D9C9;min-width:30px;}
+  .livetag{display:inline-block;background:#B7D9C9;color:#2B221A;border-radius:99px;
+           padding:4px 18px;font-weight:600;font-size:15px;letter-spacing:.12em;text-transform:uppercase;}
+  .slide.shot{padding:0 0 0 76px;background:#2B221A;}
+  .slide.shot img{flex:1;min-height:0;width:100%;object-fit:contain;}
+  .slide.shot .cap{background:rgba(36,28,20,.88);color:#EFE4D2;padding:16px 40px;font-size:19px;}
+  .slide.shot .cap b{font-family:var(--disp);}
+
+  /* feature cards */
+  .feat>div{background:#FFFDF9;border:1px solid var(--line);border-radius:8px;padding:10px 16px;}
+  .feat h3{font-size:17px;margin:0 0 4px;color:var(--hz-a);}
+  .feat p{font-size:14px;line-height:1.35;}
+
+  /* additions for the day-one decks */
+  .fig{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#FFFDF9;}
+  .fig img{display:block;width:100%;}
+  .card p.num,.num{font-family:var(--disp);font-weight:800;font-size:46px;line-height:1;color:var(--hz-a);margin-bottom:8px;}
+  .yes{color:#2E7D4F;font-weight:600;} .no{color:#A6432D;font-weight:600;}
+  td.c,th.c{text-align:center;}
+  table.sm{font-size:17.5px;} table.sm td{padding:9px 16px 9px 0;}
+  .c4{grid-template-columns:repeat(4,1fr);}
+  .card.dark{background:var(--hz-o);border-color:var(--hz-o);color:#F7F3EC;} .card.dark h3{color:#E9D9BF;}
+
+  @media print{
+    body{overflow:visible;background:#fff;}
+    #viewport{position:static;display:block;background:#fff;}
+    #stage{transform:none !important;box-shadow:none;width:1280px;height:720px;overflow:hidden;
+           page-break-after:always;position:relative;margin:0 auto;}
+    .slide{display:flex !important;flex-direction:column;position:relative;height:720px;page-break-after:always;}
+    #counter{display:none;}
+  }
+  @media (prefers-reduced-motion: no-preference){
+    .slide.current{animation:fade .28s ease;}
+    @keyframes fade{from{opacity:0}to{opacity:1}}
+  }
+</style>
+<div id="viewport">
+<div id="stage">
+<nav aria-label="Sections" id="rail">
+<button aria-label="Title" class="hz t" data-go="0">▲</button>
+<button class="hz o" data-go="1">O<small>Why</small></button>
+<button class="hz a" data-go="4">A<small>Principles</small></button>
+<button class="hz b" data-go="7">B<small>CC licences</small></button>
+<button class="hz c" data-go="11">C<small>Choosing</small></button>
+<button class="hz r" data-go="13">R<small>OpenNSIS</small></button>
+</nav>
+<div id="counter">1 / 19</div>
+<!-- 1 · TITLE -->
+<section class="slide">
+<div class="cols c2" style="flex:1;align-items:center;grid-template-columns:1.35fr 1fr;">
+<div>
+<p class="eyebrow">FAO · Global Soil Partnership</p>
+<h1>Sharing soil data: rules and licences</h1>
+<p class="lead" style="margin-top:22px;">What to share, with whom and on what terms: the Creative Commons licences and how all this works in OpenNSIS.</p>
+<p style="margin-top:34px;font-size:19px;line-height:1.45;">Eloi Ribeiro<br/><span class="quiet" style="font-size:17px;">Soil Information and Data<br/>Land and Water Division (NSL)<br/>Food and Agriculture Organization of the United Nations (FAO)</span></p>
+</div>
+<div aria-hidden="true" class="hzstrip">
+<div class="o"><span class="lt">O</span><div><b>Why</b><span>idle data do no work</span></div></div>
+<div class="a"><span class="lt">A</span><div><b>Principles</b><span>FAIR, open, graduated</span></div></div>
+<div class="b"><span class="lt">B</span><div><b>CC licences</b><span>four elements, six licences</span></div></div>
+<div class="c"><span class="lt">C</span><div><b>Choosing</b><span>one rule for the institution</span></div></div>
+<div class="r"><span class="lt">R</span><div><b>OpenNSIS</b><span>where it is set</span></div></div>
+</div>
+</div>
+</section>
+<!-- 2 · WHY: DATA THAT DOES NOT MOVE -->
+<section class="slide">
+<p class="eyebrow"><span class="hzchip" style="background:var(--hz-o)"></span>O · Why</p>
+<h2>Data that do not circulate do no work</h2>
+<div class="cols c2" style="flex:1;align-items:center;grid-template-columns:1.15fr 1fr;">
+<ul class="pts">
+<li>A soil profile costs <strong>fieldwork, transport and laboratory</strong>. That cost is paid once.</li>
+<li>The value lies in being <strong>used many times</strong>: a map, a recommendation, a thesis, another map.</li>
+<li>Without clear rules, nobody dares to use the data, or to share them.</li>
+<li>"Ask by e-mail" depends on one person being in the office. It does not scale and leaves no trace.</li>
+</ul>
+<p class="bigquote">Collecting is expensive.<br/><em>Not using costs more.</em></p>
+</div>
+</section>
+<!-- 3 · WHY: FEARS AND ANSWERS -->
+<section class="slide">
+<p class="eyebrow"><span class="hzchip" style="background:var(--hz-o)"></span>O · Why</p>
+<h2>The fears are legitimate, and they have an answer</h2>
+<table class="sm">
+<thead><tr><th>Fear</th><th>Answer</th></tr></thead>
+<tbody>
+<tr><td>"We lose control of our data."</td><td>The data stay on the country's server; the <strong>licence</strong> says what others may do.</td></tr>
+<tr><td>"They use the data and do not cite us."</td><td><strong>Attribution</strong> is compulsory in every Creative Commons licence.</td></tr>
+<tr><td>"Someone makes money from our work."</td><td>Commercial use can be excluded, or authorised case by case.</td></tr>
+<tr><td>"The data have errors and we will be criticised."</td><td>The <strong>metadata</strong> state the method, the date and the quality; whoever uses the data knows what they have.</td></tr>
+<tr><td>"The points show someone's farm."</td><td>Share only the locations, <strong>blur</strong> the coordinates or limit the number of profiles.</td></tr>
+</tbody>
+</table>
+<footer class="src">Sharing is not all or nothing: there is a scale, and the step is chosen project by project.</footer>
+</section>
+<!-- 4 · WHY: PROFILES AND MAPS ARE DIFFERENT -->
+<section class="slide">
+<p class="eyebrow"><span class="hzchip" style="background:var(--hz-o)"></span>O · Why</p>
+<h2>Profiles and maps are not the same thing</h2>
+<div class="cols c2" style="flex:1;align-content:center;">
+<div class="card">
+<h3>Soil profiles: the capital</h3>
+<p>Point data, expensive to obtain and sometimes sensitive: they show actual places, on someone's land.</p>
+<p style="margin-top:12px;"><strong>It makes sense to graduate access</strong>, per project.</p>
+</div>
+<div class="card" style="border-color:var(--accent);background:var(--accent-soft);">
+<h3 style="color:var(--accent);">Maps: the product</h3>
+<p>Made from the profiles in order to be used: planning, extension, research.</p>
+<p style="margin-top:12px;"><strong>Published means visible and downloadable.</strong></p>
+</div>
+</div>
+<footer class="src">This is how OpenNSIS is designed: restrictions apply to profiles; a published map can always be downloaded.</footer>
+</section>
+<!-- 5 · PRINCIPLES: FAIR -->
+<section class="slide">
+<p class="eyebrow"><span class="hzchip" style="background:var(--hz-a)"></span>A · Principles</p>
+<h2>FAIR: four questions to ask of the data</h2>
+<table class="sm">
+<thead><tr><th>Principle</th><th>The question</th><th>What answers it</th></tr></thead>
+<tbody>
+<tr><td><strong>F</strong>indable</td><td>Can someone from outside discover that these data exist?</td><td>metadata + catalogue</td></tr>
+<tr><td><strong>A</strong>ccessible</td><td>Is it known how to obtain them, even if on conditions?</td><td>web services, a stable address</td></tr>
+<tr><td><strong>I</strong>nteroperable</td><td>Do they open in other software, with the same codes?</td><td>OGC standards, GloSIS codes</td></tr>
+<tr><td><strong>R</strong>eusable</td><td>Is it known what one is allowed to do with them?</td><td>licence + origin of the data</td></tr>
+</tbody>
+</table>
+<footer class="src">FAIR is not the same as open: restricted data can, and should, be FAIR too.</footer>
+</section>
+<!-- 6 · PRINCIPLES: A SCALE -->
+<section class="slide">
+<p class="eyebrow"><span class="hzchip" style="background:var(--hz-a)"></span>A · Principles</p>
+<h2>As open as possible, as closed as necessary</h2>
+<div class="cols c4" style="flex:1;align-content:center;gap:16px;">
+<div class="card dark"><h3>Closed</h3><p>Inside the institution only. Nobody outside knows it exists.</p></div>
+<div class="card"><h3>Public metadata</h3><p>It is known that it exists, when it dates from and whom to ask. The data, on request.</p></div>
+<div class="card"><h3>Graduated sharing</h3><p>Locations without attributes, blurred coordinates, a limited number.</p></div>
+<div class="card" style="border-color:var(--accent);background:var(--accent-soft);"><h3 style="color:var(--accent);">Open</h3><p>View and download, with a licence that says what is allowed.</p></div>
+</div>
+<footer class="src">The GSP data policy asks for the second step as a minimum: metadata open by default.</footer>
+</section>
+<!-- 7 · PRINCIPLES: WHOSE DATA -->
+<section class="slide">
+<p class="eyebrow"><span class="hzchip" style="background:var(--hz-a)"></span>A · Principles</p>
+<h2>Whose data are they?</h2>
+<div class="cols c2" style="flex:1;align-items:center;grid-template-columns:1.15fr 1fr;">
+<ul class="pts">
+<li><strong>Sharing is not giving up ownership.</strong> Whoever licenses remains the holder.</li>
+<li>Only <strong>whoever holds that right</strong> can license: check the agreements with projects, partners and funders.</li>
+<li>The licence belongs to the <strong>institution</strong>, not to the technician who uploaded the file.</li>
+<li><strong>Personal data</strong>, such as farmers' names and contacts, are not published.</li>
+</ul>
+<p class="bigquote">A licence takes nothing<br/>from whoever grants it.<br/><em>It gives certainty to whoever uses.</em></p>
+</div>
+</section>
+<!-- 8 · CC: FOUR ELEMENTS -->
+<section class="slide">
+<p class="eyebrow"><span class="hzchip" style="background:var(--hz-b)"></span>B · CC licences</p>
+<h2>Creative Commons in four elements</h2>
+<div class="cols c4" style="flex:1;align-content:center;gap:16px;">
+<div class="card"><p class="num">BY</p><h3>Attribution</h3><p>Credit must be given to the author.</p></div>
+<div class="card"><p class="num">SA</p><h3>ShareAlike</h3><p>Adaptations must be shared under the same terms.</p></div>
+<div class="card"><p class="num">NC</p><h3>NonCommercial</h3><p>Only non-commercial use is allowed.</p></div>
+<div class="card"><p class="num">ND</p><h3>NoDerivatives</h3><p>Adaptations and derived works are not allowed.</p></div>
+</div>
+<footer class="src">Free, standard licences, with three readings: for people, for lawyers and for machines · <span class="mono"><a href="https://creativecommons.org" rel="noopener" style="color:inherit;text-decoration:none;" target="_blank">creativecommons.org</a></span></footer>
+</section>
+<!-- 9 · CC: SIX LICENCES -->
+<section class="slide">
+<p class="eyebrow"><span class="hzchip" style="background:var(--hz-b)"></span>B · CC licences</p>
+<h2>Six combinations, from the most open to the most restricted</h2>
+<table class="sm">
+<thead><tr><th>Licence</th><th class="c">Share</th><th class="c">Adapt</th><th class="c">Commercial use</th><th>Condition</th></tr></thead>
+<tbody>
+<tr><td class="svc">CC BY</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td>give credit</td></tr>
+<tr><td class="svc">CC BY-SA</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c yes">yes</td><td>credit; derivatives keep the same licence</td></tr>
+<tr><td class="svc">CC BY-NC</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c no">no</td><td>credit</td></tr>
+<tr><td class="svc">CC BY-NC-SA</td><td class="c yes">yes</td><td class="c yes">yes</td><td class="c no">no</td><td>credit; same licence on derivatives</td></tr>
+<tr><td class="svc">CC BY-ND</td><td class="c yes">yes</td><td class="c no">no</td><td class="c yes">yes</td><td>credit; only as it is</td></tr>
+<tr><td class="svc">CC BY-NC-ND</td><td class="c yes">yes</td><td class="c no">no</td><td class="c no">no</td><td>credit; only as it is</td></tr>
+</tbody>
+</table>
+<footer class="src">And also CC0: dedication to the public domain, with no conditions. Current version of the licences: 4.0 International.</footer>
+</section>
+<!-- 10 · CC: WHAT IT MEANS FOR SOIL DATA -->
+<section class="slide">
+<p class="eyebrow"><span class="hzchip" style="background:var(--hz-b)"></span>B · CC licences</p>
+<h2>Translated into soil data</h2>
+<div class="cols c2" style="flex:1;align-content:center;gap:18px 36px;">
+<div class="card"><h3>BY: "cite us"</h3><p>The map can be used, clipped and combined by anyone, provided they cite the institution.</p></div>
+<div class="card"><h3>SA: "what you make stays equally open"</h3><p>A map derived from ours has to be published under the same licence.</p></div>
+<div class="card"><h3>NC: "not for business"</h3><p>Excludes commercial uses, including input suppliers and agricultural advisory companies.</p></div>
+<div class="card"><h3>ND: "only as it is"</h3><p>It can be viewed and redistributed; clips, reclassifications and combinations cannot be published.</p></div>
+</div>
+<footer class="src">"Open", in the sense of the Open Definition, means only CC0, CC BY and CC BY-SA.</footer>
+</section>
+<!-- 11 · CC: BEFORE LICENSING -->
+<section class="slide">
+<p class="eyebrow"><span class="hzchip" style="background:var(--hz-b)"></span>B · CC licences</p>
+<h2>Four things to know before licensing</h2>
+<div class="cols c2" style="flex:1;align-items:center;grid-template-columns:1.2fr 1fr;">
+<ul class="pts">
+<li>The licence is <strong>irrevocable</strong>: you can stop distributing, but you cannot withdraw what has already been given.</li>
+<li>Only the <strong>rights holder</strong> can license.</li>
+<li>The licence is <strong>not exclusive</strong>: the holder can grant other permissions, for example commercial use to a partner.</li>
+<li>Version <strong>4.0</strong> also covers database rights.</li>
+</ul>
+<div class="card" style="text-align:center;">
+<p style="font-family:var(--disp);font-weight:600;font-size:22px;margin-bottom:14px;">How it is stated</p>
+<p class="mono" style="font-size:18px;line-height:1.6;">Institution (year).<br/>Title of the dataset.<br/>CC BY 4.0</p>
+<p class="quiet" style="margin-top:12px;font-size:16px;">author · title · licence, in the metadata and next to the map</p>
+</div>
+</div>
+</section>
+<!-- 12 · CHOOSE: A DECISION RULE -->
+<section class="slide">
+<p class="eyebrow"><span class="hzchip" style="background:var(--hz-c)"></span>C · Choosing</p>
+<h2>A decision rule in four questions</h2>
+<table class="sm">
+<thead><tr><th style="width:2em"></th><th>Question</th><th>If "no"</th><th>If "yes"</th></tr></thead>
+<tbody>
+<tr><td class="svc">1</td><td>Can these data be public?</td><td>publish only the metadata</td><td>continue</td></tr>
+<tr><td class="svc">2</td><td>Do we accept that others make derived products?</td><td>add <span class="mono">ND</span></td><td>continue</td></tr>
+<tr><td class="svc">3</td><td>Do we accept commercial use?</td><td>add <span class="mono">NC</span></td><td>continue</td></tr>
+<tr><td class="svc">4</td><td>Must derivatives stay equally open?</td><td><strong>CC BY</strong></td><td>add <span class="mono">SA</span></td></tr>
+</tbody>
+</table>
+<footer class="src">Each "no" to questions 2 and 3 reduces who can use the data. It is worth asking: whom do we want to serve?</footer>
+</section>
+<!-- 13 · CHOOSE: A ONE-PAGE POLICY -->
+<section class="slide">
+<p class="eyebrow"><span class="hzchip" style="background:var(--hz-c)"></span>C · Choosing</p>
+<h2>An institutional policy on one page</h2>
+<div class="cols c2" style="flex:1;align-items:center;grid-template-columns:1.15fr 1fr;">
+<ul class="pts" style="gap:14px;">
+<li>The <strong>default licence</strong> for maps.</li>
+<li>The rule for <strong>profiles</strong>: publish? with attributes? with blurring?</li>
+<li><strong>Who approves</strong> the publication of a dataset.</li>
+<li>The institution's <strong>citation text</strong>.</li>
+<li>The <strong>embargo</strong> period for data from ongoing projects and theses.</li>
+<li>When what is published is <strong>reviewed</strong>.</li>
+</ul>
+<p class="bigquote">A written rule<br/>saves one discussion<br/><em>for every map.</em></p>
+</div>
+<footer class="src">A topic to take to the governance sessions.</footer>
+</section>
+<!-- 14 · OPENNSIS: LICENCE IN THE RECORD -->
+<section class="slide">
+<p class="eyebrow"><span class="hzchip" style="background:var(--hz-r)"></span>R · OpenNSIS</p>
+<h2>In OpenNSIS, the licence is part of the record</h2>
+<div class="cols c2" style="flex:1;align-items:center;">
+<ul class="pts">
+<li>When uploading a raster or ingesting profiles, <strong>the licence is chosen from a list</strong>: the six CC licences, CC0 or public domain.</li>
+<li>It is stored in the dataset's <strong>ISO 19115 metadata</strong>.</li>
+<li>It appears in the map's metadata window, in the <strong>catalogue</strong> and in the XML, and travels on to the federation.</li>
+</ul>
+<div class="label-card">
+<div class="head"><a href="http://5.223.62.255:8032/collections/metadata:main/items/955c5108-d2b2-11f1-97c2-525350be1b08?f=html" rel="noopener" style="color:inherit;text-decoration:none;" target="_blank">TN-SOILFER-TEXTCLAY-2026-0-30-MEAN</a></div>
+<dl>
+<dt>Title</dt><dd>Clay texture fraction (2026)</dd>
+<dt>Licence</dt><dd><strong>CC BY-NC-ND</strong> <span class="quiet">(other restrictions)</span></dd>
+<dt>Access constr.</dt><dd><span class="mono">copyright</span></dd>
+<dt>Use constr.</dt><dd><span class="mono">license</span></dd>
+<dt>Contact</dt><dd>point of contact of the dataset</dd>
+</dl>
+</div>
+</div>
+<footer class="src">Without a licence the record says "UNKNOWN", and the reader does not know what they may do.</footer>
+</section>
+<!-- 15 · OPENNSIS: PROFILE CONTROLS -->
+<section class="slide">
+<p class="eyebrow"><span class="hzchip" style="background:var(--hz-r)"></span>R · OpenNSIS</p>
+<h2>Profiles: four controls per project</h2>
+<div class="fig"><img alt="Soil profiles table of the admin panel, with the columns Public limit, Spatial blur, Share attributes and Published" src="data:image/png;base64,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"/></div>
+<div class="cols c4" style="flex:1;align-content:center;margin-top:16px;gap:14px;">
+<div class="card" style="padding:16px 18px;"><h3>Published</h3><p style="font-size:16.5px;">Yes = the profiles appear on the public map.</p></div>
+<div class="card" style="padding:16px 18px;"><h3>Share attributes</h3><p style="font-size:16.5px;">No = only the points, without analytical data.</p></div>
+<div class="card" style="padding:16px 18px;"><h3>Spatial blur</h3><p style="font-size:16.5px;">A random shift of the coordinates, in metres.</p></div>
+<div class="card" style="padding:16px 18px;"><h3>Public limit</h3><p style="font-size:16.5px;">Maximum number of profiles shown.</p></div>
+</div>
+<footer class="src">Admin panel → Soil profiles. Changed with one click, with immediate effect.</footer>
+</section>
+<!-- 16 · OPENNSIS: MAPS -->
+<section class="slide">
+<p class="eyebrow"><span class="hzchip" style="background:var(--hz-r)"></span>R · OpenNSIS</p>
+<h2>Maps: what "publish" means</h2>
+<div class="cols c2" style="flex:1;align-items:center;grid-template-columns:1.2fr 1fr;">
+<ul class="pts">
+<li><strong>Publishing</strong> a raster: it becomes visible on the map, with a WMS service, a catalogue record and a GeoTIFF to download.</li>
+<li><strong>Unpublishing</strong> only hides it from the viewer: the WMS and the metadata record stay active.</li>
+<li>To <strong>withdraw</strong> a map: delete it.</li>
+<li>To <strong>not share</strong> a map: do not upload it to the SIS.</li>
+</ul>
+<p class="bigquote">The SIS exists to<br/>distribute the maps.<br/><em>The licence says on what terms.</em></p>
+</div>
+</section>
+<!-- 17 · OPENNSIS: GOOD PRACTICE -->
+<section class="slide">
+<p class="eyebrow"><span class="hzchip" style="background:var(--hz-r)"></span>R · OpenNSIS</p>
+<h2>Good practice day to day</h2>
+<div class="cols c3" style="flex:1;align-content:center;">
+<div class="card">
+<h3>Before uploading</h3>
+<p>Confirm who holds the data and which licence was agreed with the project or the funder.</p>
+</div>
+<div class="card">
+<h3>When uploading</h3>
+<p>Title, abstract, period, keywords, an <strong>institutional</strong> contact, and the licence. Two minutes.</p>
+</div>
+<div class="card">
+<h3>Afterwards</h3>
+<p>At the end of each project, review what was published: licences, visible profiles, blurring.</p>
+</div>
+</div>
+<footer class="src">The GloSIS federation receives exactly what the visitor sees; the same rules serve both.</footer>
+</section>
+<!-- 18 · RECAP -->
+<section class="slide">
+<h2>The full profile</h2>
+<div class="cols c2" style="grid-template-columns:1fr 1.1fr;flex:1;align-items:center;">
+<div class="hzstrip">
+<div class="o"><span class="lt">O</span><div><b>Why</b><span>the value of data lies in their use</span></div></div>
+<div class="a"><span class="lt">A</span><div><b>Principles</b><span>FAIR always; open when possible</span></div></div>
+<div class="b"><span class="lt">B</span><div><b>CC licences</b><span>BY, SA, NC, ND: six combinations</span></div></div>
+<div class="c"><span class="lt">C</span><div><b>Choosing</b><span>one rule for the institution, in writing</span></div></div>
+<div class="r"><span class="lt">R</span><div><b>OpenNSIS</b><span>licence in the record; controls per project</span></div></div>
+</div>
+<p class="bigquote">Sharing with clear rules<br/>is not losing control.<br/><em>It is exercising it.</em></p>
+</div>
+</section>
+<!-- 19 · THANKS -->
+<section class="slide">
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
+<p class="eyebrow">Thank you</p>
+<h2 style="font-size:54px;">Questions, or shall we choose a licence now?</h2>
+<div class="cols c2" style="margin-top:30px;max-width:940px;">
+<div>
+<p style="font-size:20px;line-height:1.9;"><strong>Licences</strong><br/> <span class="mono"><a href="https://creativecommons.org/share-your-work/cclicenses/" rel="noopener" style="color:inherit;text-decoration:none;" target="_blank">creativecommons.org</a></span> <span class="quiet">· the licences</span><span></span><br/> <span class="mono"><a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener" style="color:inherit;text-decoration:none;" target="_blank">creativecommons.org/licenses/by/4.0</a></span> <span class="quiet">· CC BY</span></p>
+</div>
+<div>
+<p style="font-size:20px;line-height:1.9;"><strong>In practice</strong><br/> <span class="mono"><a href="http://5.223.62.255:8032/" rel="noopener" style="color:inherit;text-decoration:none;" target="_blank">http://5.223.62.255:8032/</a></span> <span class="quiet">· Tunisia</span><br/> <span class="mono"><a href="https://un-fao.github.io/OpenNSIS/" rel="noopener" style="color:inherit;text-decoration:none;" target="_blank">un-fao.github.io/OpenNSIS</a></span></p>
+</div>
+</div>
+<p class="quiet" style="margin-top:22px;font-size:17px;line-height:1.45;"><span style="font-size:19px;">Eloi Ribeiro</span><br/>Soil Information and Data<br/>Land and Water Division (NSL)<br/>Food and Agriculture Organization of the United Nations (FAO)</p>
+</div>
+<footer class="src">CC BY 4.0. This presentation is licensed under a Creative Commons Attribution 4.0 International licence · <span class="mono">creativecommons.org/licenses/by/4.0</span></footer>
+</section>
+</div>
+</div>
+<script>
+(function(){
+  const slides=[...document.querySelectorAll('.slide')];
+  const counter=document.getElementById('counter');
+  const rail=[...document.querySelectorAll('#rail .hz')];
+  const sect=[[0,0],[1,3],[4,6],[7,10],[11,12],[13,18]]; // rail button -> slide range
+  let cur=0;
+  function show(i){
+    cur=Math.max(0,Math.min(slides.length-1,i));
+    slides.forEach((s,j)=>s.classList.toggle('current',j===cur));
+    counter.textContent=(cur+1)+' / '+slides.length;
+    rail.forEach((b,j)=>b.classList.toggle('on',cur>=sect[j][0]&&cur<=sect[j][1]));
+    try{history.replaceState(null,'','#'+(cur+1));}catch(e){}
+  }
+  function fit(){
+    const s=Math.min(innerWidth/1280,innerHeight/720);
+    document.getElementById('stage').style.transform='scale('+s+')';
+  }
+  addEventListener('resize',fit);
+  addEventListener('keydown',e=>{
+    if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();show(cur+1);}
+    else if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();show(cur-1);}
+    else if(e.key==='Home'){show(0);} else if(e.key==='End'){show(slides.length-1);}
+  });
+  let wheelLock=0;
+  addEventListener('wheel',e=>{
+    const now=Date.now();
+    if(now-wheelLock<400||Math.abs(e.deltaY)<10)return;
+    wheelLock=now;
+    show(cur+(e.deltaY>0?1:-1));
+  },{passive:true});
+  rail.forEach((b)=>b.addEventListener('click',()=>show(+b.dataset.go)));
+  let x0=null;
+  addEventListener('touchstart',e=>{x0=e.touches[0].clientX},{passive:true});
+  addEventListener('touchend',e=>{
+    if(x0===null)return;
+    const dx=e.changedTouches[0].clientX-x0;
+    if(Math.abs(dx)>50)show(cur+(dx<0?1:-1));
+    x0=null;
+  },{passive:true});
+  const h=parseInt(location.hash.slice(1),10);
+  show(isNaN(h)?0:h-1); fit();
+})();
+</script>
+</html>
