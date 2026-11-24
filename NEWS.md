@@ -7,6 +7,18 @@ the change landed on `main`.
 
 ## November 2026
 
+### 2026-11-24 — Database presentation brought up to date
+The database presentation (English, Portuguese and French editions) now
+shows the tables as they stand after migration 039: the specimen's field
+and laboratory identifiers, measurement quality on numeric observations
+(uncertainty, coverage factor, limits of detection and quantification),
+censored results, the sharing and display columns of map sets and
+layers, and the `records` table that holds the catalogue. All 49 tables
+of the `soil_data` schema are now drawn, including the seven link and
+definition tables that the first version left out. The entity
+relationship diagram itself still dates from June 2026, which the slide
+showing it now says.
+
 ### 2026-11-24 — Presentation on the architecture
 `docs/presentations/en-2026-11-24-opennsis-architecture.html` explains how
 OpenNSIS is put together in eight slides: the whole system in one
