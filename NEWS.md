@@ -9,11 +9,12 @@ the change landed on `main`.
 
 ### 2026-11-24 — Presentation on the architecture
 `docs/presentations/en-2026-11-24-opennsis-architecture.html` explains how
-OpenNSIS is put together in ten slides: the whole system in one picture,
-the seven containers and what each does, which address is answered by
-which of them, where the data are kept, the path of a soil profile and
-of a map through the system, the separation that keeps it secure, and
-how installing and updating work.
+OpenNSIS is put together in eight slides: the whole system in one
+picture, the seven containers and what each does, which address is
+answered by which of them, where the data are kept, the separation that
+keeps it secure, and how installing and updating work. A French edition,
+`fr-2026-11-24-architecture-opennsis.html`, sits next to it, and both
+agendas for Tunisia now list the session before the database one.
 
 ### 2026-11-23 — Workshop presentations in French
 The six presentations for the two days in Tunisia and their agenda now

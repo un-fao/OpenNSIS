@@ -203,10 +203,10 @@
     <button class="hz o" data-go="1">O<small>Picture</small></button>
     <button class="hz a" data-go="2">A<small>Parts</small></button>
     <button class="hz b" data-go="4">B<small>Data</small></button>
-    <button class="hz c" data-go="5">C<small>Flows</small></button>
-    <button class="hz r" data-go="7">R<small>Operate</small></button>
+    <button class="hz c" data-go="5">C<small>Security</small></button>
+    <button class="hz r" data-go="6">R<small>Operate</small></button>
   </nav>
-  <div id="counter">1 / 10</div>
+  <div id="counter">1 / 8</div>
 
   <!-- 1 · TITLE -->
   <section class="slide">
@@ -221,8 +221,8 @@
         <div class="o"><span class="lt">O</span><div><b>Picture</b><span>the whole system on one slide</span></div></div>
         <div class="a"><span class="lt">A</span><div><b>Parts</b><span>seven containers, one front door</span></div></div>
         <div class="b"><span class="lt">B</span><div><b>Data</b><span>what is kept, and where</span></div></div>
-        <div class="c"><span class="lt">C</span><div><b>Flows</b><span>a profile and a map, step by step</span></div></div>
-        <div class="r"><span class="lt">R</span><div><b>Operate</b><span>security, install, update</span></div></div>
+        <div class="c"><span class="lt">C</span><div><b>Security</b><span>separation by design</span></div></div>
+        <div class="r"><span class="lt">R</span><div><b>Operate</b><span>install and update</span></div></div>
       </div>
     </div>
   </section>
@@ -312,37 +312,9 @@
     <footer class="src">The containers can be thrown away and rebuilt from the public code at any time. These four things cannot: they are what a backup holds.</footer>
   </section>
 
-  <!-- 6 · FLOW: A PROFILE -->
+  <!-- 6 · SECURITY AND SEPARATION -->
   <section class="slide">
-    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-c)"></span>C · Flows</p>
-    <h2>A soil profile, from spreadsheet to map</h2>
-    <div class="flow">
-      <div class="st"><span class="who">admin panel</span><b>Upload</b><span>A CSV file is sent to the API.</span></div><span class="ar">→</span>
-      <div class="st"><span class="who">API → database</span><b>Stage</b><span>It becomes a table in the staging area, untouched.</span></div><span class="ar">→</span>
-      <div class="st"><span class="who">API</span><b>Map and validate</b><span>Columns are matched to properties, procedures and units; every value is checked.</span></div><span class="ar">→</span>
-      <div class="st"><span class="who">API → database</span><b>Ingest</b><span>Rows go into the ISO 28258 tables, with units converted.</span></div><span class="ar">→</span>
-      <div class="st std"><span class="who">MapServer · GloSIS API</span><b>Serve</b><span>Points appear on the map and, if shared, answer the federation.</span></div>
-    </div>
-    <footer class="src">Nothing enters the soil tables without passing validation; the uploaded file stays in staging, so an ingestion can be undone and repeated.</footer>
-  </section>
-
-  <!-- 7 · FLOW: A MAP -->
-  <section class="slide">
-    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-c)"></span>C · Flows</p>
-    <h2>A map, from GeoTIFF to web service</h2>
-    <div class="flow">
-      <div class="st"><span class="who">admin panel</span><b>Upload</b><span>A GeoTIFF and a short form: property, depth, dates, licence.</span></div><span class="ar">→</span>
-      <div class="st"><span class="who">API → disk</span><b>Prepare</b><span>The file is converted to a cloud-optimised GeoTIFF and given its name.</span></div><span class="ar">→</span>
-      <div class="st"><span class="who">API → database, disk</span><b>Describe</b><span>A map file, a legend and an ISO 19115 record are written.</span></div><span class="ar">→</span>
-      <div class="st std"><span class="who">MapServer</span><b>Draw</b><span>The layer is live as WMS, in the viewer and in any GIS.</span></div><span class="ar">→</span>
-      <div class="st std"><span class="who">pyCSW · nginx</span><b>Publish</b><span>The record is in the catalogue; the file can be downloaded.</span></div>
-    </div>
-    <footer class="src">One upload, three standard outputs: a map service, a metadata record and a download. None of them is edited by hand.</footer>
-  </section>
-
-  <!-- 8 · SECURITY AND SEPARATION -->
-  <section class="slide">
-    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-r)"></span>R · Operate</p>
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-c)"></span>C · Security</p>
     <h2>Separation is the security model</h2>
     <div class="cols c2" style="flex:1;align-items:center;grid-template-columns:1.2fr 1fr;">
       <ul class="pts">
@@ -356,7 +328,7 @@
     </div>
   </section>
 
-  <!-- 9 · INSTALL AND UPDATE -->
+  <!-- 7 · INSTALL AND UPDATE -->
   <section class="slide">
     <p class="eyebrow"><span class="hzchip" style="background:var(--hz-r)"></span>R · Operate</p>
     <h2>Installing and updating are the same idea</h2>
@@ -379,7 +351,7 @@ cd /opt/sis &amp;&amp; <span class="k">./update.sh</span>
     </div>
   </section>
 
-  <!-- 10 · THANKS -->
+  <!-- 8 · THANKS -->
   <section class="slide">
     <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
       <p class="eyebrow">Thank you</p>
@@ -404,7 +376,7 @@ cd /opt/sis &amp;&amp; <span class="k">./update.sh</span>
   const slides=[...document.querySelectorAll('.slide')];
   const counter=document.getElementById('counter');
   const rail=[...document.querySelectorAll('#rail .hz')];
-  const sect=[[0,0],[1,1],[2,3],[4,4],[5,6],[7,9]]; // rail button -> slide range
+  const sect=[[0,0],[1,1],[2,3],[4,4],[5,5],[6,7]]; // rail button -> slide range
   // Backup slides (the demo in screenshots) sit after the demo slide. Right/left skip them;
   // Down from the demo slide enters them, Up leaves them.
   const isB=i=>!!slides[i]&&slides[i].classList.contains('backup');
