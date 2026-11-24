@@ -7,6 +7,14 @@ the change landed on `main`.
 
 ## November 2026
 
+### 2026-11-24 — Presentation on the architecture
+`docs/presentations/en-2026-11-24-opennsis-architecture.html` explains how
+OpenNSIS is put together in ten slides: the whole system in one picture,
+the seven containers and what each does, which address is answered by
+which of them, where the data are kept, the path of a soil profile and
+of a map through the system, the separation that keeps it secure, and
+how installing and updating work.
+
 ### 2026-11-23 — Workshop presentations in French
 The six presentations for the two days in Tunisia and their agenda now
 have French editions in `docs/presentations/`: the standards deck

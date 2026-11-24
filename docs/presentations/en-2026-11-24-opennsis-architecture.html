@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+<title>OpenNSIS architecture</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --paper:#F7F3EC; --paper-2:#EFE8DC; --ink:#241C14; --ink-soft:#5C5044;
+    --hz-o:#3E2E1F; --hz-a:#63452C; --hz-b:#8A6844; --hz-c:#B79A77; --hz-r:#6B6157;
+    --accent:#1D5F73; --accent-soft:#DDE9EC; --line:#D8CDBC;
+    --disp:"Bricolage Grotesque", Georgia, serif;
+    --body:"Source Sans 3", "Segoe UI", Arial, sans-serif;
+    --mono:"IBM Plex Mono", "Courier New", monospace;
+  }
+  html,body{height:100%;}
+  body{margin:0;background:#221A12;font-family:var(--body);color:var(--ink);overflow:hidden;}
+
+  /* ---------- stage ---------- */
+  #viewport{position:fixed;inset:0;display:grid;place-items:center;background:#221A12;}
+  #stage{width:1280px;height:720px;position:relative;background:var(--paper);
+         box-shadow:0 20px 60px rgba(0,0,0,.5);transform-origin:center center;overflow:hidden;}
+
+  .slide{position:absolute;inset:0;display:none;padding:64px 88px 56px 132px;box-sizing:border-box;background:var(--paper);}
+  .slide.current{display:flex;flex-direction:column;}
+
+  /* ---------- horizon rail ---------- */
+  #rail{position:absolute;left:0;top:0;bottom:0;width:76px;background:var(--paper-2);
+        border-right:1px solid var(--line);display:flex;flex-direction:column;z-index:5;}
+  #rail .hz{flex:1;display:flex;align-items:flex-start;justify-content:center;cursor:pointer;
+            border:none;font-family:var(--disp);font-weight:600;font-size:15px;
+            padding-top:9px;color:#F7F3EC;opacity:.42;transition:opacity .2s;}
+  #rail .hz.on{opacity:1;}
+  #rail .hz:focus-visible{outline:3px solid var(--accent);outline-offset:-3px;}
+  #rail .hz small{font-family:var(--body);font-weight:600;font-size:10px;letter-spacing:.08em;
+                  text-transform:uppercase;writing-mode:vertical-rl;margin-top:7px;}
+  #rail .o{background:var(--hz-o);} #rail .a{background:var(--hz-a);}
+  #rail .b{background:var(--hz-b);} #rail .c{background:var(--hz-c);}
+  #rail .r{background:var(--hz-r);}
+  #rail .t{background:var(--paper-2);color:var(--ink-soft);flex:0 0 46px;align-items:center;padding-top:0;}
+
+  #counter{position:absolute;right:26px;bottom:20px;font-family:var(--mono);font-size:13px;
+           color:var(--ink-soft);z-index:6;}
+
+  /* ---------- typography ---------- */
+  .eyebrow{font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+           color:var(--accent);margin:0 0 10px;}
+  .eyebrow .hzchip{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:8px;}
+  h1{font-family:var(--disp);font-weight:800;font-size:64px;line-height:1.04;margin:0;text-wrap:balance;}
+  h2{font-family:var(--disp);font-weight:800;font-size:44px;line-height:1.08;margin:0 0 26px;text-wrap:balance;}
+  h3{font-family:var(--disp);font-weight:600;font-size:22px;margin:0 0 8px;}
+  p,li{font-size:21px;line-height:1.5;margin:0;}
+  .lead{font-size:25px;line-height:1.45;color:var(--ink-soft);max-width:30em;}
+  ul.pts{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:18px;}
+  ul.pts li{padding-left:30px;position:relative;max-width:34em;}
+  ul.pts li::before{content:"";position:absolute;left:0;top:11px;width:14px;height:8px;
+                    background:var(--hz-a);border-radius:2px;}
+  strong{font-weight:600;}
+  .mono{font-family:var(--mono);font-size:.9em;}
+  .quiet{color:var(--ink-soft);}
+  a{color:var(--accent);text-decoration:none;}
+
+  .cols{display:grid;gap:36px;align-items:start;}
+  .c2{grid-template-columns:1fr 1fr;} .c3{grid-template-columns:1fr 1fr 1fr;}
+
+  .card{background:#FFFDF9;border:1px solid var(--line);border-radius:10px;padding:22px 26px;box-sizing:border-box;}
+  .card h3{color:var(--hz-a);}
+  .card p{font-size:18px;line-height:1.45;}
+
+  .tag{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:99px;
+       padding:3px 14px;font-size:15px;font-weight:600;}
+
+  table{border-collapse:collapse;width:100%;font-size:19px;}
+  th{font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);
+     text-align:left;padding:0 18px 10px 0;border-bottom:2px solid var(--ink);}
+  td{padding:11px 18px 11px 0;border-bottom:1px solid var(--line);vertical-align:top;}
+  td.svc{font-family:var(--mono);font-weight:500;white-space:nowrap;}
+
+  .code{background:#2B221A;color:#EFE4D2;border-radius:10px;padding:18px 22px;
+        font-family:var(--mono);font-size:16px;line-height:1.65;overflow-x:auto;}
+  .code .k{color:#B7D9C9;}
+
+  footer.src{margin-top:auto;font-size:14px;color:var(--ink-soft);}
+
+  /* metadata label card */
+  .label-card{background:#FFFDF9;border:1.5px solid var(--hz-a);border-radius:12px;overflow:hidden;}
+  .label-card .head{background:var(--hz-a);color:#F7F3EC;padding:12px 22px;font-family:var(--mono);font-size:16px;}
+  .label-card dl{display:grid;grid-template-columns:auto 1fr;gap:7px 20px;margin:0;padding:18px 22px;}
+  .label-card dt{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);padding-top:3px;}
+  .label-card dd{margin:0;font-size:17px;}
+
+  /* architecture diagram */
+  .arch{display:flex;flex-direction:column;gap:14px;align-items:center;}
+  .arch .row{display:flex;gap:14px;justify-content:center;}
+  .arch .box{background:#FFFDF9;border:1.5px solid var(--hz-a);border-radius:9px;padding:10px 18px;text-align:center;}
+  .arch .box b{display:block;font-family:var(--disp);font-weight:600;font-size:18px;}
+  .arch .box span{font-size:14px;color:var(--ink-soft);}
+  .arch .box.std{border-color:var(--accent);background:var(--accent-soft);}
+  .arch .down{font-size:20px;color:var(--ink-soft);line-height:1;}
+
+  /* horizon strip on title + roadmap */
+  .hzstrip{display:flex;flex-direction:column;border-radius:12px;overflow:hidden;height:100%;min-height:340px;}
+  .hzstrip div{flex:1;display:flex;align-items:center;gap:16px;padding:0 24px;color:#F7F3EC;}
+  .hzstrip .lt{font-family:var(--disp);font-weight:800;font-size:30px;width:32px;}
+  .hzstrip b{font-family:var(--disp);font-weight:600;font-size:20px;display:block;}
+  .hzstrip span{font-size:14.5px;opacity:.85;display:block;}
+  .hzstrip .o{background:var(--hz-o);} .hzstrip .a{background:var(--hz-a);}
+  .hzstrip .b{background:var(--hz-b);} .hzstrip .c{background:var(--hz-c);}
+  .hzstrip .r{background:var(--hz-r);}
+
+  .bigquote{font-family:var(--disp);font-weight:600;font-size:34px;line-height:1.25;max-width:20em;text-wrap:balance;}
+  .bigquote em{color:var(--hz-a);font-style:normal;}
+
+
+  /* live-demo + screenshot slides */
+  .slide.live{background:#2B221A;color:#EFE4D2;}
+  .slide.live h2{color:#EFE4D2;}
+  .slide.live .steps{display:flex;flex-direction:column;gap:20px;max-width:38em;}
+  .slide.live .step{display:flex;gap:18px;align-items:baseline;font-size:22px;line-height:1.5;}
+  .slide.live .step .n{font-family:var(--disp);font-weight:800;font-size:26px;color:#B7D9C9;min-width:30px;}
+  .livetag{display:inline-block;background:#B7D9C9;color:#2B221A;border-radius:99px;
+           padding:4px 18px;font-weight:600;font-size:15px;letter-spacing:.12em;text-transform:uppercase;}
+  .slide.shot{padding:0 0 0 76px;background:#2B221A;}
+  .slide.shot img{flex:1;min-height:0;width:100%;object-fit:contain;}
+  .slide.shot .cap{background:rgba(36,28,20,.88);color:#EFE4D2;padding:16px 40px;font-size:19px;}
+  .slide.shot .cap b{font-family:var(--disp);}
+
+  /* feature cards */
+  .feat>div{background:#FFFDF9;border:1px solid var(--line);border-radius:8px;padding:10px 16px;}
+  .feat h3{font-size:17px;margin:0 0 4px;color:var(--hz-a);}
+  .feat p{font-size:14px;line-height:1.35;}
+
+  /* additions for the day-one decks */
+  .fig{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#FFFDF9;}
+  .fig img{display:block;width:100%;}
+  .card p.num,.num{font-family:var(--disp);font-weight:800;font-size:46px;line-height:1;color:var(--hz-a);margin-bottom:8px;}
+  .yes{color:#2E7D4F;font-weight:600;} .no{color:#A6432D;font-weight:600;}
+  td.c,th.c{text-align:center;}
+  table.sm{font-size:17.5px;} table.sm td{padding:9px 16px 9px 0;}
+  .c4{grid-template-columns:repeat(4,1fr);}
+  .card.dark{background:var(--hz-o);border-color:var(--hz-o);color:#F7F3EC;} .card.dark h3{color:#E9D9BF;}
+
+
+  /* additions for the GloSIS update deck */
+  .cols.tight{gap:18px;}
+  .card.sm{padding:16px 20px;} .card.sm h3{font-size:20px;margin-bottom:6px;} .card.sm p{font-size:16.5px;line-height:1.4;}
+  .names{font-size:18px;line-height:1.55;}
+  .arch.big{gap:18px;} .arch.big .row{gap:18px;} .arch.big .box{padding:14px 24px;}
+  .arch.big .box b{font-size:22px;} .arch.big .box span{font-size:16px;} .arch.big .down{font-size:21px;}
+  .slide.live .addr{margin-top:auto;font-family:var(--mono);font-size:15px;color:#B7A995;white-space:nowrap;}
+  .slide.live .addr a{color:#EFE4D2;text-decoration:none;}
+  .slide.shot .cap .n{font-family:var(--disp);font-weight:800;color:#B7D9C9;margin-right:10px;}
+  .slide.shot .cap b{margin-right:12px;}
+  .slide.live .step strong{display:block;}
+
+
+  /* additions for the database deck */
+  .pchip{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:8px;}
+  .mini{position:absolute;right:88px;top:52px;width:330px;border:1px solid var(--line);border-radius:6px;display:block;}
+  .slide.part h2{max-width:640px;margin-bottom:18px;}
+  .erd{display:flex;align-items:center;justify-content:center;gap:9px;flex:1;}
+  .erd.col{flex-direction:column;gap:12px;}
+  .erd .row{display:flex;align-items:center;justify-content:center;gap:9px;}
+  .erd .stack{display:flex;flex-direction:column;gap:8px;}
+  .tb{background:#FFFDF9;border:1.5px solid var(--c);border-radius:8px;overflow:hidden;}
+  .tb .h{background:var(--c);color:var(--ct,#fff);font-family:var(--mono);font-size:14px;font-weight:500;padding:5px 11px;white-space:nowrap;}
+  .tb .f{padding:6px 11px;font-family:var(--mono);font-size:12.5px;line-height:1.5;color:var(--ink-soft);white-space:nowrap;}
+  .tb .f b{color:var(--ink);font-weight:500;}
+  .arr{font-size:20px;color:var(--ink-soft);line-height:1;}
+  .notes{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-top:16px;}
+  .notes p{font-size:17px;line-height:1.4;padding-left:14px;border-left:4px solid var(--c);}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:16px;}
+  .legend span::before{content:"";display:inline-block;width:13px;height:13px;border-radius:3px;background:var(--c);margin-right:7px;vertical-align:-1px;}
+
+
+  /* additions for the architecture deck */
+  .flow{display:flex;align-items:stretch;justify-content:center;gap:10px;flex:none;flex-wrap:nowrap;margin:auto 0;}
+  .flow .st{background:#FFFDF9;border:1.5px solid var(--hz-a);border-radius:9px;padding:16px 16px 18px;flex:1;min-width:0;}
+  .flow .st.std{border-color:var(--accent);background:var(--accent-soft);}
+  .flow .st b{display:block;font-family:var(--disp);font-weight:600;font-size:21px;margin-bottom:6px;}
+  .flow .st span{font-size:17px;line-height:1.4;color:var(--ink-soft);display:block;}
+  .flow .st .who{font-family:var(--mono);font-size:12.5px;line-height:1.3;color:var(--hz-a);margin-bottom:8px;min-height:2.6em;}
+  .flow .ar{align-self:center;font-size:20px;color:var(--ink-soft);}
+  table.rt td.svc{font-size:16.5px;}
+
+  @media print{
+    body{overflow:visible;background:#fff;}
+    #viewport{position:static;display:block;background:#fff;}
+    #stage{transform:none !important;box-shadow:none;width:1280px;height:720px;overflow:hidden;
+           page-break-after:always;position:relative;margin:0 auto;}
+    .slide{display:flex !important;flex-direction:column;position:relative;height:720px;page-break-after:always;}
+    #counter{display:none;}
+  }
+  @media (prefers-reduced-motion: no-preference){
+    .slide.current{animation:fade .28s ease;}
+    @keyframes fade{from{opacity:0}to{opacity:1}}
+  }
+</style>
+
+<div id="viewport">
+<div id="stage">
+  <nav id="rail" aria-label="Sections">
+    <button class="hz t" data-go="0" aria-label="Title">▲</button>
+    <button class="hz o" data-go="1">O<small>Picture</small></button>
+    <button class="hz a" data-go="2">A<small>Parts</small></button>
+    <button class="hz b" data-go="4">B<small>Data</small></button>
+    <button class="hz c" data-go="5">C<small>Flows</small></button>
+    <button class="hz r" data-go="7">R<small>Operate</small></button>
+  </nav>
+  <div id="counter">1 / 10</div>
+
+  <!-- 1 · TITLE -->
+  <section class="slide">
+    <div class="cols c2" style="flex:1;align-items:center;grid-template-columns:1.35fr 1fr;">
+      <div>
+        <p class="eyebrow">FAO · Global Soil Partnership</p>
+        <h1 style="font-size:60px;">OpenNSIS<br>architecture</h1>
+        <p class="lead" style="margin-top:22px;">Seven containers behind one front door, and where the open standards sit among them.</p>
+        <p style="margin-top:30px;font-size:19px;line-height:1.45;">Eloi Ribeiro<br><span class="quiet" style="font-size:17px;">Soil Information and Data<br>Land and Water Division (NSL)<br>Food and Agriculture Organization of the United Nations (FAO)</span></p>
+      </div>
+      <div class="hzstrip" aria-hidden="true">
+        <div class="o"><span class="lt">O</span><div><b>Picture</b><span>the whole system on one slide</span></div></div>
+        <div class="a"><span class="lt">A</span><div><b>Parts</b><span>seven containers, one front door</span></div></div>
+        <div class="b"><span class="lt">B</span><div><b>Data</b><span>what is kept, and where</span></div></div>
+        <div class="c"><span class="lt">C</span><div><b>Flows</b><span>a profile and a map, step by step</span></div></div>
+        <div class="r"><span class="lt">R</span><div><b>Operate</b><span>security, install, update</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · THE WHOLE PICTURE -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-o)"></span>O · Picture</p>
+    <h2>The whole system on one slide</h2>
+    <div class="arch big" style="flex:1;justify-content:center;white-space:nowrap;gap:12px;">
+      <div class="row">
+        <div class="box"><b>Web browser</b><span>website · map viewer · admin panel</span></div>
+        <div class="box"><b>GIS software</b><span>QGIS, ArcGIS, scripts</span></div>
+        <div class="box"><b>GloSIS Discovery Hub</b><span>and other harvesters</span></div>
+      </div>
+      <div class="down">↓ &nbsp;HTTP or HTTPS</div>
+      <div class="row"><div class="box"><b>nginx</b><span>the one front door: routing, limits, tile cache</span></div></div>
+      <div class="down">↓</div>
+      <div class="row">
+        <div class="box"><b>Web app</b><span>static pages</span></div>
+        <div class="box"><b>API</b><span>application logic</span></div>
+        <div class="box std"><b>MapServer</b><span>WMS · WCS</span></div>
+        <div class="box std"><b>pyCSW</b><span>catalogue</span></div>
+        <div class="box std"><b>GloSIS API</b><span>federation, read-only</span></div>
+      </div>
+      <div class="down">↓</div>
+      <div class="row">
+        <div class="box"><b>PostGIS database</b><span>profiles, metadata, users, settings</span></div>
+        <div class="box"><b>Files on disk</b><span>rasters · catalogue records · site images</span></div>
+      </div>
+    </div>
+    <footer class="src">Blue boxes speak an open standard to the outside world. Everything runs as Docker containers on one Linux server.</footer>
+  </section>
+
+  <!-- 3 · THE SEVEN CONTAINERS -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-a)"></span>A · Parts</p>
+    <h2>Seven containers, each with one job</h2>
+    <table class="sm">
+      <thead><tr><th style="width:11em">Container</th><th style="width:14em">Built on</th><th>Its job</th></tr></thead>
+      <tbody>
+        <tr><td class="svc">sis-nginx</td><td>nginx</td><td>receives every request and passes it to the right container</td></tr>
+        <tr><td class="svc">sis-web-mapping</td><td>OpenLayers, static pages</td><td>the public website, the map viewer and the admin panel</td></tr>
+        <tr><td class="svc">sis-api</td><td>Python, FastAPI</td><td>sign-in, uploads, validation, ingestion, settings</td></tr>
+        <tr><td class="svc">sis-web-services</td><td>MapServer 8</td><td>draws the maps and serves them as WMS and WCS</td></tr>
+        <tr><td class="svc">sis-metadata</td><td>pyCSW</td><td>the metadata catalogue: OGC API Records and CSW</td></tr>
+        <tr><td class="svc">sis-api-glosis</td><td>Python, FastAPI</td><td>the federation endpoints, with read-only access</td></tr>
+        <tr><td class="svc">sis-database</td><td>PostgreSQL 17, PostGIS 3.5</td><td>one database for everything that is not a file</td></tr>
+      </tbody>
+    </table>
+    <footer class="src">An eighth, optional container (Caddy) adds HTTPS with automatic certificates when the server has a domain name.</footer>
+  </section>
+
+  <!-- 4 · ONE FRONT DOOR -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-a)"></span>A · Parts</p>
+    <h2>One front door: who answers which address</h2>
+    <div class="cols c2" style="flex:1;align-items:center;grid-template-columns:1.25fr 1fr;gap:40px;">
+      <table class="sm rt">
+        <thead><tr><th style="width:13em">Address</th><th>Answered by</th></tr></thead>
+        <tbody>
+          <tr><td class="svc">/ &nbsp;/map &nbsp;/admin</td><td>the web app</td></tr>
+          <tr><td class="svc">/api/</td><td>the API</td></tr>
+          <tr><td class="svc">/mapserver</td><td>MapServer, through a cache of map tiles</td></tr>
+          <tr><td class="svc">/collections &nbsp;/csw</td><td>the catalogue (pyCSW)</td></tr>
+          <tr><td class="svc">/glosis/</td><td>the federation API</td></tr>
+          <tr><td class="svc">/downloads/ &nbsp;/media/</td><td>nginx itself, straight from disk: GeoTIFFs and site images</td></tr>
+        </tbody>
+      </table>
+      <ul class="pts">
+        <li>One address and one port for everything, so <strong>one certificate and one firewall rule</strong>.</li>
+        <li>The limits live here: uploads up to <strong>1 GB</strong>, sign-in attempts rate-limited.</li>
+        <li>A client only ever sees the standard, never the software behind it.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 5 · WHERE THE DATA LIVE -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-b)"></span>B · Data</p>
+    <h2>What is kept, and where</h2>
+    <div class="cols c4" style="flex:1;align-content:center;align-items:stretch;gap:16px;">
+      <div class="card"><h3>Database</h3><p>Three schemas: <span class="mono">soil_data</span> (ISO 28258 tables), <span class="mono">api</span> (users, settings, audit log, website) and a staging area for uploads.</p></div>
+      <div class="card"><h3>Rasters</h3><p>The GeoTIFFs and one map file per layer, in <span class="mono">sis-web-services/volume</span>.</p></div>
+      <div class="card"><h3>Catalogue records</h3><p>One ISO 19139 XML file per record, in <span class="mono">sis-metadata/volume</span>.</p></div>
+      <div class="card"><h3>Configuration</h3><p>The secrets generated at installation, in <span class="mono">.env</span>, and the website images in <span class="mono">sis-site/volume</span>.</p></div>
+    </div>
+    <footer class="src">The containers can be thrown away and rebuilt from the public code at any time. These four things cannot: they are what a backup holds.</footer>
+  </section>
+
+  <!-- 6 · FLOW: A PROFILE -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-c)"></span>C · Flows</p>
+    <h2>A soil profile, from spreadsheet to map</h2>
+    <div class="flow">
+      <div class="st"><span class="who">admin panel</span><b>Upload</b><span>A CSV file is sent to the API.</span></div><span class="ar">→</span>
+      <div class="st"><span class="who">API → database</span><b>Stage</b><span>It becomes a table in the staging area, untouched.</span></div><span class="ar">→</span>
+      <div class="st"><span class="who">API</span><b>Map and validate</b><span>Columns are matched to properties, procedures and units; every value is checked.</span></div><span class="ar">→</span>
+      <div class="st"><span class="who">API → database</span><b>Ingest</b><span>Rows go into the ISO 28258 tables, with units converted.</span></div><span class="ar">→</span>
+      <div class="st std"><span class="who">MapServer · GloSIS API</span><b>Serve</b><span>Points appear on the map and, if shared, answer the federation.</span></div>
+    </div>
+    <footer class="src">Nothing enters the soil tables without passing validation; the uploaded file stays in staging, so an ingestion can be undone and repeated.</footer>
+  </section>
+
+  <!-- 7 · FLOW: A MAP -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-c)"></span>C · Flows</p>
+    <h2>A map, from GeoTIFF to web service</h2>
+    <div class="flow">
+      <div class="st"><span class="who">admin panel</span><b>Upload</b><span>A GeoTIFF and a short form: property, depth, dates, licence.</span></div><span class="ar">→</span>
+      <div class="st"><span class="who">API → disk</span><b>Prepare</b><span>The file is converted to a cloud-optimised GeoTIFF and given its name.</span></div><span class="ar">→</span>
+      <div class="st"><span class="who">API → database, disk</span><b>Describe</b><span>A map file, a legend and an ISO 19115 record are written.</span></div><span class="ar">→</span>
+      <div class="st std"><span class="who">MapServer</span><b>Draw</b><span>The layer is live as WMS, in the viewer and in any GIS.</span></div><span class="ar">→</span>
+      <div class="st std"><span class="who">pyCSW · nginx</span><b>Publish</b><span>The record is in the catalogue; the file can be downloaded.</span></div>
+    </div>
+    <footer class="src">One upload, three standard outputs: a map service, a metadata record and a download. None of them is edited by hand.</footer>
+  </section>
+
+  <!-- 8 · SECURITY AND SEPARATION -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-r)"></span>R · Operate</p>
+    <h2>Separation is the security model</h2>
+    <div class="cols c2" style="flex:1;align-items:center;grid-template-columns:1.2fr 1fr;">
+      <ul class="pts">
+        <li><strong>One way in.</strong> Requests arrive through nginx, on ports 80 and 443; the database has no port on the server at all.</li>
+        <li><strong>Least privilege for the federation.</strong> Its API uses a database user that can read three views and nothing else, and asks for a token.</li>
+        <li><strong>Read-only where possible.</strong> MapServer and nginx see the raster folder but cannot write to it.</li>
+        <li><strong>Accounts.</strong> Signed tokens for sessions, a lock after five failed sign-ins, and an audit log.</li>
+        <li><strong>Secrets per server.</strong> Generated at installation, never shipped in the code.</li>
+      </ul>
+      <p class="bigquote">Each container can do<br>its own job,<br><em>and little else.</em></p>
+    </div>
+  </section>
+
+  <!-- 9 · INSTALL AND UPDATE -->
+  <section class="slide">
+    <p class="eyebrow"><span class="hzchip" style="background:var(--hz-r)"></span>R · Operate</p>
+    <h2>Installing and updating are the same idea</h2>
+    <div class="cols c2" style="flex:1;align-items:center;gap:36px;">
+      <div>
+        <div class="code" style="font-size:15px;line-height:1.7;">
+<span style="color:#B7A995"># install: an empty Linux server</span><br>
+curl -fsSL …/ops/single/host-install.sh \<br>
+&nbsp;&nbsp;| sudo bash -s -- <span class="k">TN</span><br>
+<span style="color:#B7A995"># update: any time later</span><br>
+cd /opt/sis &amp;&amp; <span class="k">./update.sh</span>
+        </div>
+        <p style="margin-top:18px;font-size:18px;" class="quiet">One description of the system (a Docker Compose file) serves a laptop, a national server and a host with many instances.</p>
+      </div>
+      <ul class="pts">
+        <li><strong>Install</strong>: Docker, firewall, code, secrets, database with the code lists, then the seven containers.</li>
+        <li><strong>Update</strong>: fetch the code, apply the numbered database changes (39 so far), rebuild the three application containers.</li>
+        <li>The database, MapServer and catalogue containers <strong>keep running</strong>; the data are never reloaded.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 10 · THANKS -->
+  <section class="slide">
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
+      <p class="eyebrow">Thank you</p>
+      <h2 style="font-size:54px;">Questions?</h2>
+      <div class="cols c2" style="margin-top:30px;max-width:980px;">
+        <p style="font-size:20px;line-height:1.9;">
+          <strong>Code and documentation</strong><br>
+          <span class="mono"><a href="https://github.com/un-fao/OpenNSIS" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">github.com/un-fao/OpenNSIS</a></span><br>
+          <span class="mono"><a href="https://github.com/un-fao/OpenNSIS/blob/main/docker-compose.yml" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">…/docker-compose.yml</a></span> <span class="quiet">· the system in one file</span><br>
+          <span class="mono"><a href="https://un-fao.github.io/OpenNSIS/" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">un-fao.github.io/OpenNSIS</a></span>
+        </p>
+        <p class="quiet" style="font-size:17px;line-height:1.45;white-space:nowrap;margin-top:8px;"><span style="font-size:19px;">Eloi Ribeiro</span><br>Soil Information and Data<br>Land and Water Division (NSL)<br>Food and Agriculture Organization of the United Nations (FAO)</p>
+      </div>
+    </div>
+    <footer class="src">CC BY 4.0. This presentation is licensed under a Creative Commons Attribution 4.0 International licence · <span class="mono">creativecommons.org/licenses/by/4.0</span></footer>
+  </section>
+</div>
+</div>
+
+<script>
+(function(){
+  const slides=[...document.querySelectorAll('.slide')];
+  const counter=document.getElementById('counter');
+  const rail=[...document.querySelectorAll('#rail .hz')];
+  const sect=[[0,0],[1,1],[2,3],[4,4],[5,6],[7,9]]; // rail button -> slide range
+  // Backup slides (the demo in screenshots) sit after the demo slide. Right/left skip them;
+  // Down from the demo slide enters them, Up leaves them.
+  const isB=i=>!!slides[i]&&slides[i].classList.contains('backup');
+  const mainTotal=slides.filter(s=>!s.classList.contains('backup')).length;
+  let cur=0;
+  function show(i){
+    cur=Math.max(0,Math.min(slides.length-1,i));
+    slides.forEach((s,j)=>s.classList.toggle('current',j===cur));
+    if(isB(cur)){
+      let first=cur; while(isB(first-1))first--;
+      let last=cur; while(isB(last+1))last++;
+      counter.textContent='backup '+(cur-first+1)+' / '+(last-first+1);
+    }else{
+      counter.textContent=slides.slice(0,cur+1).filter(s=>!s.classList.contains('backup')).length+' / '+mainTotal;
+    }
+    rail.forEach((b,j)=>b.classList.toggle('on',cur>=sect[j][0]&&cur<=sect[j][1]));
+    try{history.replaceState(null,'','#'+(cur+1));}catch(e){}
+  }
+  function step(d){
+    let i=cur+d;
+    if(!isB(cur))while(isB(i))i+=d;
+    show(i);
+  }
+  function fit(){
+    const s=Math.min(innerWidth/1280,innerHeight/720);
+    document.getElementById('stage').style.transform='scale('+s+')';
+  }
+  addEventListener('resize',fit);
+  addEventListener('keydown',e=>{
+    if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();step(1);}
+    else if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();step(-1);}
+    else if(e.key==='ArrowDown'){e.preventDefault();if(isB(cur+1))show(cur+1);}
+    else if(e.key==='ArrowUp'){e.preventDefault();if(isB(cur)){let i=cur;while(isB(i))i--;show(i);}}
+    else if(e.key==='Home'){show(0);} else if(e.key==='End'){show(slides.length-1);}
+  });
+  let wheelLock=0;
+  addEventListener('wheel',e=>{
+    const now=Date.now();
+    if(now-wheelLock<400||Math.abs(e.deltaY)<10)return;
+    wheelLock=now;
+    step(e.deltaY>0?1:-1);
+  },{passive:true});
+  rail.forEach((b)=>b.addEventListener('click',()=>show(+b.dataset.go)));
+  let x0=null;
+  addEventListener('touchstart',e=>{x0=e.touches[0].clientX},{passive:true});
+  addEventListener('touchend',e=>{
+    if(x0===null)return;
+    const dx=e.changedTouches[0].clientX-x0;
+    if(Math.abs(dx)>50)step(dx<0?1:-1);
+    x0=null;
+  },{passive:true});
+  const h=parseInt(location.hash.slice(1),10);
+  show(isNaN(h)?0:h-1); fit();
+})();
+</script>
