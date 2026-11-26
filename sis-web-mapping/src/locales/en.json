@@ -709,5 +709,9 @@
   "a.sd.deleteConfirm": "Delete this design and all its points?",
   "groups.sampling": "Sampling designs",
   "sd.target": "Target point",
-  "sd.replacement": "Replacement"
+  "sd.replacement": "Replacement",
+  "a.dst.pickOutput": "Choose or add the output project and mapped property first.",
+  "a.dst.renameConfirm": "Saving creates {new} and deletes {old} together with its raster, metadata and map file. Continue?",
+  "a.dst.renameCancelled": "Not saved: the previous recipe was kept.",
+  "site.cat.place": "Place"
 }

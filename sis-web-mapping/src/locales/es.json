@@ -709,5 +709,9 @@
   "a.sd.deleteConfirm": "¿Eliminar este diseño y todos sus puntos?",
   "groups.sampling": "Puntos de muestreo",
   "sd.target": "Punto objetivo",
-  "sd.replacement": "Reemplazo"
+  "sd.replacement": "Reemplazo",
+  "a.dst.pickOutput": "Elija o añada primero el proyecto y la propiedad de salida.",
+  "a.dst.renameConfirm": "Guardar crea {new} y elimina {old} junto con su ráster, metadatos y archivo de mapa. ¿Continuar?",
+  "a.dst.renameCancelled": "No se guardó: se mantuvo la receta anterior.",
+  "site.cat.place": "Lugar"
 }

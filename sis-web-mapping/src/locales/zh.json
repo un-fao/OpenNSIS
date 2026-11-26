@@ -709,5 +709,9 @@
   "a.sd.deleteConfirm": "删除此设计及其全部点位？",
   "groups.sampling": "采样设计",
   "sd.target": "目标点",
-  "sd.replacement": "替补点"
+  "sd.replacement": "替补点",
+  "a.dst.pickOutput": "请先选择或添加输出项目和映射属性。",
+  "a.dst.renameConfirm": "保存将创建 {new}，并删除 {old} 及其栅格、元数据和地图文件。是否继续？",
+  "a.dst.renameCancelled": "未保存：已保留原配方。",
+  "site.cat.place": "地点"
 }

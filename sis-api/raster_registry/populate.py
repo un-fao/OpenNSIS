@@ -16,6 +16,7 @@ So this module only writes the identity + metadata rows; .map / .sld /
 class entries appear automatically.
 """
 
+import re
 from typing import Optional, List
 from pydantic import BaseModel
 
@@ -90,6 +91,11 @@ def populate_spatial_metadata(
             ON CONFLICT (country_id, project_id) DO NOTHING
         """, (meta.country_id, meta.project_id,
               f"{meta.country_id}-{meta.project_id}"))
+
+        # Never mint a mapped_property from a malformed id (the DST editor's
+        # "__new__" placeholder once leaked through the layer_id this way).
+        if not re.match(r"^[A-Z0-9_]+$", meta.property_id or ""):
+            raise ValueError(f"invalid mapped property id {meta.property_id!r} in layer_id")
 
         # 1b. mapped_property — created on demand with quantitative defaults.
         # Upload GeoTIFF passes an existing mapped_property_id from the

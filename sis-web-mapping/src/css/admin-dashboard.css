@@ -1315,3 +1315,31 @@ input:checked + .toggle-slider:before {
     display: block;
     margin: 8px 0;
 }
+
+/* Keyword filter pills above the GeoTIFF table — same look as the public
+   Catalogue page's filter pills (site.css .cat-pill). */
+.raster-kw-row { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 4px 0 12px; }
+.raster-kw-row:empty { display: none; }
+.raster-kw-lbl { font-weight: 700; font-size: 13.5px; color: var(--color-text-muted); margin-right: 3px; }
+.raster-kw-pill {
+    border: none; padding: 4px 13px; border-radius: 999px; font: inherit;
+    font-size: 12.5px; font-weight: 600; cursor: pointer;
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    color: var(--color-primary);
+}
+.raster-kw-pill:hover { background: color-mix(in srgb, var(--color-primary) 22%, transparent); }
+.raster-kw-pill.on { background: var(--color-primary); color: #fff; }
+/* One line per keyword group; the class pill ("physical", "chemical") leads. */
+.raster-kw-group { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; flex-basis: 100%; }
+.raster-kw-pill.cls:not(.on) { background: color-mix(in srgb, var(--color-primary) 22%, transparent); font-weight: 700; }
+.raster-kw-section { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; flex-basis: 100%; }
+.raster-kw-section + .raster-kw-section { margin-top: 6px; }
+/* Label and pills on one line: a fixed-width label, then one wrapping line
+   of pills; keyword groups follow each other on that line, a wider gap
+   before each class pill ("chemical") marking where a group starts. */
+.raster-kw-section { display: flex; flex-wrap: nowrap; align-items: flex-start; gap: 10px; flex-basis: 100%; }
+.raster-kw-section + .raster-kw-section { margin-top: 8px; }
+.raster-kw-section .raster-kw-lbl { flex: 0 0 84px; padding-top: 4px; margin-right: 0; }
+.raster-kw-pills { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; flex: 1; }
+.raster-kw-pills .raster-kw-group { display: contents; }
+.raster-kw-pills .raster-kw-group + .raster-kw-group > .raster-kw-pill:first-child { margin-left: 14px; }

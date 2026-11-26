@@ -709,5 +709,9 @@
   "a.sd.deleteConfirm": "Supprimer ce plan et tous ses points ?",
   "groups.sampling": "Plans d'échantillonnage",
   "sd.target": "Point cible",
-  "sd.replacement": "Remplacement"
+  "sd.replacement": "Remplacement",
+  "a.dst.pickOutput": "Choisissez ou ajoutez d'abord le projet et la propriété de sortie.",
+  "a.dst.renameConfirm": "L'enregistrement crée {new} et supprime {old} ainsi que son raster, ses métadonnées et son fichier de carte. Continuer ?",
+  "a.dst.renameCancelled": "Non enregistré : la recette précédente a été conservée.",
+  "site.cat.place": "Lieu"
 }

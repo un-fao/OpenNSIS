@@ -709,5 +709,9 @@
   "a.sd.deleteConfirm": "Eliminar este desenho e todos os seus pontos?",
   "groups.sampling": "Pontos de amostragem",
   "sd.target": "Ponto alvo",
-  "sd.replacement": "Substituição"
+  "sd.replacement": "Substituição",
+  "a.dst.pickOutput": "Escolha ou adicione primeiro o projeto e a propriedade de saída.",
+  "a.dst.renameConfirm": "Guardar cria {new} e elimina {old}, com o seu raster, metadados e ficheiro de mapa. Continuar?",
+  "a.dst.renameCancelled": "Não guardado: a receita anterior foi mantida.",
+  "site.cat.place": "Local"
 }

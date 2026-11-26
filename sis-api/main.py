@@ -1185,6 +1185,8 @@ async def get_all_layers(current_user: dict = Depends(get_current_user)):
                   COALESCE(m.custom_classes, FALSE) AS custom_classes,
                   l.default_opacity,
                   l.display_order,
+                  m.keyword_theme,
+                  to_char(m.creation_date, 'YYYY') AS year,
                   -- A short token that mutates whenever the engine writes
                   -- new pixels: stats_min/max + the embedded MapServer .map
                   -- text hash. Used as the WMS cache-buster.
@@ -2157,13 +2159,26 @@ def _delete_project_profiles(cur, cc, project_id) -> dict:
     return total
 
 
-def _delete_stub_catalogue_record(stub_id: str):
+def _delete_stub_catalogue_record(stub_id: str, file_identifier: Optional[str] = None):
     """Best-effort removal of a profile publish-stub's pyCSW record and its
     on-disk XML, after the stub's layer/mapset rows are gone (or renamed) —
     otherwise the catalogue keeps a ghost record forever. Call it outside the
-    DB transaction; catalogue failures must never block the deletion."""
+    DB transaction; catalogue failures must never block the deletion.
+
+    pyCSW keys the record by the mapset's file_identifier (a UUID), not by the
+    stub id, so pass the file_identifier read before the mapset was deleted.
+    It is skipped when a surviving mapset still carries it (a stub renamed onto
+    a reassignment target keeps its UUID, and with it a live record)."""
     try:
         from raster_registry.pycsw_load import delete_record, PYCSW_RECORDS_DIR
+        if file_identifier:
+            with get_db() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT 1 FROM soil_data.mapset WHERE file_identifier::text = %s",
+                                (str(file_identifier),))
+                    still_used = cur.fetchone() is not None
+            if not still_used:
+                delete_record(str(file_identifier))
         delete_record(stub_id)
         xml_path = os.path.join(PYCSW_RECORDS_DIR, f"{stub_id}.xml")
         if os.path.exists(xml_path):
@@ -2524,8 +2539,12 @@ async def delete_project_managed(
     rasters_all_handled = not summary["rasters"]["skipped"]
     stub_id = f"{cc}-{project_id}"
     stub_gone = False
+    stub_file_identifier = None
     with get_db() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT file_identifier FROM soil_data.mapset WHERE mapset_id = %s", (stub_id,))
+            _stub_row = cur.fetchone()
+            stub_file_identifier = _stub_row["file_identifier"] if _stub_row else None
             if profile_count > 0:
                 if (prof_opt.get("action") or "").lower() == "delete":
                     summary["profiles"] = _delete_project_profiles(cur, cc, project_id)
@@ -2568,7 +2587,7 @@ async def delete_project_managed(
                     f"skipped_rasters={len(summary['rasters']['skipped'])}).")
 
     if stub_gone:
-        _delete_stub_catalogue_record(stub_id)
+        _delete_stub_catalogue_record(stub_id, stub_file_identifier)
 
     log_audit(uid, None, "project_deleted",
               {"project_id": project_id, "country_id": cc, "summary": summary,
@@ -6352,6 +6371,33 @@ async def dst_pixel_breakdown(
     }
 
 
+# The output raster's project and mapped property are read back from the
+# recipe_id (<CC>-<PROJ>-<PROP>-<YEAR>-<upper>-<lower>-MEAN) when the run
+# registers the result, so the id must agree with the output picked in the
+# editor and must never carry the dropdowns' "__new__" placeholder (that
+# used to mint a mapped_property literally called "__new__").
+_DST_CODE_RE = re.compile(r"^[A-Z0-9_]+$")
+
+
+def _check_dst_recipe_ids(recipe_id: str, recipe: dict) -> None:
+    parts = recipe_id.split("-")
+    if len(parts) < 3:
+        raise HTTPException(status_code=400,
+                            detail=f"recipe_id '{recipe_id}' is not <CC>-<PROJECT>-<PROPERTY>-...")
+    project_id, property_id = parts[1], parts[2]
+    if not _DST_CODE_RE.match(project_id) or not _DST_CODE_RE.match(property_id):
+        raise HTTPException(status_code=400,
+                            detail="Choose an existing output project and mapped property "
+                                   "(or add them) before saving the recipe")
+    md = (recipe or {}).get("metadata") or {}
+    want_project = (md.get("spatial_metadata_project_id") or "").strip()
+    want_property = (md.get("spatial_metadata_property_id") or "").strip()
+    if (want_project and want_project != project_id) or (want_property and want_property != property_id):
+        raise HTTPException(status_code=400,
+                            detail=f"recipe_id '{recipe_id}' does not match the chosen output "
+                                   f"({want_project or '?'} / {want_property or '?'})")
+
+
 @app.get("/api/dst/recipes")
 async def list_dst_recipes(current_user: dict = Depends(get_current_user)):
     with get_db() as conn:
@@ -6377,6 +6423,7 @@ async def create_dst_recipe(
     recipe = payload.get("recipe") or {}
     if not isinstance(recipe, dict) or "steps" not in recipe:
         raise HTTPException(status_code=400, detail="recipe must be an object with a 'steps' array")
+    _check_dst_recipe_ids(recipe_id, recipe)
 
     with get_db() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -6418,6 +6465,7 @@ async def update_dst_recipe(
         raise HTTPException(status_code=400, detail="name is required")
     if not isinstance(recipe, dict) or "steps" not in recipe:
         raise HTTPException(status_code=400, detail="recipe must be an object with a 'steps' array")
+    _check_dst_recipe_ids(recipe_id, recipe)
     with get_db() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
@@ -6752,6 +6800,7 @@ async def run_dst_recipe(
             row = cur.fetchone()
             if not row:
                 raise HTTPException(status_code=404, detail="Recipe not found")
+        _check_dst_recipe_ids(recipe_id, row["recipe"])
         report = validate_recipe(conn, row["recipe"])
         if not report["ok"]:
             raise HTTPException(status_code=400,

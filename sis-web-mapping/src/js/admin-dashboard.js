@@ -52,6 +52,25 @@ const BASE_MAP_OPTIONS = {
   }
 };
 
+// Keyword pills grouped by property class: each class keyword ("physical",
+// "chemical") leads its own group, followed by the keywords that occur on
+// records of that class; keywords tied to neither class form a last group.
+// `items` is one keyword list per record.
+function groupKeywords(items) {
+  const CLASSES = ['physical', 'chemical'];
+  const lc = (k) => String(k).trim().toLowerCase();
+  const all = [...new Set(items.flat())];
+  const classKw = (c) => all.find((k) => lc(k) === c);
+  const groups = CLASSES.map((c) => ({ cls: classKw(c), kws: [] }));
+  const other = [];
+  all.filter((k) => !CLASSES.includes(lc(k))).sort((a, b) => a.localeCompare(b)).forEach((k) => {
+    const counts = CLASSES.map((c) => items.filter((kws) => kws.includes(k) && kws.some((x) => lc(x) === c)).length);
+    const best = counts.indexOf(Math.max(...counts));
+    if (counts[best] > 0) groups[best].kws.push(k); else other.push(k);
+  });
+  return [...groups.filter((g) => g.cls || g.kws.length), ...(other.length ? [{ cls: null, kws: other }] : [])];
+}
+
 class AdminDashboard {
   constructor() {
     this.currentTab = 'administration';
@@ -671,6 +690,7 @@ class AdminDashboard {
                   <button type="button" class="btn btn-primary" id="check-wms-btn">${t('a.raster.checkWms')}</button>
                   <span id="sync-status" style="font-size: 0.9em; color: #555;"></span>
                 </div>
+                <div class="raster-kw-row" id="raster-kw-filter"></div>
 
                 <div id="layers-table-container">
                   <table class="admin-table" id="layers-table">
@@ -1689,6 +1709,7 @@ class AdminDashboard {
       this._rasterProjects = await api.listRasterProjects();
       this._dstRenderOutputProjectOptions(pid);
       document.getElementById('dst-output-project').value = pid;
+      this._dstRefreshRecipeId();
       document.getElementById('dst-output-project-new').style.display = 'none';
       document.getElementById('dst-new-output-project-id').value = '';
       document.getElementById('dst-new-output-project-name').value = '';
@@ -1741,6 +1762,7 @@ class AdminDashboard {
       });
       this._rasterPropertyNums = await api.listRasterMappedSoilProperties();
       this._dstRenderOutputPropertyOptions(pid);
+      this._dstRefreshRecipeId();
       document.getElementById('dst-output-property-new').style.display = 'none';
       document.getElementById('dst-new-output-property-id').value = '';
       document.getElementById('dst-new-output-property-name').value = '';
@@ -2264,6 +2286,8 @@ class AdminDashboard {
       ? this._rasterCountries[0].country_id : 'BT';
     const proj = document.getElementById('dst-output-project').value || 'DST';
     const prop = document.getElementById('dst-output-property').value || 'SUITABILITY';
+    // "+ Add new…" selected: keep the current id until a real choice exists.
+    if (proj === '__new__' || prop === '__new__') return;
     const year = new Date().getFullYear();
 
     const inputs = this._dstInputs || [];
@@ -2520,6 +2544,11 @@ class AdminDashboard {
   }
 
   _dstReadEditor() {
+    if (document.getElementById('dst-output-project').value === '__new__'
+        || document.getElementById('dst-output-property').value === '__new__') {
+      throw new Error(t('a.dst.pickOutput'));
+    }
+    this._dstRefreshRecipeId();
     const tbody = document.getElementById('dst-rows-tbody');
     const rows = Array.from(tbody.querySelectorAll('tr.dst-row'));
     const steps = rows.map((tr, idx) => {
@@ -2585,6 +2614,9 @@ class AdminDashboard {
     const oldId = this._dstLoadedRecipeId;
     let layerCleanup = null;
     if (oldId && oldId !== newId) {
+      if (!confirm(t('a.dst.renameConfirm', {old: oldId, new: newId}))) {
+        throw new Error(t('a.dst.renameCancelled'));
+      }
       // Tear down the old recipe row + its produced raster/.map/.xml.
       // _delete_layer_full on the backend handles the on-disk + soil_data
       // + pyCSW cleanup. Best-effort: surface any warning to the status
@@ -3146,8 +3178,62 @@ class AdminDashboard {
     }
   }
 
+  // Theme keywords shared by every raster say nothing, so they get no pill.
+  static RASTER_KW_IGNORE = new Set(['soil', 'digital soil mapping', 'soil science']);
+
+  _rasterKeywords(layer) {
+    return (layer.keyword_theme || [])
+      .filter(k => k && !AdminDashboard.RASTER_KW_IGNORE.has(String(k).trim().toLowerCase()));
+  }
+
+  // Keyword pills above the GeoTIFF table, as on the public Catalogue page:
+  // lit pills combine as OR; no pill lit shows every raster.
+  _renderRasterKwFilter() {
+    const row = document.getElementById('raster-kw-filter');
+    if (!row) return;
+    if (!this._rasterKwSel) this._rasterKwSel = new Set();
+    if (!this._rasterYearSel) this._rasterYearSel = new Set();
+    const groups = groupKeywords((this.layers || []).map(l => this._rasterKeywords(l)));
+    const kws = groups.flatMap(g => (g.cls ? [g.cls] : []).concat(g.kws));
+    const years = [...new Set((this.layers || []).map(l => l.year).filter(Boolean))]
+      .sort((a, b) => b.localeCompare(a));
+    // Forget selections that no longer exist.
+    [...this._rasterKwSel].forEach(k => { if (!kws.includes(k)) this._rasterKwSel.delete(k); });
+    [...this._rasterYearSel].forEach(y => { if (!years.includes(y)) this._rasterYearSel.delete(y); });
+    if (!kws.length && !years.length) { row.innerHTML = ''; return; }
+    const pill = (kind, v, cls) => {
+      const on = (kind === 'year' ? this._rasterYearSel : this._rasterKwSel).has(v);
+      return `<button type="button" class="raster-kw-pill${cls ? ' cls' : ''}${on ? ' on' : ''}" data-kind="${kind}" data-v="${this.escapeHtml(v)}" aria-pressed="${on}">${this.escapeHtml(v)}</button>`;
+    };
+    // Year on top, then the keyword groups (as on the public Catalogue page).
+    row.innerHTML = (years.length
+        ? `<div class="raster-kw-section"><span class="raster-kw-lbl">${t('site.cat.year')}:</span>`
+          + `<div class="raster-kw-pills">${years.map(y => pill('year', y, false)).join('')}</div></div>`
+        : '')
+      + (kws.length
+        ? `<div class="raster-kw-section"><span class="raster-kw-lbl">${t('site.cat.keywords')}:</span><div class="raster-kw-pills">`
+          + groups.map(g => `<div class="raster-kw-group">${g.cls ? pill('kw', g.cls, true) : ''}${g.kws.map(k => pill('kw', k, false)).join('')}</div>`).join('')
+          + '</div></div>'
+        : '');
+    if (!row._kwBound) {
+      row._kwBound = true;
+      row.addEventListener('click', (ev) => {
+        const b = ev.target.closest('.raster-kw-pill');
+        if (!b) return;
+        const set = b.dataset.kind === 'year' ? this._rasterYearSel : this._rasterKwSel;
+        const v = b.dataset.v;
+        if (set.has(v)) set.delete(v); else set.add(v);
+        this.renderLayers();
+      });
+    }
+  }
+
   renderLayers() {
     const tbody = document.getElementById('layers-tbody');
+    this._renderRasterKwFilter();
+    const kwSel = this._rasterKwSel || new Set();
+    const yearSel = this._rasterYearSel || new Set();
+    const filtering = kwSel.size > 0 || yearSel.size > 0;
 
     if (this.layers.length === 0) {
       tbody.innerHTML = `<tr><td colspan="9" class="empty-state">${t('a.raster.none')}</td></tr>`;
@@ -3169,13 +3255,19 @@ class AdminDashboard {
       const deleteCell = this.isAdmin
         ? `<td class="raster-delete-col"><button class="btn btn-sm" style="background:#dc3545;color:#fff;" title="${t('a.raster.deleteTip')}" onclick="adminDashboard.deleteRasterLayer('${idJs}')">${t('a.delete')}</button></td>`
         : `<td class="raster-delete-col"></td>`;
+      // Filtered rows stay in the DOM (hidden) so ordering keeps working on
+      // the full list; the arrows are off while a filter hides neighbours.
+      // Year and keywords combine as AND; lit pills within a line as OR.
+      const hidden = (yearSel.size > 0 && !yearSel.has(layer.year))
+        || (kwSel.size > 0 && !this._rasterKeywords(layer).some(k => kwSel.has(k)));
+      const rowStyle = [layer.is_default ? 'background:#fff8d6;' : '', hidden ? 'display:none;' : ''].join('');
       return `
-      <tr${layer.is_default ? ' style="background:#fff8d6;"' : ''}>
+      <tr${rowStyle ? ` style="${rowStyle}"` : ''}>
         <td style="white-space:nowrap;">
           <button type="button" class="ord-btn layer-move" data-layer-id="${id}" data-dir="-1"
-                  title="${t('a.moveUp')}" ${rowIdx === 0 ? 'disabled' : ''}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 14l6-6 6 6"/></svg></button>
+                  title="${t('a.moveUp')}" ${rowIdx === 0 || filtering ? 'disabled' : ''}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 14l6-6 6 6"/></svg></button>
           <button type="button" class="ord-btn layer-move" data-layer-id="${id}" data-dir="1"
-                  title="${t('a.moveDown')}" ${rowIdx === this.layers.length - 1 ? 'disabled' : ''}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 10l6 6 6-6"/></svg></button>
+                  title="${t('a.moveDown')}" ${rowIdx === this.layers.length - 1 || filtering ? 'disabled' : ''}><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 10l6 6 6-6"/></svg></button>
         </td>
         <td><strong>${id}</strong></td>
         <td title="${this.escapeHtml(layer.file_orig_name || '')}" style="font-size:var(--fs-sm);color:var(--color-text-muted);">${this.escapeHtml(layer.file_orig_name || '-')}</td>

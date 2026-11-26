@@ -18,6 +18,11 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g,
 const BASE = api.baseURL || '';
 const COLLECTION = `${BASE}/collections/metadata:main/items`;
 
+// Keywords every record carries: fine in the metadata, useless as filters,
+// so they get no filter pill and no card chip (search still matches them).
+const KW_IGNORE = new Set(['soil', 'digital soil mapping', 'soil science']);
+const filterable = (kws) => kws.filter((k) => k && !KW_IGNORE.has(String(k).trim().toLowerCase()));
+
 const FILE_GLYPH = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
 
 let records = [];
@@ -40,6 +45,13 @@ function parseRecord(f) {
   (p.themes || []).forEach((th) => (th.concepts || []).forEach((c) => {
     if (c.id && !themes.includes(c.id)) themes.push(c.id);
   }));
+  // Place keywords (countries, regions) come from the record's place
+  // thesaurus; they get their own filter line instead of a class group.
+  const places = [];
+  (p.themes || []).filter((th) => /region|place/i.test(th.scheme || ''))
+    .forEach((th) => (th.concepts || []).forEach((c) => {
+      if (c.id && !places.includes(c.id)) places.push(c.id);
+    }));
   const formats = (p.formats || []).map((x) => x.name)
     .filter((n) => n && !n.startsWith('WWW:'));
   const thumbUrl = thumb && ownUrl(thumb.href);
@@ -51,6 +63,8 @@ function parseRecord(f) {
     formats,
     themes,
     keywords: p.keywords || [],
+    filterKws: filterable(p.keywords || []).filter((k) => !places.includes(k)),
+    places: filterable(places),
     licence: p.license || '',
     thumb: thumbUrl,
     download: download && { href: ownUrl(download.href), name: download.name || 'download' },
@@ -82,7 +96,7 @@ function card(r) {
   const typeLabel = r.type === 'dataset' ? t('site.cat.dataset') : r.type;
   const bullets = [typeLabel, ...r.formats].filter(Boolean)
     .map((x) => `<li>${esc(x)}</li>`).join('');
-  const chips = r.keywords.slice(0, 8)
+  const chips = r.filterKws.slice(0, 8)
     .map((k) => `<span class="cat-chip${selKws.has(k) ? ' on' : ''}">${esc(k)}</span>`).join('');
   const attach = [
     r.download && `<a href="${esc(r.download.href)}">${FILE_GLYPH} ${esc(r.download.name)}</a>`,
@@ -111,6 +125,25 @@ function card(r) {
       <div class="cat-attach">${attach}</div>
     </div>
   </article>`;
+}
+
+// Keyword pills grouped by property class: each class keyword ("physical",
+// "chemical") leads its own group, followed by the keywords that occur on
+// records of that class; keywords tied to neither class form a last group.
+// `items` is one keyword list per record.
+function groupKeywords(items) {
+  const CLASSES = ['physical', 'chemical'];
+  const lc = (k) => String(k).trim().toLowerCase();
+  const all = [...new Set(items.flat())];
+  const classKw = (c) => all.find((k) => lc(k) === c);
+  const groups = CLASSES.map((c) => ({ cls: classKw(c), kws: [] }));
+  const other = [];
+  all.filter((k) => !CLASSES.includes(lc(k))).sort((a, b) => a.localeCompare(b)).forEach((k) => {
+    const counts = CLASSES.map((c) => items.filter((kws) => kws.includes(k) && kws.some((x) => lc(x) === c)).length);
+    const best = counts.indexOf(Math.max(...counts));
+    if (counts[best] > 0) groups[best].kws.push(k); else other.push(k);
+  });
+  return [...groups.filter((g) => g.cls || g.kws.length), ...(other.length ? [{ cls: null, kws: other }] : [])];
 }
 
 // Multi-select filters: lit pills within a row combine as OR, the two rows
@@ -155,7 +188,7 @@ function render() {
   const shown = records.filter((r) =>
     (!q || r.text.includes(q))
     && (!selYears.size || selYears.has(r.year))
-    && (!selKws.size || r.keywords.some((k) => selKws.has(k))));
+    && (!selKws.size || [...r.filterKws, ...r.places].some((k) => selKws.has(k))));
   document.getElementById('cat-count').textContent = t('site.cat.count', { n: shown.length });
   list.innerHTML = shown.map(card).join('');
   highlight(q);
@@ -172,13 +205,17 @@ function syncKwPills() {
 function fillFilters() {
   const years = [...new Set(records.map((r) => r.year).filter(Boolean))]
     .sort((a, b) => b.localeCompare(a));
-  const kws = [...new Set(records.flatMap((r) => r.keywords))]
-    .sort((a, b) => a.localeCompare(b));
-  const fill = (id, label, values, set) => {
+  const kwGroups = groupKeywords(records.map((r) => r.filterKws));
+  const places = [...new Set(records.flatMap((r) => r.places))].sort((a, b) => a.localeCompare(b));
+  if (places.length) kwGroups.push({ cls: null, label: t('site.cat.place'), kws: places });
+  const pill = (v, cls) =>
+    `<button type="button" class="cat-pill${cls ? ' cls' : ''}" data-v="${esc(v)}" aria-pressed="false">${esc(v)}</button>`;
+  const fill = (id, label, values, set, groups) => {
     const row = document.getElementById(id);
     row.innerHTML = `<span class="cat-filter-lbl">${esc(label)}:</span>`
-      + values.map((v) =>
-        `<button type="button" class="cat-pill" data-v="${esc(v)}" aria-pressed="false">${esc(v)}</button>`).join('');
+      + (groups
+        ? groups.map((g) => `<div class="cat-kw-group">${g.label ? `<span class="cat-kw-sub">${esc(g.label)}</span>` : ''}${g.cls ? pill(g.cls, true) : ''}${g.kws.map((v) => pill(v, false)).join('')}</div>`).join('')
+        : values.map((v) => pill(v, false)).join(''));
     row.addEventListener('click', (ev) => {
       const b = ev.target.closest('.cat-pill');
       if (!b) return;
@@ -190,7 +227,7 @@ function fillFilters() {
     });
   };
   fill('cat-filter-years', t('site.cat.year'), years, selYears);
-  fill('cat-filter-kws', t('site.cat.keywords'), kws, selKws);
+  fill('cat-filter-kws', t('site.cat.keywords'), null, selKws, kwGroups);
 }
 
 async function init() {
