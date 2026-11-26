@@ -7,6 +7,15 @@ the change landed on `main`.
 
 ## November 2026
 
+### 2026-11-26 — Hosting and sharing in one short presentation
+`docs/presentations/en-2026-11-26-data-sharing-and-hosting.html` draws on
+the hosting and data-sharing presentations for a nine-slide talk with
+two aims: to show what installing takes (the three hosting options, the
+machine and network needed, the one-command installation) and to take
+the fear out of publishing data (the usual worries and their answers,
+the controls in OpenNSIS, what a licence guarantees, and the six
+Creative Commons licences). The two full presentations remain available.
+
 ### 2026-11-24 — Database presentation brought up to date
 The database presentation (English, Portuguese and French editions) now
 shows the tables as they stand after migration 039: the specimen's field
