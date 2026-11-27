@@ -35,6 +35,7 @@ from shared import (
     Setting, SettingCreate, SettingUpdate, APIClient, APIClientCreate,
     get_current_user, get_current_admin_user, verify_api_key,
 )
+from profile_db import router as profile_db_router, ensure_profile_container, user_can_edit
 
 # /docs, /redoc, /openapi.json reveal the full API surface. Off by default;
 # set ENABLE_DOCS=true in the env to re-enable for local development.
@@ -61,6 +62,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Admin Panel → Database tab (browse / edit profile data, photographs).
+app.include_router(profile_db_router)
 
 
 @app.on_event("startup")
@@ -382,9 +387,21 @@ async def update_own_account(
 @app.get("/api/auth/verify")
 async def verify_token(current_user: dict = Depends(get_current_user)):
     """Verify that a JWT token is valid."""
+    # Permission to edit profile data in the Database tab. Read apart from
+    # the token check, so a database that has not had migration 040 yet
+    # still signs users in.
+    can_edit = bool(current_user['is_admin'])
+    if not can_edit:
+        try:
+            with get_db() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    can_edit = user_can_edit(cur, current_user)
+        except Exception:
+            can_edit = False
     return {
         "user_id": current_user['user_id'],
         "is_admin": current_user['is_admin'],
+        "can_edit_data": can_edit,
         "message": "Token is valid"
     }
 
@@ -478,7 +495,8 @@ async def list_users(current_user: dict = Depends(get_current_admin_user)):
     with get_db() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
-                "SELECT user_id, is_active, is_admin, created_at, last_login FROM api.user ORDER BY created_at DESC"
+                "SELECT user_id, is_active, is_admin, can_edit_data, created_at, last_login "
+                "FROM api.user ORDER BY created_at DESC"
             )
             return [dict(u) for u in cur.fetchall()]
 
@@ -543,6 +561,22 @@ async def toggle_user_admin(user_id: str, is_admin: bool, current_user: dict = D
             log_audit(current_user['user_id'], None, "user_admin_toggled",
                      {"user": user_id, "is_admin": is_admin}, None)
             return {"message": f"Administrator rights {'granted' if is_admin else 'revoked'} successfully"}
+
+
+@app.patch("/api/users/{user_id}/data-editor")
+async def toggle_user_data_editor(user_id: str, can_edit_data: bool,
+                                  current_user: dict = Depends(get_current_admin_user)):
+    """Grant or revoke the right to edit soil profile data in the Database
+    tab (admin only). Administrators can always edit, whatever this says."""
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE api.\"user\" SET can_edit_data = %s WHERE user_id = %s",
+                        (can_edit_data, user_id))
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    log_audit(current_user['user_id'], None, "user_data_editor_toggled",
+              {"user": user_id, "can_edit_data": can_edit_data}, None)
+    return {"message": f"Data editing {'granted' if can_edit_data else 'revoked'} successfully"}
 
 @app.delete("/api/users/{user_id}")
 async def delete_user(user_id: str, current_user: dict = Depends(get_current_admin_user)):
@@ -3650,61 +3684,11 @@ async def ingest_dataset(
             if not project_id:
                 raise HTTPException(status_code=400, detail="Project is required for ingest")
 
-            # Ensure the site for this project exists (site_id = project_id)
-            site_id = project_id
-            cur.execute("""
-                INSERT INTO soil_data.site (site_id) VALUES (%s)
-                ON CONFLICT (site_id) DO NOTHING
-            """, (site_id,))
-            cur.execute("""
-                INSERT INTO soil_data.project_site (country_id, project_id, site_id)
-                VALUES (%s, %s, %s) ON CONFLICT DO NOTHING
-            """, (country_id, project_id, site_id))
-
-            # Ensure a stub mapset + layer exists for this project so the
-            # Soil profiles tab can hang policy fields (is_published,
-            # profile_limit, spatial_blur_m) off them. ID convention:
-            #   mapset_id == layer_id == <CC>-<PROJ>
+            # Ensure the project can hold profiles: its site (site_id =
+            # project_id), the project_site link and the stub mapset + layer
+            # '<CC>-<PROJ>' the Soil profiles tab hangs its policy fields on.
+            site_id = ensure_profile_container(cur, country_id, project_id)
             stub_id = f"{country_id}-{project_id}"
-            cur.execute("""
-                INSERT INTO soil_data.mapset
-                    (country_id, project_id, mapped_property_id, mapset_id,
-                     keyword_theme, keyword_place, costum_group, title,
-                     spatial_representation_type_code)
-                VALUES (%s, %s, NULL, %s, ARRAY['soil profile'],
-                        (SELECT ARRAY_REMOVE(ARRAY[un_reg, en], NULL)
-                         FROM soil_data.country
-                         WHERE country_id = (SELECT value FROM api.setting WHERE key='COUNTRY_CODE')),
-                        %s,
-                        (SELECT name FROM soil_data.project
-                         WHERE country_id = %s AND project_id = %s),
-                        'vector')
-                ON CONFLICT (mapset_id) DO UPDATE SET
-                    keyword_theme = COALESCE(EXCLUDED.keyword_theme,
-                                             soil_data.mapset.keyword_theme),
-                    keyword_place = COALESCE(EXCLUDED.keyword_place,
-                                             soil_data.mapset.keyword_place),
-                    costum_group  = COALESCE(EXCLUDED.costum_group,
-                                             soil_data.mapset.costum_group),
-                    title         = COALESCE(EXCLUDED.title,
-                                             soil_data.mapset.title),
-                    spatial_representation_type_code = 'vector'
-            """, (country_id, project_id, stub_id, project_id,
-                  country_id, project_id))
-            # file_orig_name has NOT NULL + UNIQUE — use the stub_id as a
-            # placeholder so each stub row gets a unique non-null value.
-            # costum_name mirrors soil_data.project.name (same source the
-            # stub mapset's title uses).
-            cur.execute("""
-                INSERT INTO soil_data.layer
-                    (mapset_id, layer_id, file_path, is_published, file_orig_name, costum_name)
-                VALUES (%s, %s, '', TRUE, %s,
-                        (SELECT name FROM soil_data.project
-                         WHERE country_id = %s AND project_id = %s))
-                ON CONFLICT (layer_id) DO UPDATE SET
-                    costum_name = COALESCE(EXCLUDED.costum_name,
-                                           soil_data.layer.costum_name)
-            """, (stub_id, stub_id, f"(stub) {stub_id}", country_id, project_id))
             sites_inserted.add(site_id)
             project_sites_inserted.add((project_id, site_id))
 

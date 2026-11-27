@@ -62,6 +62,7 @@ class User(BaseModel):
     user_id: str
     is_active: bool
     is_admin: bool
+    can_edit_data: bool = False         # may edit profile data (Database tab)
     created_at: datetime
     last_login: Optional[datetime] = None
 

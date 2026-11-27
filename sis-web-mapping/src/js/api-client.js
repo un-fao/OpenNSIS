@@ -173,6 +173,72 @@ class SISApiClient {
     return r.blob();
   }
 
+  // ---- Profile database (Admin Panel → Database tab) ----
+  _qs(params) {
+    const q = new URLSearchParams();
+    Object.entries(params || {}).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') q.append(k, v);
+    });
+    const s = q.toString();
+    return s ? `?${s}` : '';
+  }
+  async pdbMeta() { return this.authenticatedRequest('/api/pdb/meta'); }
+  async pdbPlots(params) { return this.authenticatedRequest(`/api/pdb/plots${this._qs(params)}`); }
+  async pdbElements(params) { return this.authenticatedRequest(`/api/pdb/elements${this._qs(params)}`); }
+  async pdbRecordAt(params) { return this.authenticatedRequest(`/api/pdb/record${this._qs(params)}`); }
+  async pdbRecord(plotId) { return this.authenticatedRequest(`/api/pdb/plots/${plotId}`); }
+  async pdbSave(changes) {
+    return this.authenticatedRequest('/api/pdb/save', {
+      method: 'POST', body: JSON.stringify({ changes })
+    });
+  }
+  async pdbCreatePlot(projectId, values) {
+    return this.authenticatedRequest('/api/pdb/plots', {
+      method: 'POST', body: JSON.stringify({ project_id: projectId, values })
+    });
+  }
+  async pdbDeletePlot(plotId) {
+    return this.authenticatedRequest(`/api/pdb/plots/${plotId}`, { method: 'DELETE' });
+  }
+  async pdbCreateElement(plotId, values) {
+    return this.authenticatedRequest(`/api/pdb/plots/${plotId}/elements`, {
+      method: 'POST', body: JSON.stringify({ values })
+    });
+  }
+  async pdbDeleteElement(elementId) {
+    return this.authenticatedRequest(`/api/pdb/elements/${elementId}`, { method: 'DELETE' });
+  }
+  async pdbUploadPhoto(plotId, file, caption) {
+    const fd = new FormData();
+    fd.append('file', file);
+    if (caption) fd.append('caption', caption);
+    // Raw fetch: authenticatedRequest would force a JSON Content-Type.
+    const r = await fetch(`${this.baseURL}/api/pdb/plots/${plotId}/photos`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${this.jwtToken}` },
+      body: fd
+    });
+    if (!r.ok) {
+      const error = await r.json().catch(() => ({ detail: r.statusText }));
+      throw new Error(this._detailToMessage(error.detail) || `API Error: ${r.status}`);
+    }
+    return r.json();
+  }
+  async pdbPhotoBlob(photoId, size) {
+    const r = await fetch(`${this.baseURL}/api/pdb/photos/${photoId}?size=${size === 'thumb' ? 'thumb' : 'full'}`,
+      { headers: { 'Authorization': `Bearer ${this.jwtToken}` } });
+    if (!r.ok) throw new Error(`Photo failed: ${r.status}`);
+    return r.blob();
+  }
+  async pdbUpdatePhoto(photoId, patch) {
+    return this.authenticatedRequest(`/api/pdb/photos/${photoId}`, {
+      method: 'PATCH', body: JSON.stringify(patch)
+    });
+  }
+  async pdbDeletePhoto(photoId) {
+    return this.authenticatedRequest(`/api/pdb/photos/${photoId}`, { method: 'DELETE' });
+  }
+
   // ---- News (blog posts on the public site) ----
   async getNews() { return this.request('/api/news'); }
   async getNewsManage() { return this.authenticatedRequest('/api/news/manage'); }
@@ -410,6 +476,12 @@ class SISApiClient {
 
   async toggleUserAdmin(userId, isAdmin) {
     return this.authenticatedRequest(`/api/users/${encodeURIComponent(userId)}/admin?is_admin=${isAdmin}`, {
+      method: 'PATCH'
+    });
+  }
+
+  async toggleUserDataEditor(userId, canEdit) {
+    return this.authenticatedRequest(`/api/users/${encodeURIComponent(userId)}/data-editor?can_edit_data=${canEdit}`, {
       method: 'PATCH'
     });
   }

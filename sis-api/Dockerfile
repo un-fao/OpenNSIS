@@ -24,6 +24,7 @@ COPY --from=builder /install /usr/local
 COPY shared.py .
 COPY main.py .
 COPY sampling_design.py .
+COPY profile_db.py .
 COPY raster_registry/ ./raster_registry/
 
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app

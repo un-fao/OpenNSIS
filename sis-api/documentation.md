@@ -90,6 +90,7 @@ After **5 consecutive failed logins** the account is locked for **15 minutes**. 
 | Administration tab (users, API clients, GloSIS, update check) | **JWT (admin)**  | `is_admin = true` enforced server-side         |
 | Website tab (settings, site content, media, sampling designs), administrative divisions, legend colour edits, project delete, LIMS connection management | **JWT (admin)** | |
 | ETL Delete dataset (`DELETE /api/etl/datasets/{table}`)| **JWT (admin)**        | Destructive — drops the staging table          |
+| Database tab — edit profile data, photographs (`/api/pdb/*` writes) | **JWT (admin or data editor)** | `api.user.can_edit_data`, granted under Administration → Users; deleting a whole profile is admin-only |
 | Everything else mutating (layers, ETL upload/ingest/prune, codelist creates, raster registration, DST recipes, LIMS fetch, soil-profile publish/limit/blur, sync) | **JWT (any user)** | Login required |
 | Read endpoints under `/api/*`                          | **API key**            | Header `X-API-Key`                              |
 | `/health`, `/`                                         | **Public**             |                                                |
@@ -393,6 +394,31 @@ background with a live run log. All admin-only except the public listing.
 | PATCH  | `/api/sampling/designs/{design_id}`           | JWT-admin | Publish / Active / symbology — same semantics as other layer tables |
 | DELETE | `/api/sampling/designs/{design_id}`           | JWT-admin | Delete                                         |
 | GET    | `/api/sampling/public`                        | API key   | Published designs for the map viewer           |
+
+### Profile database (Database tab)
+
+The soil profile data as stored: plots, profiles, horizons, analytical
+values and the descriptive results (`result_desc_plot` / `_surface` /
+`_profile` / `_element`), plus photographs. Reading needs a signed-in user;
+writing needs an administrator or an account with `can_edit_data`
+("editor" below). Implemented in `profile_db.py`.
+
+| Method | Path                                   | Auth      | Description                                   |
+| ------ | -------------------------------------- | --------- | ---------------------------------------------- |
+| GET    | `/api/pdb/meta`                        | JWT       | Projects, code lists (descriptive properties with categories per level, numeric observations), whether the user may edit |
+| GET    | `/api/pdb/plots?project_id=&q=&limit=&offset=&sort=&dir=` | JWT | One row per profile, with site / surface / profile description |
+| GET    | `/api/pdb/elements?project_id=&q=&limit=&offset=` | JWT | One row per horizon, with analytical values and description |
+| GET    | `/api/pdb/record?…&offset=` or `&plot_id=` | JWT   | The profile at a position of the selection (form navigator) |
+| GET    | `/api/pdb/plots/{plot_id}`             | JWT       | One profile in full                            |
+| POST   | `/api/pdb/save`                        | editor    | A list of changes (`plot`, `element`, `specimen`, `desc`, `num`) applied in one transaction |
+| POST   | `/api/pdb/plots`                       | editor    | New profile in a project                       |
+| DELETE | `/api/pdb/plots/{plot_id}`             | JWT-admin | Delete a profile with everything under it      |
+| POST   | `/api/pdb/plots/{plot_id}/elements`    | editor    | Add a horizon / layer                          |
+| DELETE | `/api/pdb/elements/{element_id}`       | editor    | Delete a horizon / layer                       |
+| POST   | `/api/pdb/plots/{plot_id}/photos`      | editor    | Upload a photograph (multipart; re-encoded as JPEG, max 12 MB, 30 per profile) |
+| GET    | `/api/pdb/photos/{photo_id}?size=thumb\|full` | JWT | The image                                   |
+| PATCH / DELETE | `/api/pdb/photos/{photo_id}`   | editor    | Caption / order, delete                        |
+| PATCH  | `/api/users/{user_id}/data-editor?can_edit_data=` | JWT-admin | Grant or revoke the data editor permission |
 
 ### Website (public site CMS)
 

@@ -7,6 +7,7 @@ import api from './api-client.js';
 import { AVAILABLE as LANGUAGES, t } from './i18n.js';
 import { mountSiteAdmin } from './site-admin.js';
 import { mountSamplingDesign } from './sampling-design.js';
+import { mountProfileDatabase } from './profile-database.js';
 import Map from 'ol/Map';
 import View from 'ol/View';
 import { Tile as TileLayer } from 'ol/layer';
@@ -241,6 +242,7 @@ class AdminDashboard {
             <li><button class="tab-btn" data-tab="projects">${t('a.tab.projects')}</button></li>
             <li><button class="tab-btn" data-tab="sampling">${t('a.tab.sampling')}</button></li>
             <li><button class="tab-btn" data-tab="layers">${t('a.tab.soilProfiles')}</button></li>
+            <li><button class="tab-btn" data-tab="database">${t('a.tab.database')}</button></li>
             <li><button class="tab-btn" data-tab="add-raster">${t('a.tab.rasters')}</button></li>
             <li><button class="tab-btn" data-tab="dst">${t('a.tab.dst')}</button></li>
           </ul>
@@ -318,6 +320,7 @@ class AdminDashboard {
                     <tr>
                       <th>${t('a.username')}</th>
                       <th>${t('a.admin')}</th>
+                      <th title="${t('a.users.dataEditorTip')}">${t('a.users.dataEditor')}</th>
                       <th>${t('a.active')}</th>
                       <th>${t('a.created')}</th>
                       <th>${t('a.lastLogin')}</th>
@@ -820,6 +823,11 @@ class AdminDashboard {
               <div id="sampling-root"></div>
             </div>
 
+            <!-- Database Tab — content mounted lazily by profile-database.js -->
+            <div id="database-tab" class="tab-pane">
+              <div id="pdb-root"></div>
+            </div>
+
             <!-- Website Tab (issue #13) — content mounted lazily by site-admin.js -->
             <div id="website-tab" class="tab-pane">
               <div id="site-admin-root"></div>
@@ -1210,6 +1218,10 @@ class AdminDashboard {
 
     if (tab === 'sampling') {
       mountSamplingDesign();
+    }
+
+    if (tab === 'database') {
+      mountProfileDatabase();
     }
 
     if (tab === 'administration' && this.isAdmin) {
@@ -3051,7 +3063,7 @@ class AdminDashboard {
     if (!tbody) return;
 
     if (this.users.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" class="empty-state">${t('a.emptyUsers')}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" class="empty-state">${t('a.emptyUsers')}</td></tr>`;
       return;
     }
 
@@ -3090,10 +3102,16 @@ class AdminDashboard {
       } else {
         adminLabel = `<span class="badge toggle-admin" style="cursor:pointer;background:#e0e0e0;color:var(--color-text-muted);" title="${t('a.users.clickGrant')}">${t('a.user')}</span>`;
       }
+      // Data editor: may edit profile data in the Database tab.
+      // Administrators always may, so their badge is not a switch.
+      const editorLabel = u.is_admin
+        ? `<span class="badge badge-success" title="${t('a.users.dataEditorAdmin')}">${t('a.yes')}</span>`
+        : `<span class="badge badge-${u.can_edit_data ? 'success' : 'danger'} toggle-editor" style="cursor:pointer;" title="${t('a.users.dataEditorTip')}">${u.can_edit_data ? t('a.yes') : t('a.no')}</span>`;
       return `
         <tr>
           <td><strong>${this.escapeHtml(u.user_id)}</strong></td>
           <td data-user-id="${this.escapeHtml(u.user_id)}" data-admin="${u.is_admin}">${adminLabel}</td>
+          <td data-user-id="${this.escapeHtml(u.user_id)}" data-editor="${!!u.can_edit_data}">${editorLabel}</td>
           <td data-user-id="${this.escapeHtml(u.user_id)}" data-active="${u.is_active}">${activeLabel}</td>
           <td>${fmt(u.created_at)}</td>
           <td>${fmt(u.last_login)}</td>
@@ -3115,6 +3133,20 @@ class AdminDashboard {
           this.renderUsers();
         } catch (e) {
           alert(t('a.err.prefix') + e.message);
+        }
+      });
+    });
+
+    // Data-editor toggle
+    tbody.querySelectorAll('.toggle-editor').forEach(el => {
+      el.addEventListener('click', async () => {
+        const td = el.closest('td');
+        try {
+          await api.toggleUserDataEditor(td.dataset.userId, td.dataset.editor !== 'true');
+          await this.loadUsers();
+          this.renderUsers();
+        } catch (err) {
+          alert(t('a.err.updateFailed') + err.message);
         }
       });
     });

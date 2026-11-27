@@ -125,5 +125,9 @@ volumes).
   /news).
 - `039_site_live_by_default.sql` — The public website is live by default: flips
   the stored `SITE_LANDING_ENABLED` on installs that never published a site.
+- `040_profile_database.sql` — Database tab: descriptive results are deleted
+  with their plot / profile / element (`ON DELETE CASCADE`), profile
+  photographs (`api.profile_photo`), and the `can_edit_data` permission on
+  `api.user`.
 
 Each file's own header holds the full rationale.

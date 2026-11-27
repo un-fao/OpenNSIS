@@ -17,7 +17,10 @@ organisation and exposes:
   raster upload, a raster calculator (DST), administrative division
   boundary layers (GeoJSON / zipped Shapefile / GeoPackage / KML,
   reprojected to WGS 84 on the fly), SoilFER three-stage sampling designs,
-  and the website content and settings;
+  a **Database** tab to browse and edit the soil profile data (analytical
+  results and field description) as tables or one profile at a time, with
+  photographs and a printable profile report, and the website content and
+  settings;
 - a **REST API** (FastAPI) for soil profiles, observations, layers, settings
   and admin operations;
 - an **OGC API Records / CSW** metadata catalogue (pyCSW) for the rasters;
