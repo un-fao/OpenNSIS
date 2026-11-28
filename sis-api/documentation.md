@@ -311,7 +311,7 @@ Result values are stored in the **canonical unit** for the (property, procedure)
 
 | Method | Path                  | Auth    | Description                                 |
 | ------ | --------------------- | ------- | ------------------------------------------- |
-| GET    | `/api/stats/dashboard`| API key | Aggregates (profiles per project, value summaries per property, etc.) for the public **Statistics** page at `/dashboard` |
+| GET    | `/api/stats/dashboard`| API key | Aggregates (profiles per project, value summaries per property, etc.) for the public **Statistics** page at `/dashboard`. Published data only, by the rules of the public views: profiles of published projects within the profile limit, values unless the project shares locations only, published rasters; an unpublished project is not named |
 
 ### Projects
 

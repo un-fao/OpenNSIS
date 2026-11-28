@@ -7,6 +7,16 @@ the change landed on `main`.
 
 ## November 2026
 
+### 2026-11-28 — Statistics page counts published data only
+The public **Statistics** page counted everything in the database, so a
+project that was not published still appeared there by name, with its
+number of profiles, and its values entered the summaries. The page now
+follows the same rules as the map: profiles count when their project is
+published (and up to the project's profile limit, when one is set),
+measurements and depths count unless the project shares locations only,
+and rasters count when they are published. A project with nothing
+published is not listed and not counted.
+
 ### 2026-11-27 — Database tab: browse, edit and report soil profiles
 A new **Database** tab in the Admin Panel shows the soil profile data as it
 sits in the database, for every signed-in user:
@@ -18,17 +28,25 @@ sits in the database, for every signed-in user:
   showed before.
 - A **Form** view, one profile at a time with first / previous / next /
   last: identification and location with a small map, photographs, site
-  and surface description, a to-scale sketch of the horizons, and for the
-  selected horizon its analytical values and description.
-- **Edit mode** for administrators and for accounts marked *Data editor*
-  (a new Yes/No column under Administration → Users). Nothing is written
-  while editing: changed cells and fields are marked and wait for **Save**,
-  which writes them together, all or none; **Cancel** drops them. New profiles and horizons can be keyed in by hand, values and
-  description properties added or removed; deleting a whole profile stays
-  with administrators. Edits are written to the audit log.
+  and surface description, and a to-scale sketch of the horizons beside a
+  horizons table with every analytical result as a column. Pointing at a
+  row highlights the horizon in the sketch, and the other way round; the
+  description of the selected horizon is listed below.
+- A **Columns** button on each of the three tables to show or hide
+  columns; the choice is remembered in the browser.
+- **View / Edit** buttons; Edit is for administrators and for accounts
+  marked *Data editor* (a new Yes/No column under Administration → Users).
+  Nothing is written while editing: changed cells and fields are marked
+  and wait for **Save**, which writes them together, all or none;
+  **Cancel** drops them, and leaving with unsaved changes asks first. New
+  profiles and horizons can be keyed in by hand, values and description
+  properties added or removed; deleting a whole profile stays with
+  administrators. Edits are written to the audit log.
 - **Photographs** per profile, with captions. They are re-encoded on upload
   (orientation applied, location metadata removed), kept in the database so
-  that backups include them, and shown only to signed-in users.
+  that backups include them, and shown only to signed-in users. The
+  picture viewer moves to the next and previous picture with the arrow
+  keys.
 - A **profile report**: identification, location map, site description,
   horizon sketch with depth plots, the horizon descriptions, the analytical
   table with its methods and the photographs, laid out for A4. *Print /

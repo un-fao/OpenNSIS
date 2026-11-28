@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpenNSIS — Open National Soil Information System</title>
-<meta name="description" content="OpenNSIS is an open-source national soil information system: a public website with web mapping, catalogue and statistics, soil-profile ETL, sampling designs and GloSIS federation endpoints, deployed with one command.">
+<meta name="description" content="OpenNSIS is an open-source national soil information system: a public website with web mapping, catalogue and statistics, soil-profile ETL, a profile database with field descriptions, photographs and profile reports, sampling designs and GloSIS federation endpoints, deployed with one command.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌱</text></svg>">
 <style>
   :root {
@@ -144,6 +144,13 @@
         <p>Fetch released samples straight from a laboratory information system
         into the ETL — re-fetching updates rather than fails, and measurement
         quality (uncertainty, LOD/LOQ) carries through.</p></div>
+      <div class="card"><span class="ic">🗃️</span>
+        <h3>Profile database</h3>
+        <p>Browse the soil profile data as tables or one profile at a time —
+        analytical results and the field description from the FAO Guidelines
+        for Soil Description code lists. Edit with Save / Cancel under a
+        per-user permission, attach photographs, and print a profile report
+        with horizon sketch, depth plots and location map.</p></div>
       <div class="card"><span class="ic">🧮</span>
         <h3>Raster calculator</h3>
         <p>Build suitability maps from published rasters with threshold-based

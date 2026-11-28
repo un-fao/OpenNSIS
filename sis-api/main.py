@@ -5824,47 +5824,99 @@ async def delete_soil_profile_data(
     return {"message": "Soil profiles deleted", "project_id": project_id, "deleted": deleted}
 
 
+# What a visitor can see, as CTEs shared by every statistics query. The rules
+# are those of the public views: a profile is public when its project's profile
+# layer (stub layer '<CC>-<PROJ>') is published and the profile falls within
+# the project's profile limit (api.vw_api_profile); its values are public
+# unless the project shares locations only (api.vw_api_observation).
+_STATS_PUBLIC_CTE = """
+    WITH ranked AS (
+      SELECT pr.profile_id, pr.plot_id,
+             proj.country_id, proj.project_id, proj.name AS project_name,
+             sl.is_published, pm.profile_limit, pm.locations_only,
+             row_number() OVER (PARTITION BY proj.country_id, proj.project_id
+                                ORDER BY pr.profile_id) AS rn
+      FROM soil_data.project proj
+      JOIN soil_data.project_site ps
+        ON ps.country_id = proj.country_id AND ps.project_id = proj.project_id
+      JOIN soil_data.plot pl ON pl.site_id = ps.site_id
+      JOIN soil_data.profile pr ON pr.plot_id = pl.plot_id
+      LEFT JOIN soil_data.mapset pm
+        ON pm.mapset_id = proj.country_id || '-' || proj.project_id
+      LEFT JOIN soil_data.layer sl
+        ON sl.layer_id = proj.country_id || '-' || proj.project_id
+    ),
+    pub AS (
+      SELECT * FROM ranked
+      WHERE is_published = TRUE
+        AND (profile_limit IS NULL OR rn <= profile_limit)
+    ),
+    pub_val AS (
+      SELECT DISTINCT profile_id FROM pub WHERE locations_only IS NOT TRUE
+    ),
+    pub_res AS (
+      SELECT o.property_num_id, r.value
+      FROM pub_val pv
+      JOIN soil_data.element e ON e.profile_id = pv.profile_id
+      JOIN soil_data.specimen sp ON sp.element_id = e.element_id
+      JOIN soil_data.result_num r ON r.specimen_id = sp.specimen_id
+      JOIN soil_data.observation_num o ON o.observation_num_id = r.observation_num_id
+    )
+"""
+
+
 @app.get("/api/stats/dashboard")
 async def dashboard_stats(api_client: dict = Depends(verify_api_key)):
     """Aggregated stats across soil_data for the public dashboard page
-    (counts and distributions only — no record-level data)."""
+    (counts and distributions only — no record-level data).
+
+    Only published data count: profiles of published projects (within the
+    project's profile limit), values of projects that share more than
+    locations, and published rasters. An unpublished project appears nowhere,
+    not even by name."""
     out = {}
     with get_db() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             # Top-line cards
-            cur.execute("""
+            cur.execute(_STATS_PUBLIC_CTE + """
                 SELECT
-                  (SELECT count(*) FROM soil_data.profile) AS profile_count,
-                  (SELECT count(*) FROM soil_data.result_num) AS observation_count,
-                  (SELECT count(*) FROM soil_data.project) AS project_count,
-                  -- Distinct properties that actually have measurements in
-                  -- this database (not the full catalogue of known ones).
-                  (SELECT count(DISTINCT o.property_num_id)
-                   FROM soil_data.observation_num o
-                   JOIN soil_data.result_num r
-                     ON r.observation_num_id = o.observation_num_id) AS property_count,
-                  (SELECT count(*) FROM soil_data.site) AS site_count,
-                  -- Registered raster layers (grid mapsets).
+                  (SELECT count(DISTINCT profile_id) FROM pub) AS profile_count,
+                  (SELECT count(*) FROM pub_res) AS observation_count,
+                  -- Projects with something published: profiles or rasters.
+                  (SELECT count(*) FROM (
+                     SELECT country_id, project_id FROM pub
+                     UNION
+                     SELECT m.country_id, m.project_id
+                     FROM soil_data.layer l
+                     JOIN soil_data.mapset m ON m.mapset_id = l.mapset_id
+                     WHERE m.spatial_representation_type_code = 'grid'
+                       AND l.is_published = TRUE
+                       AND m.project_id IS NOT NULL
+                   ) x) AS project_count,
+                  -- Distinct properties that actually have published
+                  -- measurements (not the full catalogue of known ones).
+                  (SELECT count(DISTINCT property_num_id) FROM pub_res) AS property_count,
+                  (SELECT count(DISTINCT pl.site_id)
+                   FROM pub JOIN soil_data.plot pl ON pl.plot_id = pub.plot_id) AS site_count,
+                  -- Published raster layers (grid mapsets).
                   (SELECT count(*) FROM soil_data.layer l
                    JOIN soil_data.mapset m ON m.mapset_id = l.mapset_id
-                   WHERE m.spatial_representation_type_code = 'grid') AS raster_count;
+                   WHERE m.spatial_representation_type_code = 'grid'
+                     AND l.is_published = TRUE) AS raster_count;
             """)
             out["totals"] = cur.fetchone()
 
             # Profiles per project
-            cur.execute("""
-                SELECT p.name AS project_name,
-                       count(DISTINCT pr.profile_id) AS profile_count
-                FROM soil_data.project p
-                LEFT JOIN soil_data.project_site ps ON ps.project_id = p.project_id
-                LEFT JOIN soil_data.plot pl ON pl.site_id = ps.site_id
-                LEFT JOIN soil_data.profile pr ON pr.plot_id = pl.plot_id
-                GROUP BY p.name
+            cur.execute(_STATS_PUBLIC_CTE + """
+                SELECT project_name,
+                       count(DISTINCT profile_id) AS profile_count
+                FROM pub
+                GROUP BY project_name
                 ORDER BY profile_count DESC;
             """)
             out["profiles_per_project"] = cur.fetchall()
 
-            # Rasters per project (registered grid layers)
+            # Rasters per project (published grid layers)
             cur.execute("""
                 SELECT p.name AS project_name,
                        count(l.layer_id) AS raster_count
@@ -5873,29 +5925,29 @@ async def dashboard_stats(api_client: dict = Depends(verify_api_key)):
                        ON m.country_id = p.country_id AND m.project_id = p.project_id
                 JOIN soil_data.layer l ON l.mapset_id = m.mapset_id
                 WHERE m.spatial_representation_type_code = 'grid'
+                  AND l.is_published = TRUE
                 GROUP BY p.name
                 ORDER BY raster_count DESC;
             """)
             out["rasters_per_project"] = cur.fetchall()
 
             # Top 10 measured properties
-            cur.execute("""
-                SELECT o.property_num_id AS property,
+            cur.execute(_STATS_PUBLIC_CTE + """
+                SELECT property_num_id AS property,
                        count(*) AS observation_count
-                FROM soil_data.result_num r
-                JOIN soil_data.observation_num o ON o.observation_num_id = r.observation_num_id
-                GROUP BY o.property_num_id
+                FROM pub_res
+                GROUP BY property_num_id
                 ORDER BY observation_count DESC
                 LIMIT 10;
             """)
             out["top_properties"] = cur.fetchall()
 
             # Profiles sampled per year
-            cur.execute("""
+            cur.execute(_STATS_PUBLIC_CTE + """
                 SELECT extract(year FROM pl.sampling_date)::int AS year,
-                       count(DISTINCT pr.profile_id) AS profile_count
-                FROM soil_data.plot pl
-                JOIN soil_data.profile pr ON pr.plot_id = pl.plot_id
+                       count(DISTINCT pub.profile_id) AS profile_count
+                FROM pub
+                JOIN soil_data.plot pl ON pl.plot_id = pub.plot_id
                 WHERE pl.sampling_date IS NOT NULL
                 GROUP BY year
                 ORDER BY year;
@@ -5903,10 +5955,9 @@ async def dashboard_stats(api_client: dict = Depends(verify_api_key)):
             out["profiles_per_year"] = cur.fetchall()
 
             # Depth distribution (bins of 25cm up to 2m, then >200)
-            cur.execute("""
-                WITH depths AS (
+            cur.execute(_STATS_PUBLIC_CTE + """
+                , depths AS (
                   SELECT CASE
-                           WHEN lower_depth IS NULL THEN NULL
                            WHEN lower_depth <= 25 THEN '0-25'
                            WHEN lower_depth <= 50 THEN '25-50'
                            WHEN lower_depth <= 75 THEN '50-75'
@@ -5916,7 +5967,6 @@ async def dashboard_stats(api_client: dict = Depends(verify_api_key)):
                            ELSE '>200'
                          END AS bucket,
                          CASE
-                           WHEN lower_depth IS NULL THEN 999
                            WHEN lower_depth <= 25 THEN 0
                            WHEN lower_depth <= 50 THEN 1
                            WHEN lower_depth <= 75 THEN 2
@@ -5925,8 +5975,9 @@ async def dashboard_stats(api_client: dict = Depends(verify_api_key)):
                            WHEN lower_depth <= 200 THEN 5
                            ELSE 6
                          END AS sort_idx
-                  FROM soil_data.element
-                  WHERE lower_depth IS NOT NULL
+                  FROM soil_data.element e
+                  JOIN pub_val pv ON pv.profile_id = e.profile_id
+                  WHERE e.lower_depth IS NOT NULL
                 )
                 SELECT bucket AS depth_range, count(*) AS element_count
                 FROM depths
@@ -5936,27 +5987,25 @@ async def dashboard_stats(api_client: dict = Depends(verify_api_key)):
             out["depth_distribution"] = cur.fetchall()
 
             # Value summary per top property (min, q1, median, q3, max)
-            cur.execute("""
-                WITH top_props AS (
-                  SELECT o.property_num_id
-                  FROM soil_data.result_num r
-                  JOIN soil_data.observation_num o ON o.observation_num_id = r.observation_num_id
-                  GROUP BY o.property_num_id
+            cur.execute(_STATS_PUBLIC_CTE + """
+                , top_props AS (
+                  SELECT property_num_id
+                  FROM pub_res
+                  GROUP BY property_num_id
                   ORDER BY count(*) DESC
                   LIMIT 8
                 )
-                SELECT o.property_num_id AS property,
+                SELECT r.property_num_id AS property,
                        count(r.value)::int AS n,
                        min(r.value)::float AS vmin,
                        percentile_cont(0.25) WITHIN GROUP (ORDER BY r.value)::float AS q1,
                        percentile_cont(0.5)  WITHIN GROUP (ORDER BY r.value)::float AS median,
                        percentile_cont(0.75) WITHIN GROUP (ORDER BY r.value)::float AS q3,
                        max(r.value)::float AS vmax
-                FROM soil_data.result_num r
-                JOIN soil_data.observation_num o ON o.observation_num_id = r.observation_num_id
-                JOIN top_props tp ON tp.property_num_id = o.property_num_id
+                FROM pub_res r
+                JOIN top_props tp ON tp.property_num_id = r.property_num_id
                 WHERE r.value IS NOT NULL
-                GROUP BY o.property_num_id
+                GROUP BY r.property_num_id
                 ORDER BY n DESC;
             """)
             out["value_summary"] = cur.fetchall()

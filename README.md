@@ -75,6 +75,7 @@ sis-dev/
 │   ├── Dockerfile
 │   ├── main.py
 │   ├── shared.py                           # Auth, DB, models — shared with sis-api-glosis
+│   ├── profile_db.py                       # Database tab: profile data browser/editor, photographs (/api/pdb)
 │   ├── dst/                                # Raster calculator (DST) engine
 │   ├── raster_registry/                    # Raster registration, COG conversion, ISO XML, pyCSW load
 │   └── requirements.txt
@@ -289,7 +290,7 @@ A complete instance is four things — everything else is rebuilt from source:
 
 | What | Where | Contains |
 |---|---|---|
-| Database dump | `docker exec sis-database pg_dump -U sis -d sis` | users, settings, projects, mapsets, profiles, metadata records |
+| Database dump | `docker exec sis-database pg_dump -U sis -d sis` | users, settings, projects, mapsets, profiles with their field descriptions and photographs, metadata records |
 | Raster/map volume | `sis-web-services/volume/` | uploaded rasters (COGs), generated mapfiles |
 | Catalogue volume | `sis-metadata/volume/` | pyCSW XML records |
 | Configuration | `.env` | all secrets, incl. the API key the web bundle is built with |
